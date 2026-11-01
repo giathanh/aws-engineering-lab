@@ -8,16 +8,13 @@
 :root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
 @media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
 *{box-sizing:border-box}
-html{scroll-behavior:smooth;scroll-padding-top:72px}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
-header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
-header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-header.top .brand{font-weight:650;margin-right:12px}
-header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
-header.top a:hover{color:var(--fg);background:var(--code-bg)}
-header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+a.back{display:inline-flex;align-items:center;gap:6px;margin-bottom:16px;padding:4px 12px;border:1px solid var(--line);border-radius:999px;color:var(--muted);text-decoration:none;font-size:14px}
+a.back:hover{color:var(--fg);background:var(--code-bg)}
+main > a.back{display:none}
 .layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
-aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc{position:sticky;top:24px;align-self:start;max-height:calc(100vh - 48px);overflow:auto;font-size:14px}
 aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
 aside.toc ol{list-style:none;margin:0;padding:0}
 aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
@@ -52,15 +49,15 @@ ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
 details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
 details summary{cursor:pointer;font-weight:600}
 footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
-@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
-@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}main > a.back{display:inline-flex}}
+@media print{a.back,aside.toc,.code button{display:none}.layout{display:block}}
 </style>
 </head>
 <body>
-<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="01-foundations.html">01. Lý thuyết</a><a href="../labs/01-foundations/README.html">01. Lab</a><a href="02-identity-and-access.html">02. Lý thuyết</a><a href="../labs/02-identity-and-access/README.html">02. Lab</a><a href="03-cost-management.html">03. Lý thuyết</a><a href="../labs/03-cost-management/README.html">03. Lab</a><a href="04-networking.html">04. Lý thuyết</a><a href="../labs/04-networking/README.html">04. Lab</a><a href="05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../labs/05-compute-and-load-balancing/README.html">05. Lab</a><a href="06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../labs/06-storage-and-content-delivery/README.html">06. Lab</a><a href="07-databases-and-cache.html">07. Lý thuyết</a><a href="../labs/07-databases-and-cache/README.html">07. Lab</a><a href="08-containers.html" class="active">08. Lý thuyết</a><a href="../labs/08-containers/README.html">08. Lab</a><a href="09-serverless.html">09. Lý thuyết</a><a href="../labs/09-serverless/README.html">09. Lab</a><a href="10-observability-and-application-security.html">10. Lý thuyết</a><a href="../labs/10-observability-and-application-security/README.html">10. Lab</a><a href="11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../labs/11-messaging-and-workflows/README.html">11. Lab</a><a href="12-iac-and-cicd.html">12. Lý thuyết</a><a href="../labs/12-iac-and-cicd/README.html">12. Lab</a><a href="13-reliability-and-performance.html">13. Lý thuyết</a><a href="../labs/13-reliability-and-performance/README.html">13. Lab</a><a href="14-architecture-and-governance.html">14. Lý thuyết</a><a href="../labs/14-architecture-and-governance/README.html">14. Lab</a></nav></header>
 <div class="layout">
-<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#mục-tiêu">Mục tiêu</a></li><li><a href="#phần-1--amazon-ecr-kho-chứa-ảnh-container-tag-bất-biến-và-vòng-đời-45-phút">Phần 1 — Amazon ECR: Kho chứa Ảnh Container, Tag Bất biến và Vòng đời (45 phút)</a></li><li><a href="#phần-2--kiến-trúc-amazon-ecs-cluster-task-definition-task-service-và-aws-fargate-50-phút">Phần 2 — Kiến trúc Amazon ECS: Cluster, Task Definition, Task, Service và AWS Fargate (50 phút)</a></li><li><a href="#phần-3--phân-biệt-hai-iam-role-sống-còn-trong-ecs-execution-role-vs-task-role-45-phút">Phần 3 — Phân biệt Hai IAM Role Sống còn trong ECS: Execution Role vs Task Role (45 phút)</a></li><li><a href="#phần-4--mô-hình-mạng-awsvpc-subnet-riêng-tư-và-alb-target-type-ip-45-phút">Phần 4 — Mô hình mạng awsvpc, Subnet Riêng tư và ALB Target Type ip (45 phút)</a></li><li><a href="#phần-5--chiến-lược-triển-khai-kiểm-tra-sức-khỏe-và-graceful-shutdown-50-phút">Phần 5 — Chiến lược Triển khai, Kiểm tra Sức khỏe và Graceful Shutdown (50 phút)</a></li><li><a href="#phần-6--giới-thiệu-bài-thực-hành-lab-08">Phần 6 — Giới thiệu bài thực hành (Lab 08)</a></li><li><a href="#phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi phổ biến (25 phút)</a></li><li><a href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></li><li><a href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></li><li><a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></li><li><a href="#đáp-án-gợi-ý">Đáp án gợi ý</a></li></ol></aside>
+<aside class="toc"><a class="back" href="00-introduction.html">← Mở đầu</a><div class="label">Mục lục</div><ol><li><a href="#mục-tiêu">Mục tiêu</a></li><li><a href="#phần-1--amazon-ecr-kho-chứa-ảnh-container-tag-bất-biến-và-vòng-đời-45-phút">Phần 1 — Amazon ECR: Kho chứa Ảnh Container, Tag Bất biến và Vòng đời (45 phút)</a></li><li><a href="#phần-2--kiến-trúc-amazon-ecs-cluster-task-definition-task-service-và-aws-fargate-50-phút">Phần 2 — Kiến trúc Amazon ECS: Cluster, Task Definition, Task, Service và AWS Fargate (50 phút)</a></li><li><a href="#phần-3--phân-biệt-hai-iam-role-sống-còn-trong-ecs-execution-role-vs-task-role-45-phút">Phần 3 — Phân biệt Hai IAM Role Sống còn trong ECS: Execution Role vs Task Role (45 phút)</a></li><li><a href="#phần-4--mô-hình-mạng-awsvpc-subnet-riêng-tư-và-alb-target-type-ip-45-phút">Phần 4 — Mô hình mạng awsvpc, Subnet Riêng tư và ALB Target Type ip (45 phút)</a></li><li><a href="#phần-5--chiến-lược-triển-khai-kiểm-tra-sức-khỏe-và-graceful-shutdown-50-phút">Phần 5 — Chiến lược Triển khai, Kiểm tra Sức khỏe và Graceful Shutdown (50 phút)</a></li><li><a href="#phần-6--giới-thiệu-bài-thực-hành-lab-08">Phần 6 — Giới thiệu bài thực hành (Lab 08)</a></li><li><a href="#phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi phổ biến (25 phút)</a></li><li><a href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></li><li><a href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></li><li><a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></li><li><a href="#đáp-án-gợi-ý">Đáp án gợi ý</a></li></ol></aside>
 <main>
+<a class="back" href="00-introduction.html">← Mở đầu</a>
 <h1 id="bài-08--vận-hành-ứng-dụng-container-amazon-ecr-ecs-và-aws-fargate"><a class="anchor" href="#bài-08--vận-hành-ứng-dụng-container-amazon-ecr-ecs-và-aws-fargate">Bài 08 — Vận hành Ứng dụng Container: Amazon ECR, ECS và AWS Fargate</a></h1>
 <blockquote>
 <p><strong>Đối tượng:</strong> developer có kinh nghiệm nhưng mới học AWS.

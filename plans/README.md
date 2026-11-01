@@ -1,5 +1,7 @@
 # Mục lục kế hoạch học AWS
 
+Người học nên bắt đầu từ [Bài 00 — Mở đầu](../notes/00-introduction.md).
+
 Mỗi file là plan để mô hình khác viết bài hướng dẫn, không phải bài học đã hoàn thành. Học theo thứ tự dưới đây; prerequisite và nhánh tùy chọn được ghi riêng trong từng plan.
 
 - [01. Nền tảng AWS](01-aws-foundations.md)

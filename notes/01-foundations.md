@@ -2,6 +2,7 @@
 
 > **Đối tượng:** developer có kinh nghiệm nhưng mới học AWS.
 > **Thời lượng:** khoảng 3–4 giờ, chia hai buổi. Buổi 1 gồm phần 1–4 (lý thuyết). Buổi 2 gồm phần 5–7 và [lab chỉ đọc](../labs/01-foundations/README.md).
+> **Bài trước:** [Bài 00 — Mở đầu](00-introduction.md)
 > **Kế hoạch gốc:** [plans/01-aws-foundations.md](../plans/01-aws-foundations.md)
 > **Ngày đối chiếu tài liệu:** 2026-10-31. Xem [Trạng thái kiểm chứng](#trạng-thái-kiểm-chứng) ở cuối bài.
 

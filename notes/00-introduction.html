@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bài 00 — Mở đầu: Lộ trình AWS Engineering Lab</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+a.back{display:inline-flex;align-items:center;gap:6px;margin-bottom:16px;padding:4px 12px;border:1px solid var(--line);border-radius:999px;color:var(--muted);text-decoration:none;font-size:14px}
+a.back:hover{color:var(--fg);background:var(--code-bg)}
+main > a.back{display:none}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:24px;align-self:start;max-height:calc(100vh - 48px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}main > a.back{display:inline-flex}}
+@media print{a.back,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#bài-này-giúp-bạn-làm-gì">Bài này giúp bạn làm gì</a></li><li><a href="#vì-sao-học-theo-lộ-trình-này">Vì sao học theo lộ trình này</a></li><li><a href="#bản-đồ-lộ-trình">Bản đồ lộ trình</a></li><li><a href="#cách-mỗi-chủ-đề-được-tổ-chức">Cách mỗi chủ đề được tổ chức</a></li><li><a href="#quy-tắc-an-toàn-cho-mọi-lab">Quy tắc an toàn cho mọi lab</a></li><li><a href="#chuẩn-bị-trước-khi-vào-bài-01">Chuẩn bị trước khi vào Bài 01</a></li><li><a href="#checklist-sẵn-sàng">Checklist sẵn sàng</a></li><li><a href="#tự-kiểm-tra">Tự kiểm tra</a></li><li><a href="#tiếp-theo">Tiếp theo</a></li></ol></aside>
+<main>
+
+<h1 id="bài-00--mở-đầu-lộ-trình-aws-engineering-lab"><a class="anchor" href="#bài-00--mở-đầu-lộ-trình-aws-engineering-lab">Bài 00 — Mở đầu: Lộ trình AWS Engineering Lab</a></h1>
+<blockquote>
+<p><strong>Đối tượng:</strong> developer có kinh nghiệm nhưng mới học AWS.
+<strong>Thời lượng:</strong> khoảng 45–60 phút đọc và chuẩn bị máy. Bài này không có lab và không tạo tài nguyên AWS.
+<strong>Mục lục kế hoạch:</strong> <a href="../plans/README.md">plans/README.md</a>
+<strong>Bài tiếp theo:</strong> <a href="01-foundations.html">Bài 01 — Nền tảng AWS</a></p>
+</blockquote>
+<h2 id="bài-này-giúp-bạn-làm-gì"><a class="anchor" href="#bài-này-giúp-bạn-làm-gì">Bài này giúp bạn làm gì</a></h2>
+<p>Sau bài mở đầu, bạn sẽ:</p>
+<ol>
+<li>Biết toàn bộ lộ trình gồm những chủ đề nào, học theo thứ tự nào và vì sao.</li>
+<li>Hiểu mỗi chủ đề được tổ chức thế nào: bài lý thuyết, lab, kế hoạch gốc.</li>
+<li>Biết những quy tắc an toàn áp dụng cho mọi lab, nhất là về credentials và chi phí.</li>
+<li>Chuẩn bị xong máy và account trước khi vào <a href="01-foundations.html">Bài 01</a>.</li>
+</ol>
+<p>Mục tiêu của cả lộ trình không phải là nhớ hết dịch vụ AWS. Học xong, bạn cần làm được bốn việc: <strong>giải thích</strong> được vì sao chọn dịch vụ này thay vì dịch vụ khác, <strong>triển khai</strong> theo cách tái lập được, <strong>chứng minh</strong> hệ thống chạy đúng và hỏng đúng cách khi có lỗi, và <strong>biết</strong> mình đang trả tiền cho cái gì.</p>
+<hr>
+<h2 id="vì-sao-học-theo-lộ-trình-này"><a class="anchor" href="#vì-sao-học-theo-lộ-trình-này">Vì sao học theo lộ trình này</a></h2>
+<p>Nhiều người học AWS bằng cách mở Console, bấm tạo EC2, rồi cố hiểu vì sao nó không truy cập được. Cách đó nhanh lúc đầu nhưng để lại lỗ hổng: không biết mình đang ở account nào, Region nào, dùng quyền gì, và tốn bao nhiêu tiền.</p>
+<p>Lộ trình này đi theo hướng ngược lại:</p>
+<ul>
+<li><strong>Nền móng trước:</strong> account, Region, CLI, quyền và chi phí được học trước khi tạo bất kỳ máy chủ nào.</li>
+<li><strong>CLI thay vì bấm chuột:</strong> lệnh CLI ghi lại chính xác bạn đã làm gì, lặp lại được, và dọn dẹp được. Console vẫn được dùng để quan sát.</li>
+<li><strong>Mỗi lab có lỗi có kiểm soát:</strong> bạn không chỉ thấy hệ thống chạy, mà còn cố tình làm nó hỏng để hiểu cơ chế.</li>
+<li><strong>Mỗi lab kết thúc bằng cleanup và kiểm kê:</strong> không để lại tài nguyên mồ côi.</li>
+</ul>
+<hr>
+<h2 id="bản-đồ-lộ-trình"><a class="anchor" href="#bản-đồ-lộ-trình">Bản đồ lộ trình</a></h2>
+<p>14 chủ đề được chia thành năm chặng. Mỗi chặng dựa trên chặng trước.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Chặng 1 — Nền móng            01 Nền tảng ─► 02 IAM ─► 03 Chi phí
+                                                │
+Chặng 2 — Hạ tầng cốt lõi     04 Mạng ─► 05 EC2/ALB ─► 06 S3/CloudFront ─► 07 Database/Cache
+                                                │
+Chặng 3 — Mô hình chạy app    08 Container (ECS/Fargate)      09 Serverless (Lambda)
+                                                │
+Chặng 4 — Vận hành            10 Quan sát &amp; bảo mật ─► 11 Messaging ─► 12 IaC &amp; CI/CD ─► 13 Độ tin cậy
+                                                │
+Chặng 5 — Quản trị            14 Kiến trúc &amp; quản trị nhiều account</code></pre></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Chủ đề</th>
+<th>Bạn trả lời được câu hỏi</th>
+<th>Thời lượng</th>
+<th>Chi phí lab</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>01</td>
+<td><a href="01-foundations.html">Nền tảng AWS</a> · <a href="../labs/01-foundations/README.html">Lab</a></td>
+<td>Lệnh này chạy ở account nào, Region nào, bằng identity nào?</td>
+<td>3–4 giờ</td>
+<td>Không tạo tài nguyên</td>
+</tr>
+<tr>
+<td>02</td>
+<td><a href="02-identity-and-access.html">IAM, Identity Center, STS</a> · <a href="../labs/02-identity-and-access/README.html">Lab</a></td>
+<td>Ai được làm gì, trên tài nguyên nào, trong bao lâu?</td>
+<td>4–5 giờ</td>
+<td>Gần như bằng 0</td>
+</tr>
+<tr>
+<td>03</td>
+<td><a href="03-cost-management.html">Budgets, Cost Explorer</a> · <a href="../labs/03-cost-management/README.html">Lab</a></td>
+<td>Tiền đi đâu, và làm sao biết sớm khi chi vượt dự kiến?</td>
+<td>2–3 giờ</td>
+<td>Gần như bằng 0</td>
+</tr>
+<tr>
+<td>04</td>
+<td><a href="04-networking.html">VPC và mạng</a> · <a href="../labs/04-networking/README.html">Lab</a></td>
+<td>Gói tin đi từ Internet tới app theo đường nào, bị chặn ở đâu?</td>
+<td>5–6 giờ</td>
+<td>Không tính phí (lab chính)</td>
+</tr>
+<tr>
+<td>05</td>
+<td><a href="05-compute-and-load-balancing.html">EC2, ALB, Auto Scaling</a> · <a href="../labs/05-compute-and-load-balancing/README.html">Lab</a></td>
+<td>Làm sao chạy nhiều máy, tự thay máy hỏng?</td>
+<td>5–7 giờ</td>
+<td><strong>Tính theo giờ</strong> (NAT, ALB, EC2)</td>
+</tr>
+<tr>
+<td>06</td>
+<td><a href="06-storage-and-content-delivery.html">S3, CloudFront, Route 53, ACM</a> · <a href="../labs/06-storage-and-content-delivery/README.html">Lab</a></td>
+<td>Lưu file ở đâu, phát nội dung an toàn ra sao?</td>
+<td>5–7 giờ</td>
+<td>Thấp</td>
+</tr>
+<tr>
+<td>07</td>
+<td><a href="07-databases-and-cache.html">RDS, Aurora, DynamoDB, ElastiCache</a> · <a href="../labs/07-databases-and-cache/README.html">Lab</a></td>
+<td>Chọn database theo access pattern, backup và restore thế nào?</td>
+<td>6–8 giờ</td>
+<td><strong>Tính theo giờ</strong> (RDS)</td>
+</tr>
+<tr>
+<td>08</td>
+<td><a href="08-containers.html">ECR, ECS, Fargate</a> · <a href="../labs/08-containers/README.html">Lab</a></td>
+<td>Deploy, rollback và tắt container đúng cách ra sao?</td>
+<td>5–7 giờ</td>
+<td><strong>Tính theo giờ</strong> (NAT, ALB, Fargate)</td>
+</tr>
+<tr>
+<td>09</td>
+<td><a href="09-serverless.html">Lambda, API Gateway</a> · <a href="../labs/09-serverless/README.html">Lab</a></td>
+<td>Khi nào serverless rẻ hơn, khi nào đắt hơn, giới hạn ở đâu?</td>
+<td>5–7 giờ</td>
+<td>Theo request, gần như bằng 0</td>
+</tr>
+<tr>
+<td>10</td>
+<td><a href="10-observability-and-application-security.html">CloudWatch, CloudTrail, Secrets, KMS</a> · <a href="../labs/10-observability-and-application-security/README.html">Lab</a></td>
+<td>Hệ thống đang khỏe không, ai đã làm gì, bí mật cất ở đâu?</td>
+<td>6–8 giờ</td>
+<td>Thấp</td>
+</tr>
+<tr>
+<td>11</td>
+<td><a href="11-messaging-and-workflows.html">SQS, SNS, EventBridge, Step Functions</a> · <a href="../labs/11-messaging-and-workflows/README.html">Lab</a></td>
+<td>Xử lý bất đồng bộ, message lỗi và retry ra sao?</td>
+<td>6–8 giờ</td>
+<td>Thấp</td>
+</tr>
+<tr>
+<td>12</td>
+<td><a href="12-iac-and-cicd.html">CloudFormation, Terraform, GitHub OIDC</a> · <a href="../labs/12-iac-and-cicd/README.html">Lab</a></td>
+<td>Làm sao hạ tầng tái lập được và deploy không cần access key?</td>
+<td>6–8 giờ</td>
+<td>Thấp</td>
+</tr>
+<tr>
+<td>13</td>
+<td><a href="13-reliability-and-performance.html">SLO, load test, backup, DR</a> · <a href="../labs/13-reliability-and-performance/README.html">Lab</a></td>
+<td>Hệ thống tin cậy đến mức nào, phục hồi mất bao lâu?</td>
+<td>6–10 giờ</td>
+<td>Thấp, có trần</td>
+</tr>
+<tr>
+<td>14</td>
+<td><a href="14-architecture-and-governance.html">Organizations, SCP, Control Tower, WAF</a> · <a href="../labs/14-architecture-and-governance/README.html">Lab</a></td>
+<td>Quản trị nhiều account và ghi lại quyết định kiến trúc ra sao?</td>
+<td>5–7 giờ</td>
+<td>Phần lớn là thiết kế; nhánh WAF tính theo giờ</td>
+</tr>
+</tbody></table>
+</div>
+<p>Tổng cộng khoảng <strong>70–100 giờ</strong>. Cột &quot;Chi phí lab&quot; chỉ mang tính định hướng; mỗi lab có bảng ước tính riêng với giá minh họa, và bạn phải tra lại giá cho Region của mình.</p>
+<h3 id="thứ-tự-học-và-các-nhánh"><a class="anchor" href="#thứ-tự-học-và-các-nhánh">Thứ tự học và các nhánh</a></h3>
+<ul>
+<li><strong>01 → 02 → 03 là bắt buộc và theo đúng thứ tự.</strong> Đừng bỏ qua 03: phải đặt cảnh báo ngân sách trước khi tạo tài nguyên tính tiền theo giờ ở bài 05.</li>
+<li><strong>04 → 05 là bắt buộc.</strong> Từ 05 trở đi các lab dùng VPC có public/private subnet.</li>
+<li><strong>06 và 07</strong> có thể học theo thứ tự bất kỳ sau 05.</li>
+<li><strong>08 và 09</strong> là hai cách chạy ứng dụng song song. Nên học cả hai; nếu thiếu thời gian, chọn một rồi quay lại sau.</li>
+<li><strong>10</strong> dùng một API từ 05, 08 hoặc 09, nên chỉ cần đã học ít nhất một trong ba bài đó.</li>
+<li><strong>11–13</strong> dùng kiến thức của các bài trước, nhưng mỗi lab tự dựng fixture riêng.</li>
+<li><strong>14</strong> nên học cuối vì nó tổng hợp mọi thứ ở góc độ tổ chức.</li>
+</ul>
+<p>Logging, IAM, kiểm soát chi phí và IaC không đợi tới bài riêng mới dùng. Chúng xuất hiện dần từ các lab đầu, rồi được học sâu ở bài tương ứng.</p>
+<h3 id="ví-dụ-xuyên-suốt"><a class="anchor" href="#ví-dụ-xuyên-suốt">Ví dụ xuyên suốt</a></h3>
+<p>Khi phù hợp, các bài dùng chung một ví dụ: <strong>hệ thống đơn hàng nhỏ</strong>. Nó lớn dần theo lộ trình:</p>
+<ol>
+<li>Bài 04–05: API đơn hàng chạy trên EC2 trong private subnet, sau ALB.</li>
+<li>Bài 06–07: ảnh sản phẩm trên S3/CloudFront, đơn hàng lưu trong DynamoDB hoặc RDS.</li>
+<li>Bài 08–09: cùng API đó chạy bằng container trên Fargate, hoặc bằng Lambda.</li>
+<li>Bài 10–11: có log, metric, alarm; xử lý đơn bất đồng bộ qua hàng đợi và workflow.</li>
+<li>Bài 12–14: toàn bộ được viết bằng IaC, deploy qua CI/CD, đo SLO và đặt trong mô hình nhiều account.</li>
+</ol>
+<p>Ví dụ chỉ giúp liên kết các bài lại với nhau. Mỗi lab vẫn có thể làm độc lập; nếu dùng lại tài nguyên từ lab trước, lab sẽ nói rõ.</p>
+<hr>
+<h2 id="cách-mỗi-chủ-đề-được-tổ-chức"><a class="anchor" href="#cách-mỗi-chủ-đề-được-tổ-chức">Cách mỗi chủ đề được tổ chức</a></h2>
+<p>Mỗi chủ đề có ba file:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>File</th>
+<th>Vai trò</th>
+<th>Khi nào đọc</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>notes/NN-*.md</code></td>
+<td>Bài lý thuyết: khái niệm, sơ đồ, đánh đổi, câu hỏi tự kiểm tra</td>
+<td>Buổi 1</td>
+</tr>
+<tr>
+<td><code>labs/NN-*/README.md</code></td>
+<td>Lab từng bước: lệnh, output minh họa, lỗi có kiểm soát, troubleshooting, cleanup</td>
+<td>Buổi 2</td>
+</tr>
+<tr>
+<td><code>plans/NN-*.md</code></td>
+<td>Kế hoạch gốc dùng để biên soạn hai file trên</td>
+<td>Chỉ khi muốn biết phạm vi và tiêu chí của bài</td>
+</tr>
+</tbody></table>
+</div>
+<p>Mỗi file <code>.md</code> có bản <code>.html</code> cùng tên để đọc trên trình duyệt, với mục lục và nút copy lệnh. Bản HTML được sinh tự động:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>npm install
+npm run build:html</code></pre></div>
+<p>Chỉ sửa file Markdown, không sửa trực tiếp file HTML.</p>
+<h3 id="nhịp-học-gợi-ý-cho-mỗi-chủ-đề"><a class="anchor" href="#nhịp-học-gợi-ý-cho-mỗi-chủ-đề">Nhịp học gợi ý cho mỗi chủ đề</a></h3>
+<ol>
+<li><strong>Buổi 1 — lý thuyết:</strong> đọc phần 1–4 hoặc 1–5 của bài. Trả lời câu hỏi &quot;Tự kiểm tra&quot; trước khi xem đáp án.</li>
+<li><strong>Buổi 2 — lab:</strong> đọc lại phần còn lại, làm lab, ghi bằng chứng vào sổ tay của bạn.</li>
+<li><strong>Kết thúc:</strong> chạy cleanup, kiểm kê tài nguyên còn lại, ghi lại một lỗi bạn đã tự chẩn đoán.</li>
+</ol>
+<p>Với nhịp hai buổi mỗi tuần, cả lộ trình mất khoảng 7–10 tuần.</p>
+<h3 id="cách-đọc-một-lab"><a class="anchor" href="#cách-đọc-một-lab">Cách đọc một lab</a></h3>
+<p>Các lab dùng chung những quy ước sau:</p>
+<ul>
+<li><strong>Placeholder</strong> như <code>&lt;REGION&gt;</code>, <code>&lt;ACCOUNT_ID&gt;</code>, <code>&lt;ROLE_NAME&gt;</code> được giải thích trong bảng ở đầu lab. Thay bằng giá trị của bạn.</li>
+<li><strong>Profile CLI</strong> luôn là <code>aws-lab</code>, được tạo ở Lab 01.</li>
+<li><strong>Tag:</strong> từ Lab 04, tài nguyên do lab tạo được gắn tag <code>Project=aws-lab-NN</code> (NN là số bài). Tag giúp tìm và dọn tài nguyên, và tách tài nguyên của lab này khỏi lab khác.</li>
+<li><strong>Output trong bài là minh họa</strong>, không phải kết quả chạy thật. Kết quả của bạn sẽ khác ở ID, thời gian và số đo. Mỗi bài có mục &quot;Trạng thái kiểm chứng&quot; ghi rõ phần nào đã đối chiếu tài liệu, phần nào đã chạy thử.</li>
+<li><strong>&quot;Lab này làm gì và không làm gì&quot;</strong> ở đầu mỗi lab cho biết phạm vi. Đọc kỹ phần này trước khi chạy lệnh.</li>
+</ul>
+<hr>
+<h2 id="quy-tắc-an-toàn-cho-mọi-lab"><a class="anchor" href="#quy-tắc-an-toàn-cho-mọi-lab">Quy tắc an toàn cho mọi lab</a></h2>
+<p>Những quy tắc này áp dụng từ Bài 01 tới Bài 14. Chúng được giải thích kỹ ở các bài 01–03; ở đây chỉ liệt kê để bạn biết trước.</p>
+<h3 id="account"><a class="anchor" href="#account">Account</a></h3>
+<ul>
+<li>Dùng <strong>account lab hoặc sandbox riêng</strong>. Không bao giờ làm lab trên account production hoặc account có dữ liệu thật.</li>
+<li><strong>Không dùng root user</strong> cho công việc hằng ngày. Root chỉ dùng cho vài thao tác quản trị account, và phải bật MFA.</li>
+<li>Không cần <code>AdministratorAccess</code> để học. Mỗi lab liệt kê quyền tối thiểu cần có.</li>
+</ul>
+<h3 id="credentials"><a class="anchor" href="#credentials">Credentials</a></h3>
+<ul>
+<li>Ưu tiên <strong>temporary credentials</strong> qua IAM Identity Center (SSO) hoặc cơ chế của sandbox. Không tạo long-lived access key làm cách mặc định.</li>
+<li><strong>Không commit</strong> credentials, session token, file <code>~/.aws/config</code> hay <code>~/.aws/credentials</code> vào repository.</li>
+<li>Khi chia sẻ kết quả (blog, chat, issue), <strong>che account ID, ARN, start URL và mọi định danh</strong>.</li>
+</ul>
+<h3 id="chi-phí"><a class="anchor" href="#chi-phí">Chi phí</a></h3>
+<ul>
+<li>AWS tính tiền theo mức dùng. Một số tài nguyên <strong>tính theo giờ dù không có ai dùng</strong>: NAT Gateway, load balancer, RDS, EC2, Fargate task đang chạy.</li>
+<li><strong>Đặt cảnh báo ngân sách ở Bài 03</strong>, trước khi làm Lab 05. Cảnh báo ngân sách chỉ báo cho bạn biết, nó <strong>không chặn chi tiêu</strong>.</li>
+<li>Không giả định Free Tier sẽ bao hết chi phí. Điều kiện Free Tier thay đổi theo thời gian và theo account.</li>
+<li><strong>Làm lab có tài nguyên tính theo giờ trong một lần ngồi.</strong> Nếu phải dừng giữa chừng, chạy cleanup trước rồi làm lại sau.</li>
+<li>Sau mỗi lab, chạy phần <strong>cleanup</strong> và <strong>kiểm kê</strong> ở cuối lab. Kiểm tra trong đúng Region bạn đã dùng.</li>
+</ul>
+<h3 id="trước-mỗi-lệnh-thay-đổi-hạ-tầng"><a class="anchor" href="#trước-mỗi-lệnh-thay-đổi-hạ-tầng">Trước mỗi lệnh thay đổi hạ tầng</a></h3>
+<p>Hãy tự hỏi ba câu, và chạy lệnh để xác nhận thay vì đoán:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws sts get-caller-identity --profile aws-lab   # Đúng account và role chưa?
+aws configure get region --profile aws-lab      # Đúng Region chưa?</code></pre></div>
+<p>Câu hỏi thứ ba: tài nguyên này có tính tiền theo giờ không, và bạn sẽ xóa nó lúc nào?</p>
+<hr>
+<h2 id="chuẩn-bị-trước-khi-vào-bài-01"><a class="anchor" href="#chuẩn-bị-trước-khi-vào-bài-01">Chuẩn bị trước khi vào Bài 01</a></h2>
+<h3 id="kiến-thức-nền"><a class="anchor" href="#kiến-thức-nền">Kiến thức nền</a></h3>
+<p>Lộ trình giả định bạn đã:</p>
+<ul>
+<li>Dùng terminal hằng ngày (bash/zsh), biết biến môi trường và pipe.</li>
+<li>Hiểu HTTP, REST API, JSON và mô hình client/server.</li>
+<li>Biết Git cơ bản và từng chạy một ứng dụng web.</li>
+<li>Biết sơ qua về Docker (cần cho Bài 08) và mạng cơ bản như IP, port, DNS (Bài 04 sẽ giải thích phần riêng của AWS).</li>
+</ul>
+<p>Không cần biết trước bất kỳ dịch vụ AWS nào.</p>
+<h3 id="công-cụ-trên-máy"><a class="anchor" href="#công-cụ-trên-máy">Công cụ trên máy</a></h3>
+<p>Hướng dẫn trong các lab viết cho macOS/zsh. Linux dùng được gần như nguyên vẹn; Windows nên dùng WSL.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Công cụ</th>
+<th>Dùng từ bài</th>
+<th>Ghi chú</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Terminal (zsh/bash)</td>
+<td>01</td>
+<td></td>
+</tr>
+<tr>
+<td><a href="https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html" target="_blank" rel="noopener">AWS CLI v2</a></td>
+<td>01</td>
+<td>Cài và cấu hình chi tiết ở Bài 01</td>
+</tr>
+<tr>
+<td><code>git</code></td>
+<td>01</td>
+<td></td>
+</tr>
+<tr>
+<td><code>jq</code></td>
+<td>01</td>
+<td>Đọc và lọc JSON; macOS: <code>brew install jq</code></td>
+</tr>
+<tr>
+<td><code>curl</code></td>
+<td>04</td>
+<td>Thường có sẵn</td>
+</tr>
+<tr>
+<td>Python 3</td>
+<td>03</td>
+<td>Script phụ trợ nhỏ trong nhiều lab</td>
+</tr>
+<tr>
+<td>Node.js</td>
+<td>05</td>
+<td>Ứng dụng mẫu trong lab 05, 07, 08; cũng dùng để build HTML</td>
+</tr>
+<tr>
+<td>Docker</td>
+<td>08</td>
+<td>Build và push image</td>
+</tr>
+<tr>
+<td><code>psql</code></td>
+<td>07</td>
+<td>PostgreSQL client</td>
+</tr>
+<tr>
+<td>Terraform</td>
+<td>12</td>
+<td>Chỉ cho phần so sánh với CloudFormation</td>
+</tr>
+<tr>
+<td>Tài khoản GitHub</td>
+<td>12</td>
+<td>Chỉ cho nhánh chạy GitHub Actions thật</td>
+</tr>
+</tbody></table>
+</div>
+<p>Không cần cài hết ngay. Cài AWS CLI, <code>git</code> và <code>jq</code> trước, phần còn lại cài khi tới bài cần.</p>
+<p>Kiểm tra nhanh:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>git --version
+jq --version
+python3 --version
+aws --version   # Nếu chưa có, Bài 01 hướng dẫn cài</code></pre></div>
+<h3 id="account-aws"><a class="anchor" href="#account-aws">Account AWS</a></h3>
+<p>Chọn một trong ba trường hợp:</p>
+<ol>
+<li><strong>Công ty hoặc nhóm đã có IAM Identity Center:</strong> xin quản trị viên một account lab và một permission set. Ghi lại start URL, SSO Region, account ID và tên permission set. Đây là trường hợp lý tưởng.</li>
+<li><strong>Có sandbox do nền tảng học tập cấp:</strong> dùng temporary credentials theo hướng dẫn của sandbox. Lưu ý sandbox có thể hạn chế một số dịch vụ hoặc tự xóa tài nguyên sau một thời gian.</li>
+<li><strong>Tự tạo account cá nhân:</strong> bật MFA cho root ngay, sau đó thiết lập truy cập không dùng root. Bài 01–02 hướng dẫn phần này. Bạn tự chịu chi phí, nên Bài 03 càng quan trọng.</li>
+</ol>
+<p>Bài 01 sẽ hướng dẫn cấu hình CLI cho cả ba trường hợp.</p>
+<h3 id="sổ-tay-học-tập"><a class="anchor" href="#sổ-tay-học-tập">Sổ tay học tập</a></h3>
+<p>Tạo một thư mục hoặc file ghi chép riêng, <strong>ngoài repository này</strong> hoặc trong một thư mục đã được <code>.gitignore</code>. Với mỗi lab, ghi lại:</p>
+<ul>
+<li>Region đã dùng và lý do chọn.</li>
+<li>Lệnh quan trọng và output đã che định danh.</li>
+<li>Một lỗi bạn gặp, cách chẩn đoán và cách sửa.</li>
+<li>Kết quả kiểm kê sau cleanup.</li>
+</ul>
+<p>Sổ tay này sẽ trở thành runbook cá nhân của bạn.</p>
+<hr>
+<h2 id="checklist-sẵn-sàng"><a class="anchor" href="#checklist-sẵn-sàng">Checklist sẵn sàng</a></h2>
+<p>Trước khi chuyển sang Bài 01, hãy chắc chắn:</p>
+<ul>
+<li><input type="checkbox"> Tôi biết lộ trình gồm năm chặng và thứ tự bắt buộc của 01 → 02 → 03 → 04 → 05.</li>
+<li><input type="checkbox"> Tôi biết mỗi chủ đề gồm bài lý thuyết và lab, và output trong bài chỉ là minh họa.</li>
+<li><input type="checkbox"> Tôi có, hoặc biết cách xin, một account lab/sandbox không phải production.</li>
+<li><input type="checkbox"> Tôi sẽ không dùng root user và không commit credentials.</li>
+<li><input type="checkbox"> Tôi hiểu một số tài nguyên tính tiền theo giờ, và sẽ đặt cảnh báo ngân sách ở Bài 03 trước khi làm Lab 05.</li>
+<li><input type="checkbox"> Máy tôi đã có terminal, <code>git</code> và <code>jq</code>.</li>
+<li><input type="checkbox"> Tôi đã chuẩn bị sổ tay ghi chép nằm ngoài repository.</li>
+</ul>
+<h2 id="tự-kiểm-tra"><a class="anchor" href="#tự-kiểm-tra">Tự kiểm tra</a></h2>
+<ol>
+<li>Vì sao Bài 03 (chi phí) phải học trước Bài 05?</li>
+<li>Cảnh báo ngân sách có ngăn AWS tính tiền khi bạn quên xóa NAT Gateway không?</li>
+<li>Output trong lab khác output trên máy bạn. Điều đó có nghĩa là bạn làm sai không?</li>
+<li>Bạn cần chạy lệnh gì trước một lệnh tạo tài nguyên để biết chắc mình đang ở đúng account và Region?</li>
+<li>Bạn chỉ có thời gian cho một trong hai bài 08 và 09. Bài 10 có bị ảnh hưởng không?</li>
+</ol>
+<details>
+<summary>Đáp án gợi ý</summary>
+
+<ol>
+<li>Từ Bài 05 bắt đầu có tài nguyên tính tiền theo giờ (NAT Gateway, ALB, EC2). Cần có cảnh báo ngân sách và hiểu cách đọc chi phí trước khi tạo chúng.</li>
+<li>Không. Budgets chỉ gửi cảnh báo khi chi phí thực tế hoặc dự báo vượt ngưỡng; nó không phải trần chi tiêu. Chỉ cleanup mới dừng chi phí.</li>
+<li>Không nhất thiết. ID, thời gian, số đo và thứ tự kết quả thường khác. Hãy so cấu trúc output và tiêu chí đạt của từng bước, không so từng ký tự.</li>
+<li><code>aws sts get-caller-identity --profile aws-lab</code> để xem account và identity, và kiểm tra Region bằng <code>aws configure get region --profile aws-lab</code> hoặc truyền <code>--region</code> rõ ràng. Bài 01 giải thích thêm về thứ tự ưu tiên cấu hình.</li>
+<li>Không. Bài 10 chỉ cần một API từ bài 05, 08 hoặc 09.</li>
+</ol>
+</details>
+
+<hr>
+<h2 id="tiếp-theo"><a class="anchor" href="#tiếp-theo">Tiếp theo</a></h2>
+<p>Bài 01 bắt đầu từ câu hỏi nền tảng nhất: khi bạn gõ một lệnh AWS, lệnh đó đi đâu, chạy trong account nào, ở Region nào, và bằng identity nào? Bạn sẽ cài AWS CLI v2, tạo profile <code>aws-lab</code> và làm lab chỉ đọc đầu tiên mà không tạo tài nguyên tính phí nào.</p>
+<p>👉 <a href="01-foundations.html">Bài 01 — Nền tảng AWS: Region, Availability Zone và AWS CLI</a></p>
+
+<footer>Sinh tự động từ <code>notes/00-introduction.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

@@ -4,6 +4,7 @@ import path from 'node:path';
 
 const root = process.argv[2] ?? path.resolve(import.meta.dirname, '..');
 const docs = [
+  { src: 'notes/00-introduction.md', nav: '00. Mở đầu' },
   { src: 'notes/01-foundations.md', nav: '01. Lý thuyết' },
   { src: 'labs/01-foundations/README.md', nav: '01. Lab' },
   { src: 'notes/02-identity-and-access.md', nav: '02. Lý thuyết' },
@@ -47,16 +48,13 @@ const CSS = `
 :root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
 @media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
 *{box-sizing:border-box}
-html{scroll-behavior:smooth;scroll-padding-top:72px}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
-header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
-header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-header.top .brand{font-weight:650;margin-right:12px}
-header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
-header.top a:hover{color:var(--fg);background:var(--code-bg)}
-header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+a.back{display:inline-flex;align-items:center;gap:6px;margin-bottom:16px;padding:4px 12px;border:1px solid var(--line);border-radius:999px;color:var(--muted);text-decoration:none;font-size:14px}
+a.back:hover{color:var(--fg);background:var(--code-bg)}
+main > a.back{display:none}
 .layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
-aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc{position:sticky;top:24px;align-self:start;max-height:calc(100vh - 48px);overflow:auto;font-size:14px}
 aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
 aside.toc ol{list-style:none;margin:0;padding:0}
 aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
@@ -91,8 +89,8 @@ ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
 details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
 details summary{cursor:pointer;font-weight:600}
 footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
-@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
-@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}main > a.back{display:inline-flex}}
+@media print{a.back,aside.toc,.code button{display:none}.layout{display:block}}
 `;
 
 const JS = `
@@ -150,7 +148,8 @@ for (const doc of docs) {
   const title = (md.match(/^# (.+)$/m) || [, doc.nav])[1];
   const out = htmlPath(doc.src);
   const rel = (target) => path.relative(path.dirname(out), htmlPath(target)) || path.basename(out);
-  const nav = docs.map((d) => `<a href="${rel(d.src)}"${d === doc ? ' class="active"' : ''}>${d.nav}</a>`).join('');
+  // Trang mở đầu là trang chủ; mọi trang khác chỉ có một nút quay về đó
+  const back = doc === docs[0] ? '' : `<a class="back" href="${rel(docs[0].src)}">← Mở đầu</a>`;
   const html = `<!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -160,10 +159,10 @@ for (const doc of docs) {
 <style>${CSS}</style>
 </head>
 <body>
-<header class="top"><nav><span class="brand">AWS Engineering Lab</span>${nav}</nav></header>
 <div class="layout">
-<aside class="toc"><div class="label">Mục lục</div><ol>${toc.map((t) => `<li><a href="#${esc(t.id)}">${t.label}</a></li>`).join('')}</ol></aside>
+<aside class="toc">${back}<div class="label">Mục lục</div><ol>${toc.map((t) => `<li><a href="#${esc(t.id)}">${t.label}</a></li>`).join('')}</ol></aside>
 <main>
+${back}
 ${body}
 <footer>Sinh tự động từ <code>${doc.src}</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
 </main>
