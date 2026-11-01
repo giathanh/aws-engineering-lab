@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bài 01 — Nền tảng AWS: Region, Availability Zone và AWS CLI</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="01-foundations.html" class="active">01. Lý thuyết</a><a href="../labs/01-foundations/README.html">01. Lab</a><a href="02-identity-and-access.html">02. Lý thuyết</a><a href="../labs/02-identity-and-access/README.html">02. Lab</a><a href="03-cost-management.html">03. Lý thuyết</a><a href="../labs/03-cost-management/README.html">03. Lab</a><a href="04-networking.html">04. Lý thuyết</a><a href="../labs/04-networking/README.html">04. Lab</a><a href="05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../labs/05-compute-and-load-balancing/README.html">05. Lab</a><a href="06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../labs/06-storage-and-content-delivery/README.html">06. Lab</a><a href="07-databases-and-cache.html">07. Lý thuyết</a><a href="../labs/07-databases-and-cache/README.html">07. Lab</a><a href="08-containers.html">08. Lý thuyết</a><a href="../labs/08-containers/README.html">08. Lab</a><a href="09-serverless.html">09. Lý thuyết</a><a href="../labs/09-serverless/README.html">09. Lab</a><a href="10-observability-and-application-security.html">10. Lý thuyết</a><a href="../labs/10-observability-and-application-security/README.html">10. Lab</a><a href="11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../labs/11-messaging-and-workflows/README.html">11. Lab</a><a href="12-iac-and-cicd.html">12. Lý thuyết</a><a href="../labs/12-iac-and-cicd/README.html">12. Lab</a><a href="13-reliability-and-performance.html">13. Lý thuyết</a><a href="../labs/13-reliability-and-performance/README.html">13. Lab</a><a href="14-architecture-and-governance.html">14. Lý thuyết</a><a href="../labs/14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#mục-tiêu">Mục tiêu</a></li><li><a href="#phần-1--mô-hình-aws-15-phút">Phần 1 — Mô hình AWS (15 phút)</a></li><li><a href="#phần-2--hạ-tầng-toàn-cầu-30-phút">Phần 2 — Hạ tầng toàn cầu (30 phút)</a></li><li><a href="#phần-3--phạm-vi-tài-nguyên-và-chọn-region-25-phút">Phần 3 — Phạm vi tài nguyên và chọn Region (25 phút)</a></li><li><a href="#phần-4--chuẩn-bị-truy-cập-20-phút">Phần 4 — Chuẩn bị truy cập (20 phút)</a></li><li><a href="#phần-5--aws-cli-v2-và-cấu-hình-35-phút">Phần 5 — AWS CLI v2 và cấu hình (35 phút)</a></li><li><a href="#phần-6--lab-chỉ-đọc-45-phút">Phần 6 — Lab chỉ đọc (45 phút)</a></li><li><a href="#phần-7--troubleshooting-và-tổng-kết-25-phút">Phần 7 — Troubleshooting và tổng kết (25 phút)</a></li><li><a href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></li><li><a href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></li><li><a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></li><li><a href="#đáp-án-gợi-ý">Đáp án gợi ý</a></li></ol></aside>
+<main>
+<h1 id="bài-01--nền-tảng-aws-region-availability-zone-và-aws-cli"><a class="anchor" href="#bài-01--nền-tảng-aws-region-availability-zone-và-aws-cli">Bài 01 — Nền tảng AWS: Region, Availability Zone và AWS CLI</a></h1>
+<blockquote>
+<p><strong>Đối tượng:</strong> developer có kinh nghiệm nhưng mới học AWS.
+<strong>Thời lượng:</strong> khoảng 3–4 giờ, chia hai buổi. Buổi 1 gồm phần 1–4 (lý thuyết). Buổi 2 gồm phần 5–7 và <a href="../labs/01-foundations/README.html">lab chỉ đọc</a>.
+<strong>Kế hoạch gốc:</strong> <a href="../plans/01-aws-foundations.md">plans/01-aws-foundations.md</a>
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Xem <a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a> ở cuối bài.</p>
+</blockquote>
+<h2 id="mục-tiêu"><a class="anchor" href="#mục-tiêu">Mục tiêu</a></h2>
+<p>Sau bài này, bạn có thể:</p>
+<ol>
+<li>Giải thích quan hệ AWS account → Region → Availability Zone, và vì sao account không phải một địa điểm vật lý.</li>
+<li>Phân biệt Region, AZ, data center và edge location.</li>
+<li>Phân biệt tài nguyên global, regional và zonal.</li>
+<li>Chọn Region dựa trên tiêu chí rõ ràng.</li>
+<li>Phân biệt high availability (nhiều AZ) với disaster recovery (nhiều Region).</li>
+<li>Cài AWS CLI v2, cấu hình named profile và đăng nhập bằng temporary credentials.</li>
+<li>Biết chắc account, identity và Region trước khi chạy lệnh.</li>
+<li>Dùng CLI đọc danh sách Region/AZ, lọc kết quả và xử lý lỗi cấu hình phổ biến.</li>
+</ol>
+<hr>
+<h2 id="phần-1--mô-hình-aws-15-phút"><a class="anchor" href="#phần-1--mô-hình-aws-15-phút">Phần 1 — Mô hình AWS (15 phút)</a></h2>
+<h3 id="cloud-nhìn-từ-góc-độ-developer"><a class="anchor" href="#cloud-nhìn-từ-góc-độ-developer">Cloud nhìn từ góc độ developer</a></h3>
+<p>Có thể coi AWS là <strong>một tập hợp lớn các API</strong>. Tạo máy ảo, đọc danh sách Region hay xóa bucket đều là một HTTP request có ký (signed) gửi tới endpoint của một dịch vụ. Ba đặc điểm cần nhớ:</p>
+<ul>
+<li><strong>Truy cập qua API:</strong> mọi thao tác đều đi qua API, có xác thực và phân quyền.</li>
+<li><strong>Cấp phát theo nhu cầu:</strong> bạn tạo tài nguyên khi cần và xóa khi xong, không phải mua phần cứng.</li>
+<li><strong>Trả tiền theo mức dùng:</strong> chi phí phụ thuộc vào loại tài nguyên, thời gian dùng, dung lượng và lưu lượng. Đây là lý do phải dọn dẹp sau mỗi lab.</li>
+</ul>
+<h3 id="aws-account"><a class="anchor" href="#aws-account">AWS account</a></h3>
+<p><strong>AWS account</strong> là ranh giới về sở hữu, thanh toán và bảo mật. Tài nguyên thuộc về một account, hóa đơn tính theo account, và quyền truy cập được cấp trong phạm vi account. Account được định danh bằng một <strong>account ID</strong> gồm 12 chữ số.</p>
+<p>Account <strong>không phải một địa điểm</strong>. Một account có thể chứa tài nguyên ở nhiều Region. Khi hỏi &quot;tài nguyên X nằm ở đâu&quot;, cần trả lời hai ý: <em>account nào</em> và <em>Region nào</em> (với tài nguyên zonal thì thêm <em>AZ nào</em>).</p>
+<h3 id="console-cli-sdk-cùng-gọi-một-api"><a class="anchor" href="#console-cli-sdk-cùng-gọi-một-api">Console, CLI, SDK: cùng gọi một API</a></h3>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code> ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
+ │ AWS Console  │   │   AWS CLI    │   │  AWS SDK     │
+ │ (web UI)     │   │ (terminal)   │   │ (code)       │
+ └──────┬───────┘   └──────┬───────┘   └──────┬───────┘
+        │   HTTPS request có ký bằng credentials  │
+        └──────────────────┼──────────────────────┘
+                           ▼
+            Endpoint dịch vụ theo Region
+            vd: ec2.&lt;region&gt;.amazonaws.com
+                           ▼
+              Xác thực → Phân quyền (IAM)
+                           ▼
+              Tài nguyên trong account của bạn</code></pre></div>
+<ul>
+<li><strong>Console</strong> phù hợp để khám phá và xem trực quan. Region được chọn ở góc trên bên phải.</li>
+<li><strong>CLI</strong> phù hợp để thao tác lặp lại, viết script và ghi lại chính xác những gì đã làm. Bài này tập trung vào CLI.</li>
+<li><strong>SDK</strong> dùng khi ứng dụng của bạn gọi AWS (Python/boto3, JavaScript, Go, Java…).</li>
+</ul>
+<p>Vì cả ba gọi cùng một API, một lỗi <code>AccessDenied</code> trên CLI cũng xảy ra trên Console nếu dùng cùng identity và cùng thao tác.</p>
+<h3 id="shared-responsibility-model"><a class="anchor" href="#shared-responsibility-model">Shared Responsibility Model</a></h3>
+<p>AWS và khách hàng chia nhau trách nhiệm bảo mật:</p>
+<ul>
+<li><strong>AWS chịu trách nhiệm &quot;security <em>of</em> the cloud&quot;:</strong> data center vật lý, phần cứng, mạng toàn cầu, lớp ảo hóa.</li>
+<li><strong>Khách hàng chịu trách nhiệm &quot;security <em>in</em> the cloud&quot;:</strong> ai được quyền làm gì (IAM), cấu hình tài nguyên, dữ liệu, mã hóa, vá hệ điều hành nếu tự quản lý máy ảo.</li>
+</ul>
+<p>Ví dụ: AWS bảo đảm không ai lấy được ổ cứng trong data center. Nhưng nếu bạn commit access key lên GitHub công khai, đó là trách nhiệm của bạn. Ranh giới này thay đổi tùy dịch vụ: dịch vụ càng được quản lý sẵn (managed) thì phần của khách hàng càng ít.</p>
+<blockquote>
+<p><strong>Tự kiểm tra:</strong> Hãy mô tả điều gì xảy ra khi bạn chạy <code>aws ec2 describe-regions</code>, theo luồng CLI → API → kết quả.</p>
+</blockquote>
+<hr>
+<h2 id="phần-2--hạ-tầng-toàn-cầu-30-phút"><a class="anchor" href="#phần-2--hạ-tầng-toàn-cầu-30-phút">Phần 2 — Hạ tầng toàn cầu (30 phút)</a></h2>
+<h3 id="các-khái-niệm"><a class="anchor" href="#các-khái-niệm">Các khái niệm</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Khái niệm</th>
+<th>Là gì</th>
+<th>Ví dụ định danh</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Region</strong></td>
+<td>Một khu vực địa lý, gồm nhiều AZ cách ly với nhau. Mỗi Region độc lập với các Region khác.</td>
+<td><code>ap-southeast-1</code>, <code>us-east-1</code></td>
+</tr>
+<tr>
+<td><strong>Availability Zone (AZ)</strong></td>
+<td>Một hoặc nhiều data center trong Region, có nguồn điện, làm mát và mạng dự phòng riêng. Các AZ trong cùng Region nối với nhau bằng mạng độ trễ thấp.</td>
+<td>Tên: <code>ap-southeast-1a</code> · ID: <code>apse1-az1</code></td>
+</tr>
+<tr>
+<td><strong>Data center</strong></td>
+<td>Tòa nhà vật lý chứa máy chủ. AWS không cho bạn chọn data center.</td>
+<td>Không có định danh công khai</td>
+</tr>
+<tr>
+<td><strong>Edge location</strong></td>
+<td>Điểm hiện diện (PoP) gần người dùng, phục vụ CloudFront (CDN), Route 53 (DNS)… Không phải nơi bạn chạy máy ảo thông thường.</td>
+<td>Không chọn khi tạo VPC/EC2</td>
+</tr>
+</tbody></table>
+</div>
+<p>Một AZ <strong>có thể gồm nhiều data center</strong>. AZ là một đơn vị logic về khả năng chịu lỗi, không phải một tòa nhà. AWS nhóm các data center chia sẻ rủi ro tương tự vào cùng một AZ, và tách các AZ đủ xa nhau để một sự cố cục bộ (mất điện, cháy, lũ) khó ảnh hưởng tới nhiều AZ cùng lúc.</p>
+<blockquote>
+<p>AWS còn có Local Zones, Wavelength Zones và Outposts. Đây là các mở rộng của Region, nằm ngoài phạm vi bài này. Bạn sẽ thấy tên của chúng khi lọc kết quả ở lab.</p>
+</blockquote>
+<h3 id="sơ-đồ"><a class="anchor" href="#sơ-đồ">Sơ đồ</a></h3>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>AWS account 111122223333 (ranh giới sở hữu / thanh toán / quyền)
+│
+├── Region ap-southeast-1 ─────────────────────────────────────┐
+│   ├── AZ apse1-az1  [DC] [DC]                                │
+│   ├── AZ apse1-az2  [DC]          ← mạng riêng độ trễ thấp → │
+│   └── AZ apse1-az3  [DC] [DC]                                │
+│                                                              │
+├── Region us-east-1 (độc lập, có tập AZ riêng) ───────────────┘
+│   └── ...
+│
+└── Tài nguyên global (vd: IAM) — không thuộc Region nào
+
+Edge locations: rải khắp thế giới, phục vụ CDN/DNS, tách biệt với AZ.</code></pre></div>
+<p><em>Số AZ trong sơ đồ chỉ để minh họa. Số Region và số AZ thay đổi theo thời gian, nên hãy tra cứu bằng CLI hoặc tài liệu khi cần.</em></p>
+<h3 id="ranh-giới-lỗi-failure-domain"><a class="anchor" href="#ranh-giới-lỗi-failure-domain">Ranh giới lỗi (failure domain)</a></h3>
+<p>Hiểu đúng ranh giới lỗi giúp bạn thiết kế đúng:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Sự cố</th>
+<th>Ảnh hưởng</th>
+<th>Cách giảm thiểu</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Một máy chủ hỏng</td>
+<td>Một instance</td>
+<td>Chạy nhiều instance</td>
+</tr>
+<tr>
+<td>Một AZ gặp sự cố</td>
+<td>Mọi thứ trong AZ đó</td>
+<td>Triển khai qua <strong>nhiều AZ</strong> (high availability)</td>
+</tr>
+<tr>
+<td>Cả Region gặp sự cố (hiếm)</td>
+<td>Mọi thứ trong Region</td>
+<td><strong>Disaster recovery</strong> sang Region khác</td>
+</tr>
+</tbody></table>
+</div>
+<p><strong>High availability (HA)</strong> là khả năng hệ thống tiếp tục phục vụ khi một thành phần hoặc một AZ hỏng. Cách làm thường gặp là chạy nhiều bản sao ở nhiều AZ, có load balancer và cơ sở dữ liệu nhân bản.</p>
+<p><strong>Disaster recovery (DR)</strong> là khả năng khôi phục sau sự cố lớn, thường là sao lưu hoặc nhân bản sang Region khác. DR được đo bằng RPO (chấp nhận mất bao nhiêu dữ liệu) và RTO (chấp nhận gián đoạn bao lâu).</p>
+<p>Hai hiểu lầm thường gặp:</p>
+<ul>
+<li><em>&quot;Region có nhiều AZ nên ứng dụng tự động HA.&quot;</em> <strong>Sai.</strong> Nếu bạn chỉ chạy một instance ở một AZ, sự cố của AZ đó sẽ làm ứng dụng ngừng hoạt động. Bạn phải chủ động triển khai và cấu hình qua nhiều AZ.</li>
+<li><em>&quot;Hệ thống nghiêm túc nào cũng phải multi-Region.&quot;</em> <strong>Không nhất thiết.</strong> Multi-Region làm tăng chi phí, độ phức tạp, và gây khó khăn cho tính nhất quán dữ liệu. Nhiều hệ thống chỉ cần multi-AZ cộng với sao lưu sang Region khác. Quyết định nên dựa trên RPO/RTO và yêu cầu kinh doanh.</li>
+</ul>
+<blockquote>
+<p><strong>Tự kiểm tra:</strong> Hai instance chạy cùng một AZ có bảo vệ được ứng dụng khi toàn bộ AZ đó gặp sự cố không?</p>
+</blockquote>
+<hr>
+<h2 id="phần-3--phạm-vi-tài-nguyên-và-chọn-region-25-phút"><a class="anchor" href="#phần-3--phạm-vi-tài-nguyên-và-chọn-region-25-phút">Phần 3 — Phạm vi tài nguyên và chọn Region (25 phút)</a></h2>
+<h3 id="global-regional-zonal"><a class="anchor" href="#global-regional-zonal">Global, regional, zonal</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Phạm vi</th>
+<th>Ý nghĩa</th>
+<th>Ví dụ minh họa</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Global</strong></td>
+<td>Không gắn với Region. Thấy và dùng được từ mọi Region.</td>
+<td><strong>IAM</strong> (user, role, policy)</td>
+</tr>
+<tr>
+<td><strong>Regional</strong></td>
+<td>Thuộc một Region, có thể trải qua nhiều AZ trong Region đó.</td>
+<td><strong>VPC</strong> (mạng ảo)</td>
+</tr>
+<tr>
+<td><strong>Zonal</strong></td>
+<td>Thuộc đúng một AZ.</td>
+<td><strong>Subnet</strong> (một dải mạng con nằm trong một AZ)</td>
+</tr>
+</tbody></table>
+</div>
+<p>Lưu ý:</p>
+<ul>
+<li>Bảng trên chỉ minh họa phạm vi. VPC, subnet và IAM sẽ được học chi tiết ở các bài sau.</li>
+<li><strong>Không phải dịch vụ nào cũng có cùng kiểu phạm vi</strong>, và <strong>không phải dịch vụ nào cũng có ở mọi Region</strong>. Hãy kiểm tra trang &quot;AWS Services by Region&quot; trước khi chọn Region.</li>
+<li>Hệ quả thực tế: nếu bạn tạo tài nguyên regional ở <code>ap-southeast-1</code> rồi tìm nó ở <code>us-east-1</code>, bạn sẽ không thấy gì. Đây là nguyên nhân phổ biến nhất của câu hỏi &quot;tài nguyên của tôi đâu rồi?&quot;.</li>
+</ul>
+<h3 id="region-code-az-name-và-az-id"><a class="anchor" href="#region-code-az-name-và-az-id">Region code, AZ name và AZ ID</a></h3>
+<ul>
+<li><strong>Region code</strong> như <code>ap-southeast-1</code> là định danh dùng trong CLI/SDK. Console hiển thị thêm tên dễ đọc như &quot;Asia Pacific (Singapore)&quot;.</li>
+<li><strong>AZ name</strong> như <code>ap-southeast-1a</code> là tên AZ <strong>theo góc nhìn của account bạn</strong>.</li>
+<li><strong>AZ ID</strong> như <code>apse1-az1</code> là định danh <strong>cố định của AZ vật lý</strong>, giống nhau ở mọi account.</li>
+</ul>
+<p>AWS có thể ánh xạ AZ name sang AZ vật lý <strong>khác nhau giữa các account</strong>, để tài nguyên không dồn hết vào AZ &quot;a&quot;. Vì vậy <code>ap-southeast-1a</code> của account A và <code>ap-southeast-1a</code> của account B <strong>chưa chắc là cùng một AZ</strong>. Khi phối hợp giữa nhiều account (ví dụ đặt hai hệ thống cùng AZ để giảm độ trễ), hãy so sánh bằng <strong>AZ ID</strong>.</p>
+<h3 id="chọn-region"><a class="anchor" href="#chọn-region">Chọn Region</a></h3>
+<p>Đừng mặc định chọn Region gần nhất. Hãy cân nhắc các tiêu chí sau:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tiêu chí</th>
+<th>Câu hỏi cần trả lời</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Độ trễ</strong></td>
+<td>Người dùng ở đâu? Đo độ trễ thực tế thay vì chỉ nhìn khoảng cách trên bản đồ.</td>
+</tr>
+<tr>
+<td><strong>Dịch vụ &amp; tính năng</strong></td>
+<td>Region có đủ dịch vụ, loại instance và tính năng bạn cần không?</td>
+</tr>
+<tr>
+<td><strong>Chi phí</strong></td>
+<td>Giá cùng một dịch vụ khác nhau giữa các Region. Hãy dùng AWS Pricing Calculator.</td>
+</tr>
+<tr>
+<td><strong>Dữ liệu &amp; tuân thủ</strong></td>
+<td>Có quy định về nơi lưu dữ liệu (data residency) hoặc yêu cầu pháp lý không?</td>
+</tr>
+<tr>
+<td><strong>Region opt-in</strong></td>
+<td>Một số Region mới phải được bật thủ công trước khi dùng. Bài này <strong>không</strong> bật Region.</td>
+</tr>
+<tr>
+<td><strong>DR</strong></td>
+<td>Nếu cần DR, Region dự phòng nào phù hợp và cách đủ xa?</td>
+</tr>
+</tbody></table>
+</div>
+<p><strong>Tình huống:</strong> Một startup có người dùng chủ yếu ở Việt Nam. Cần kiểm tra:</p>
+<ol>
+<li>Các Region trong khu vực Đông Nam Á/châu Á mà account đang dùng được (<code>describe-regions</code>), và Region nào cần opt-in.</li>
+<li>Độ trễ đo thực tế từ mạng người dùng (Việt Nam) tới từng Region ứng viên.</li>
+<li>Region ứng viên có đủ dịch vụ dự định dùng không.</li>
+<li>Giá của các dịch vụ chính tại từng Region ứng viên.</li>
+<li>Có ràng buộc pháp lý nào về lưu trữ dữ liệu không.</li>
+</ol>
+<p>Không có đáp án cố định. Câu trả lời tốt nêu rõ tiêu chí và đánh đổi, ví dụ: &quot;chọn X vì độ trễ thấp và có đủ dịch vụ, chấp nhận giá cao hơn Y khoảng Z%&quot;.</p>
+<p><strong>Region dùng để học:</strong> nên chọn <strong>một Region cố định</strong> đã được bật sẵn (<code>opt-in-not-required</code>), có đầy đủ dịch vụ phổ biến, rồi dùng thống nhất cho mọi lab. Như vậy bạn sẽ không bị &quot;mất&quot; tài nguyên vì quên Region nào. Trong các bài này, <code>ap-southeast-1</code> chỉ là <strong>ví dụ minh họa</strong>. Hãy thay bằng Region bạn chọn.</p>
+<blockquote>
+<p><strong>Tự kiểm tra:</strong> Vì sao cùng AZ name ở hai account chưa chắc là cùng vị trí vật lý? Khi cần so sánh thì dùng định danh gì?</p>
+</blockquote>
+<hr>
+<h2 id="phần-4--chuẩn-bị-truy-cập-20-phút"><a class="anchor" href="#phần-4--chuẩn-bị-truy-cập-20-phút">Phần 4 — Chuẩn bị truy cập (20 phút)</a></h2>
+<h3 id="nguyên-tắc-an-toàn"><a class="anchor" href="#nguyên-tắc-an-toàn">Nguyên tắc an toàn</a></h3>
+<ul>
+<li><strong>Dùng account lab/sandbox</strong>, không dùng account production để học.</li>
+<li><strong>Không dùng root user</strong> cho công việc hằng ngày. Root có toàn quyền và không thể giới hạn bằng IAM policy. Hãy bật <strong>MFA</strong> cho root, cất thông tin đăng nhập root ở nơi an toàn và chỉ dùng cho những việc bắt buộc phải dùng root.</li>
+<li><strong>Ưu tiên temporary credentials</strong>: credentials tạm thời, tự hết hạn. Tránh tạo long-lived access key (access key ID + secret không hết hạn), vì đây là nguồn rò rỉ phổ biến nhất.</li>
+<li><strong>Quyền tối thiểu:</strong> lab này chỉ cần quyền đọc <code>ec2:DescribeRegions</code> và <code>ec2:DescribeAvailabilityZones</code>. <strong>Không</strong> cần, và không nên xin, <code>AdministratorAccess</code>.</li>
+<li><code>sts:GetCallerIdentity</code> <strong>không cần được cấp quyền</strong>. Tài liệu AWS ghi rõ rằng thao tác này chạy được kể cả khi bị deny tường minh, vì nó chỉ trả lại thông tin về chính identity đang gọi.</li>
+<li><strong>Budget alert không phải trần chi tiêu.</strong> AWS Budgets chỉ cảnh báo khi chi phí vượt ngưỡng, không tự chặn chi tiêu. Phần lớn lệnh đọc trong lab này không phát sinh phí, nhưng <strong>đừng mặc định mọi thao tác trên Console/CLI đều miễn phí</strong>.</li>
+</ul>
+<h3 id="các-con-đường-xác-thực"><a class="anchor" href="#các-con-đường-xác-thực">Các con đường xác thực</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Nhánh</th>
+<th>Khi nào dùng</th>
+<th>Bạn cần có</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>A. IAM Identity Center (khuyến nghị)</strong></td>
+<td>Tổ chức hoặc bạn đã thiết lập IAM Identity Center (trước đây là AWS SSO)</td>
+<td><strong>Start URL</strong> (dạng <code>https://&lt;tên&gt;.awsapps.com/start</code>), <strong>SSO Region</strong> (Region đặt Identity Center), <strong>account ID</strong>, <strong>permission set / role</strong> được gán</td>
+</tr>
+<tr>
+<td><strong>B. Chưa có Identity Center</strong></td>
+<td>Account cá nhân mới tạo, chưa ai thiết lập</td>
+<td>Prerequisite <strong>chưa đáp ứng</strong>. Nhờ quản trị viên cấp quyền, hoặc tự thiết lập Identity Center theo tài liệu chính thức (bước tùy chọn, ngoài phạm vi bài)</td>
+</tr>
+<tr>
+<td><strong>C. Sandbox cấp temporary credentials</strong></td>
+<td>Nền tảng học tập/sandbox cấp sẵn bộ credentials tạm</td>
+<td>Access key ID, secret access key, <strong>session token</strong> và thời hạn, theo hướng dẫn của sandbox</td>
+</tr>
+</tbody></table>
+</div>
+<p>Ghi chú cho nhánh B: từ AWS CLI <strong>2.32.0</strong> có lệnh <code>aws login</code>. Lệnh này dùng thông tin đăng nhập Console để sinh temporary credentials. Identity cần có managed policy <code>SignInLocalDevelopmentAccess</code>. Đây là lựa chọn hợp lệ nếu quản trị viên đã cấp quyền đó cho một IAM user hoặc role phục vụ lab. <strong>Không dùng root để chạy <code>aws login</code></strong> cho việc học.</p>
+<blockquote>
+<p><strong>Tự kiểm tra:</strong> Trước khi làm lab, bạn đang ở nhánh nào? Ai cấp thông tin đăng nhập cho bạn, và bạn đã có đủ Start URL, SSO Region, account, role chưa?</p>
+</blockquote>
+<hr>
+<h2 id="phần-5--aws-cli-v2-và-cấu-hình-35-phút"><a class="anchor" href="#phần-5--aws-cli-v2-và-cấu-hình-35-phút">Phần 5 — AWS CLI v2 và cấu hình (35 phút)</a></h2>
+<h3 id="cài-đặt"><a class="anchor" href="#cài-đặt">Cài đặt</a></h3>
+<p>Chỉ cài từ nguồn chính thức: <a href="https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html" target="_blank" rel="noopener">Installing AWS CLI v2</a>. Trên macOS (bản CLI hiện hành yêu cầu macOS 11 trở lên):</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code># Cài bằng gói .pkg chính thức cho mọi user trên máy
+curl &quot;https://awscli.amazonaws.com/AWSCLIV2.pkg&quot; -o &quot;AWSCLIV2.pkg&quot;
+sudo installer -pkg AWSCLIV2.pkg -target /
+
+# Kiểm tra
+which aws        # thường là /usr/local/bin/aws
+aws --version    # phải bắt đầu bằng aws-cli/2.</code></pre></div>
+<p>Tài liệu cài đặt hiện cũng giới thiệu script <code>install.sh</code> chính thức. Linux và Windows làm theo các mục tương ứng trong cùng trang. Homebrew tiện lợi nhưng không phải kênh phân phối do AWS duy trì.</p>
+<h3 id="file-cấu-hình"><a class="anchor" href="#file-cấu-hình">File cấu hình</a></h3>
+<p>CLI đọc hai file trong thư mục <code>~/.aws/</code>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>File</th>
+<th>Chứa gì</th>
+<th>Ghi chú</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>~/.aws/config</code></td>
+<td>Profile, Region, output, thông tin SSO</td>
+<td>Không chứa secret nếu dùng SSO</td>
+</tr>
+<tr>
+<td><code>~/.aws/credentials</code></td>
+<td>Access key tĩnh (nếu có)</td>
+<td><strong>Nhạy cảm</strong>. Đừng in nội dung, đừng commit</td>
+</tr>
+</tbody></table>
+</div>
+<p>Khi dùng SSO, token và credentials tạm được cache trong <code>~/.aws/sso/cache</code> và <code>~/.aws/cli/cache</code>. Các file cache này cũng nhạy cảm như nhau.</p>
+<p>Có thể đổi vị trí hai file bằng biến môi trường <code>AWS_CONFIG_FILE</code> và <code>AWS_SHARED_CREDENTIALS_FILE</code>.</p>
+<h3 id="named-profile"><a class="anchor" href="#named-profile">Named profile</a></h3>
+<p><strong>Profile</strong> là một bộ cấu hình có tên (identity, Region, output). Thay vì dùng <code>[default]</code>, hãy dùng profile có tên rõ nghĩa như <code>aws-lab</code>, để không vô tình chạy lệnh vào nhầm account.</p>
+<p>Ví dụ <code>~/.aws/config</code> cho nhánh A (giá trị đều là <strong>placeholder</strong>):</p>
+<div class="code"><span class="lang">ini</span><button type="button">Copy</button><pre><code>[profile aws-lab]
+sso_session = lab-sso
+sso_account_id = 111122223333
+sso_role_name = LabReadOnly
+region = ap-southeast-1
+output = json
+
+[sso-session lab-sso]
+sso_start_url = https://my-org.awsapps.com/start
+sso_region = us-east-1
+sso_registration_scopes = sso:account:access</code></pre></div>
+<p>Hai Region ở đây <strong>khác nhau về ý nghĩa</strong>:</p>
+<ul>
+<li><code>sso_region</code> là Region nơi <strong>IAM Identity Center</strong> được thiết lập. CLI chỉ dùng nó để đăng nhập.</li>
+<li><code>region</code> là Region <strong>mặc định cho các lệnh dịch vụ</strong> (EC2, S3…).</li>
+</ul>
+<p>Hai giá trị này khác nhau là <strong>hoàn toàn bình thường</strong>, không phải cấu hình sai.</p>
+<h3 id="region-trên-console--region-của-cli"><a class="anchor" href="#region-trên-console--region-của-cli">Region trên Console ≠ Region của CLI</a></h3>
+<p>Region chọn trên Console được lưu trong trình duyệt. Region của CLI lấy từ cấu hình CLI. <strong>Hai bên không tự đồng bộ.</strong> Bạn có thể đang xem <code>us-east-1</code> trên Console trong khi CLI chạy ở <code>ap-southeast-1</code>. Đây là lý do thường gặp khi &quot;tạo bằng CLI rồi mà không thấy trên Console&quot;.</p>
+<h3 id="thứ-tự-ưu-tiên-precedence"><a class="anchor" href="#thứ-tự-ưu-tiên-precedence">Thứ tự ưu tiên (precedence)</a></h3>
+<p>Theo tài liệu CLI hiện hành, các nguồn cấu hình và credentials được ưu tiên theo thứ tự:</p>
+<ol>
+<li>Tùy chọn dòng lệnh: <code>--region</code>, <code>--output</code>, <code>--profile</code></li>
+<li>Biến môi trường</li>
+<li>Assume role</li>
+<li>Assume role with web identity</li>
+<li>IAM Identity Center</li>
+<li>File credentials</li>
+<li>Custom process</li>
+<li>File config</li>
+<li>Container credentials (ECS task role)</li>
+<li>EC2 instance profile</li>
+</ol>
+<p>Danh sách trên gộp nhiều loại cài đặt khác nhau. Để dễ suy luận, hãy tách thành hai câu hỏi.</p>
+<p><strong>Câu hỏi 1: Region nào được dùng?</strong> Theo thứ tự ưu tiên giảm dần:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Ưu tiên</th>
+<th>Nguồn</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td><code>--region</code> trên dòng lệnh</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Biến môi trường <code>AWS_REGION</code> (ghi đè <code>AWS_DEFAULT_REGION</code>)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Biến môi trường <code>AWS_DEFAULT_REGION</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Cài đặt <code>region</code> trong profile đang dùng (file config)</td>
+</tr>
+</tbody></table>
+</div>
+<p>Output format (<code>--output</code>, <code>AWS_DEFAULT_OUTPUT</code>, <code>output</code> trong profile) cũng theo nguyên tắc: dòng lệnh &gt; biến môi trường &gt; file.</p>
+<p><strong>Câu hỏi 2: Credentials nào được dùng?</strong> CLI duyệt lần lượt các credential provider và dùng nguồn đầu tiên tìm thấy. Biến môi trường (<code>AWS_ACCESS_KEY_ID</code>, <code>AWS_SECRET_ACCESS_KEY</code>, <code>AWS_SESSION_TOKEN</code>) đứng <strong>trước</strong> credentials lấy từ profile, dù profile đó là SSO, file credentials hay file config.</p>
+<p>Một bẫy thường gặp: trong shell còn sót <code>AWS_ACCESS_KEY_ID</code> từ phiên trước, nên lệnh chạy bằng identity khác với profile bạn nghĩ. Tài liệu <strong>không mô tả trực tiếp</strong> mọi tổ hợp (ví dụ cùng lúc có <code>AWS_PROFILE</code> hoặc <code>--profile</code> và access key trong biến môi trường). Vì vậy đừng suy đoán. Hãy:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>env | grep '^AWS_' | sed 's/=.*/=&lt;đã ẩn&gt;/'   # xem biến AWS_* nào đang được đặt, không in giá trị
+aws configure list --profile aws-lab           # xem giá trị hiệu lực và nguồn (Type/Location)
+aws sts get-caller-identity --profile aws-lab  # xác nhận identity thật sự đang dùng</code></pre></div>
+<p>Nếu có biến credentials không mong muốn thì <code>unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN</code>.</p>
+<h3 id="thói-quen-biết-mình-đang-ở-đâu"><a class="anchor" href="#thói-quen-biết-mình-đang-ở-đâu">Thói quen &quot;biết mình đang ở đâu&quot;</a></h3>
+<p>Trước mọi lệnh có thể thay đổi tài nguyên (ở các bài sau), hãy trả lời ba câu hỏi:</p>
+<ol>
+<li><strong>Account nào?</strong> → <code>aws sts get-caller-identity</code> (trường <code>Account</code>)</li>
+<li><strong>Identity nào?</strong> → cũng lệnh đó (trường <code>Arn</code>: user hay role nào)</li>
+<li><strong>Region nào?</strong> → <code>aws configure list</code> hoặc chỉ định tường minh <code>--region</code></li>
+</ol>
+<h3 id="output-help-query"><a class="anchor" href="#output-help-query">Output, help, query</a></h3>
+<ul>
+<li><code>--output json | yaml | text | table</code>: <code>json</code> dễ đọc bằng máy, <code>table</code> dễ đọc bằng mắt, <code>text</code> tiện kết hợp với <code>grep</code>/<code>awk</code>.</li>
+<li><code>aws help</code>, <code>aws ec2 help</code>, <code>aws ec2 describe-regions help</code>: trợ giúp theo từng cấp, hoạt động offline.</li>
+<li><code>--query</code> dùng cú pháp <strong>JMESPath</strong> để <strong>lọc phía client</strong>. CLI vẫn nhận toàn bộ response từ API rồi mới lọc trên máy bạn.</li>
+<li><code>--filters</code> (với các API hỗ trợ, như EC2 <code>describe-*</code>) là <strong>lọc phía server</strong>. API chỉ trả về những gì khớp điều kiện.</li>
+<li><strong>Pager:</strong> mặc định CLI v2 chuyển output dài qua <code>less</code>. Tắt cho một lệnh bằng <code>--no-cli-pager</code>, cho cả phiên bằng <code>export AWS_PAGER=&quot;&quot;</code>, hoặc vĩnh viễn bằng <code>cli_pager=</code> trong profile.</li>
+</ul>
+<hr>
+<h2 id="phần-6--lab-chỉ-đọc-45-phút"><a class="anchor" href="#phần-6--lab-chỉ-đọc-45-phút">Phần 6 — Lab chỉ đọc (45 phút)</a></h2>
+<p>Làm theo <strong><a href="../labs/01-foundations/README.html">labs/01-foundations/README.md</a></strong>. Lab chỉ đọc dữ liệu và quản lý phiên/cấu hình cục bộ, <strong>không tạo tài nguyên dịch vụ</strong>.</p>
+<hr>
+<h2 id="phần-7--troubleshooting-và-tổng-kết-25-phút"><a class="anchor" href="#phần-7--troubleshooting-và-tổng-kết-25-phút">Phần 7 — Troubleshooting và tổng kết (25 phút)</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Triệu chứng</th>
+<th>Chẩn đoán</th>
+<th>Cách xử lý</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>aws: command not found</code></td>
+<td>CLI chưa cài, hoặc thư mục cài không có trong <code>PATH</code></td>
+<td>Cài theo trang chính thức. Kiểm tra <code>which aws</code> và <code>echo $PATH</code>. Mở terminal mới</td>
+</tr>
+<tr>
+<td><code>The config profile (aws-lab) could not be found</code></td>
+<td>Sai tên profile, file config ở chỗ khác, hoặc <code>AWS_PROFILE</code>/<code>AWS_CONFIG_FILE</code> trỏ sai</td>
+<td><code>aws configure list-profiles</code>. Kiểm tra <code>echo $AWS_PROFILE $AWS_CONFIG_FILE</code>. Trong file config, tên phải là <code>[profile aws-lab]</code></td>
+</tr>
+<tr>
+<td><code>Unable to locate credentials</code></td>
+<td>Không provider nào có credentials: chưa login, chưa chọn profile, hoặc profile thiếu thông tin</td>
+<td>Thêm <code>--profile aws-lab</code>. Với SSO thì <code>aws sso login --profile aws-lab</code></td>
+</tr>
+<tr>
+<td>Lỗi token SSO hết hạn / <code>Error when retrieving token from sso</code></td>
+<td>Phiên Identity Center đã hết hạn</td>
+<td><code>aws sso login --profile aws-lab</code> rồi chạy lại</td>
+</tr>
+<tr>
+<td><code>AccessDenied</code> / <code>UnauthorizedOperation</code></td>
+<td>Đã <strong>xác thực</strong> nhưng <strong>không được phép</strong> gọi API này</td>
+<td>Đọc thông báo lỗi để xác định API bị từ chối (ví dụ <code>ec2:DescribeAvailabilityZones</code>). Xin đúng quyền đó. <strong>Không</strong> xử lý bằng cách xin quyền admin</td>
+</tr>
+<tr>
+<td><code>You must specify a region</code></td>
+<td>Không có Region ở cả dòng lệnh, biến môi trường và profile</td>
+<td>Thêm <code>--region</code> hoặc đặt <code>region</code> trong profile</td>
+</tr>
+<tr>
+<td><code>Could not connect to the endpoint URL</code></td>
+<td>Sai mã Region (gõ nhầm), Region chưa enable, hoặc vấn đề mạng/proxy/VPN</td>
+<td>So sánh với danh sách từ <code>describe-regions</code>. Kiểm tra <code>HTTPS_PROXY</code> và mạng</td>
+</tr>
+<tr>
+<td><code>AuthFailure</code> / token không hợp lệ ở một Region</td>
+<td>Region chưa được opt-in cho account</td>
+<td>Dùng Region <code>opt-in-not-required</code>. Lab này không bật Region</td>
+</tr>
+<tr>
+<td>Kết quả từ sai account/identity</td>
+<td>Biến môi trường credentials ghi đè, hoặc dùng nhầm profile</td>
+<td>Chạy <code>env | grep &#39;^AWS_&#39;</code> (ẩn giá trị), <code>aws configure list</code>, <code>aws sts get-caller-identity</code></td>
+</tr>
+<tr>
+<td>Output bị kẹt trong màn hình <code>less</code></td>
+<td>Client-side pager</td>
+<td>Nhấn <code>q</code> để thoát. Dùng <code>--no-cli-pager</code> hoặc <code>AWS_PAGER=&quot;&quot;</code></td>
+</tr>
+</tbody></table>
+</div>
+<h3 id="kết-thúc-phiên"><a class="anchor" href="#kết-thúc-phiên">Kết thúc phiên</a></h3>
+<ul>
+<li>Nhánh A (SSO): <code>aws sso logout</code> xóa token và credentials đã cache.</li>
+<li><code>aws login</code> (nếu dùng): <code>aws logout --profile &lt;tên&gt;</code>.</li>
+<li>Nhánh C (sandbox): <code>unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN</code> và đóng terminal. Làm theo quy trình kết thúc của sandbox.</li>
+</ul>
+<h3 id="cầu-nối-sang-bài-iam"><a class="anchor" href="#cầu-nối-sang-bài-iam">Cầu nối sang bài IAM</a></h3>
+<p>Lỗi <code>UnauthorizedOperation</code> cho thấy hai bước khác nhau:</p>
+<ul>
+<li><strong>Authentication (xác thực):</strong> <em>bạn là ai?</em> <code>sts get-caller-identity</code> thành công nghĩa là AWS đã biết bạn là ai.</li>
+<li><strong>Authorization (phân quyền):</strong> <em>bạn được làm gì?</em> Bước này do IAM policy quyết định, và là chủ đề của bài tiếp theo.</li>
+</ul>
+<p>Xác thực thành công <strong>không có nghĩa</strong> là được phép làm mọi thứ.</p>
+<hr>
+<h2 id="câu-hỏi-tự-kiểm-tra"><a class="anchor" href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></h2>
+<ol>
+<li>Một Region và một AZ khác nhau ở ranh giới lỗi nào?</li>
+<li>Hai instance cùng một AZ có bảo vệ được trước sự cố toàn AZ không?</li>
+<li>Vì sao đổi Region trên Console không làm CLI đổi Region?</li>
+<li>Vì sao cùng AZ name ở hai account chưa chắc là cùng vị trí vật lý?</li>
+<li>Với người dùng chủ yếu ở Việt Nam, cần kiểm tra gì trước khi chọn Region?</li>
+<li>Khi SSO Region khác Region triển khai, có phải cấu hình sai không?</li>
+<li>Làm thế nào biết lệnh sắp chạy đang dùng account, identity và Region nào?</li>
+<li>Nếu không thấy tài nguyên mong đợi, cần kiểm tra account, Region, quyền và bộ lọc theo cách nào?</li>
+</ol>
+<p><strong>Bài tập cuối:</strong> viết một ghi chú ngắn gồm Region đã chọn và lý do, sơ đồ account/Region/AZ, lệnh kiểm tra identity, bảng AZ đã ẩn thông tin định danh, và một lỗi bạn đã tự chẩn đoán. Mẫu ghi chú có trong <a href="../labs/01-foundations/README.html#bước-9--kết-thúc-phiên-và-ghi-lại-kết-quả">lab</a>.</p>
+<p>Đáp án gợi ý nằm ở cuối bài. Hãy tự trả lời trước khi xem.</p>
+<hr>
+<h2 id="tài-liệu-tham-khảo-chính-thức"><a class="anchor" href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></h2>
+<ul>
+<li><a href="https://docs.aws.amazon.com/global-infrastructure/latest/regions/aws-regions.html" target="_blank" rel="noopener">AWS Regions</a></li>
+<li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html" target="_blank" rel="noopener">Regions and Availability Zones — Amazon EC2</a></li>
+<li><a href="https://aws.amazon.com/compliance/shared-responsibility-model/" target="_blank" rel="noopener">Shared Responsibility Model</a></li>
+<li><a href="https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html" target="_blank" rel="noopener">Installing AWS CLI v2</a></li>
+<li><a href="https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html" target="_blank" rel="noopener">Setting up the AWS CLI</a></li>
+<li><a href="https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sso.html" target="_blank" rel="noopener">Configuring IAM Identity Center for the CLI</a></li>
+<li><a href="https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sign-in.html" target="_blank" rel="noopener">Login with console credentials (<code>aws login</code>)</a></li>
+<li><a href="https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html" target="_blank" rel="noopener">Configuration and credential precedence</a></li>
+<li><a href="https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html" target="_blank" rel="noopener">Environment variables</a></li>
+<li><a href="https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html" target="_blank" rel="noopener">Configuration and credential files</a></li>
+<li><a href="https://docs.aws.amazon.com/cli/latest/userguide/cli-usage-pagination.html" target="_blank" rel="noopener">Pagination &amp; client-side pager</a></li>
+<li>CLI reference: <a href="https://docs.aws.amazon.com/cli/latest/reference/sts/get-caller-identity.html" target="_blank" rel="noopener">get-caller-identity</a> · <a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-regions.html" target="_blank" rel="noopener">describe-regions</a> · <a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-availability-zones.html" target="_blank" rel="noopener">describe-availability-zones</a></li>
+</ul>
+<h2 id="trạng-thái-kiểm-chứng"><a class="anchor" href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></h2>
+<ul>
+<li><strong>Đã đối chiếu với tài liệu AWS ngày 2026-10-31:</strong> thứ tự precedence, quan hệ <code>AWS_REGION</code>/<code>AWS_DEFAULT_REGION</code>, luồng và file cấu hình <code>aws configure sso</code> (PKCE mặc định từ CLI 2.22.0), <code>aws login</code> (từ 2.32.0), ghi chú quyền của <code>get-caller-identity</code>, hành vi mặc định và filter của <code>describe-regions</code>/<code>describe-availability-zones</code>, cách tắt pager, lệnh cài đặt trên macOS.</li>
+<li><strong>Chưa kiểm thử thực tế:</strong> chưa chạy lệnh nào trên AWS account thật. Mọi output trong bài và lab là <strong>minh họa</strong>, đã thay định danh bằng placeholder.</li>
+<li><strong>Suy luận, không phải trích dẫn tài liệu:</strong> hành vi khi đồng thời có <code>--profile</code>/<code>AWS_PROFILE</code> và access key trong biến môi trường. Bài khuyên kiểm tra bằng <code>configure list</code> và <code>get-caller-identity</code> thay vì dựa vào suy luận này.</li>
+</ul>
+<hr>
+<h2 id="đáp-án-gợi-ý"><a class="anchor" href="#đáp-án-gợi-ý">Đáp án gợi ý</a></h2>
+<details>
+<summary>Mở để xem đáp án</summary>
+
+<ol>
+<li><strong>Region và AZ:</strong> AZ là ranh giới lỗi <em>bên trong</em> một Region. Các AZ có điện, làm mát và mạng độc lập, nên sự cố cục bộ thường chỉ ảnh hưởng một AZ. Region là ranh giới lớn hơn và độc lập với các Region khác, nên sự cố hoặc thay đổi ở một Region không lan sang Region khác. Thiết kế multi-AZ chống được sự cố AZ. Muốn chống sự cố cả Region thì cần chiến lược DR qua Region khác.</li>
+<li><strong>Không.</strong> Cả hai instance chung một failure domain. Cần đặt ít nhất ở hai AZ khác nhau, và có cơ chế phân phối traffic/failover.</li>
+<li>Region trên Console là trạng thái giao diện lưu trong trình duyệt. CLI lấy Region từ <code>--region</code>, biến môi trường hoặc profile. Hai bên không chia sẻ cấu hình.</li>
+<li>AWS ánh xạ AZ name sang AZ vật lý độc lập cho từng account. Để so sánh giữa các account, hãy dùng <strong>AZ ID</strong> (ví dụ <code>apse1-az1</code>).</li>
+<li>Độ trễ đo thực tế từ người dùng, dịch vụ/tính năng có sẵn, giá, yêu cầu pháp lý về dữ liệu, trạng thái opt-in, và Region dự phòng nếu cần DR. Câu trả lời cần nêu đánh đổi, không chỉ nêu tên Region.</li>
+<li><strong>Không.</strong> <code>sso_region</code> là nơi đặt IAM Identity Center và chỉ dùng để đăng nhập. <code>region</code> là nơi gửi lệnh dịch vụ. Hai giá trị khác nhau là bình thường.</li>
+<li><code>aws sts get-caller-identity --profile &lt;p&gt;</code> cho biết account và identity (ARN). <code>aws configure list --profile &lt;p&gt;</code> cho biết Region hiệu lực và nguồn của nó. Ngoài ra nên kiểm tra biến <code>AWS_*</code> trong shell, và với lệnh quan trọng thì truyền <code>--profile</code>/<code>--region</code> tường minh.</li>
+<li>Theo thứ tự: (a) <strong>account/identity</strong>: <code>get-caller-identity</code>; (b) <strong>Region</strong>: tài nguyên regional/zonal chỉ hiện ở Region của nó, nên chạy lại với <code>--region</code> đúng; (c) <strong>quyền</strong>: có lỗi <code>AccessDenied</code> không, hay identity chỉ thấy một phần; (d) <strong>bộ lọc</strong>: bỏ <code>--filters</code>/<code>--query</code> để xem dữ liệu gốc, kiểm tra tên filter (phân biệt hoa thường). Trên Console thì kiểm tra Region đang chọn ở góc trên.</li>
+</ol>
+<p><strong>Bài tập cuối (khung gợi ý):</strong> Region đã chọn kèm 2–3 lý do theo bảng tiêu chí; sơ đồ dạng <code>account (ẩn) → &lt;region&gt; → &lt;AZ ID 1&gt;, &lt;AZ ID 2&gt;, …</code>; lệnh <code>aws sts get-caller-identity --profile aws-lab</code> với output đã ẩn; bảng ZoneName/ZoneId/State; một lỗi được mô tả theo cấu trúc <em>triệu chứng → giả thuyết → lệnh kiểm tra → nguyên nhân → cách sửa</em>.</p>
+</details>
+
+<footer>Sinh tự động từ <code>notes/01-foundations.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

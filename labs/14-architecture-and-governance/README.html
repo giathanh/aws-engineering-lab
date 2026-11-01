@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab 14 — Kiến trúc và quản trị: thiết kế multi-account, SCP có test matrix, đánh giá Control Tower, WAF count → block, review sáu trụ cột và ADR</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="../../notes/01-foundations.html">01. Lý thuyết</a><a href="../01-foundations/README.html">01. Lab</a><a href="../../notes/02-identity-and-access.html">02. Lý thuyết</a><a href="../02-identity-and-access/README.html">02. Lab</a><a href="../../notes/03-cost-management.html">03. Lý thuyết</a><a href="../03-cost-management/README.html">03. Lab</a><a href="../../notes/04-networking.html">04. Lý thuyết</a><a href="../04-networking/README.html">04. Lab</a><a href="../../notes/05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../05-compute-and-load-balancing/README.html">05. Lab</a><a href="../../notes/06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../06-storage-and-content-delivery/README.html">06. Lab</a><a href="../../notes/07-databases-and-cache.html">07. Lý thuyết</a><a href="../07-databases-and-cache/README.html">07. Lab</a><a href="../../notes/08-containers.html">08. Lý thuyết</a><a href="../08-containers/README.html">08. Lab</a><a href="../../notes/09-serverless.html">09. Lý thuyết</a><a href="../09-serverless/README.html">09. Lab</a><a href="../../notes/10-observability-and-application-security.html">10. Lý thuyết</a><a href="../10-observability-and-application-security/README.html">10. Lab</a><a href="../../notes/11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../11-messaging-and-workflows/README.html">11. Lab</a><a href="../../notes/12-iac-and-cicd.html">12. Lý thuyết</a><a href="../12-iac-and-cicd/README.html">12. Lab</a><a href="../../notes/13-reliability-and-performance.html">13. Lý thuyết</a><a href="../13-reliability-and-performance/README.html">13. Lab</a><a href="../../notes/14-architecture-and-governance.html">14. Lý thuyết</a><a href="README.html" class="active">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></li><li><a href="#quy-ước-placeholder">Quy ước placeholder</a></li><li><a href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></li><li><a href="#sơ-đồ-kiến-trúc-lab-14">Sơ đồ kiến trúc Lab 14</a></li><li><a href="#bước-0--biến-và-thư-mục-bàn-giao">Bước 0 — Biến và thư mục bàn giao</a></li><li><a href="#bước-1--thiết-kế-multi-account-trên-giấy">Bước 1 — Thiết kế multi-account trên giấy</a></li><li><a href="#bước-2--scp-mẫu-validate-và-test-matrix">Bước 2 — SCP mẫu, validate và test matrix</a></li><li><a href="#bước-3--đánh-giá-control-tower-từ-tài-liệu">Bước 3 — Đánh giá Control Tower từ tài liệu</a></li><li><a href="#nhánh-tùy-chọn-waf-bước-48">Nhánh tùy chọn WAF (Bước 4–8)</a></li><li><a href="#bước-4--fixture-vpc-tối-thiểu-và-alb-fixed-response">Bước 4 — Fixture: VPC tối thiểu và ALB fixed-response</a></li><li><a href="#bước-5--web-acl-ở-chế-độ-count-bật-logging-associate">Bước 5 — Web ACL ở chế độ count, bật logging, associate</a></li><li><a href="#bước-6--traffic-giả-lập-ở-chế-độ-count-và-đo-false-positive">Bước 6 — Traffic giả lập ở chế độ count và đo false positive</a></li><li><a href="#bước-7--block-nguyên-bản-để-thấy-false-positive-rồi-tinh-chỉnh">Bước 7 — Block &quot;nguyên bản&quot; để thấy false positive, rồi tinh chỉnh</a></li><li><a href="#bước-8--waf-không-phải-authentication">Bước 8 — WAF không phải authentication</a></li><li><a href="#bước-9--review-sáu-trụ-cột-cho-hệ-thống-đơn-hàng">Bước 9 — Review sáu trụ cột cho hệ thống đơn hàng</a></li><li><a href="#bước-10--ba-adr">Bước 10 — Ba ADR</a></li><li><a href="#bước-11--dọn-dẹp-nhánh-waf-theo-dependency">Bước 11 — Dọn dẹp nhánh WAF (theo dependency)</a></li><li><a href="#checklist-hoàn-thành">Checklist hoàn thành</a></li><li><a href="#troubleshooting-nhanh">Troubleshooting nhanh</a></li><li><a href="#tiếp-theo">Tiếp theo</a></li></ol></aside>
+<main>
+<h1 id="lab-14--kiến-trúc-và-quản-trị-thiết-kế-multi-account-scp-có-test-matrix-đánh-giá-control-tower-waf-count--block-review-sáu-trụ-cột-và-adr"><a class="anchor" href="#lab-14--kiến-trúc-và-quản-trị-thiết-kế-multi-account-scp-có-test-matrix-đánh-giá-control-tower-waf-count--block-review-sáu-trụ-cột-và-adr">Lab 14 — Kiến trúc và quản trị: thiết kế multi-account, SCP có test matrix, đánh giá Control Tower, WAF count → block, review sáu trụ cột và ADR</a></h1>
+<blockquote>
+<p><strong>Lý thuyết:</strong> <a href="../../notes/14-architecture-and-governance.html">notes/14-architecture-and-governance.md</a>. Đọc phần 1–5 trước khi thực hiện lab.
+<strong>Thời lượng:</strong> khoảng 4–5 giờ. Phần thiết kế (Bước 1–3, 9–10) mất 2,5–3 giờ. Nhánh WAF tùy chọn (Bước 4–8) mất 60–90 phút.
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Mọi output là <strong>minh họa</strong>: lab chưa chạy trên account thật. Riêng JSON của SCP và rule WAF đã được kiểm tra cú pháp cục bộ bằng <code>jq</code>. Kết quả của IAM policy simulator và AWS WAF phải được bạn tự đo và ghi lại.</p>
+</blockquote>
+<hr>
+<h2 id="lab-này-làm-gì-và-không-làm-gì"><a class="anchor" href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>✅ Có</th>
+<th>❌ Không</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Thiết kế <strong>trên giấy</strong> cho multi-account: OU, account, owner, ai được vào và bằng đường nào, break-glass</td>
+<td>Bật Organizations, tạo account, đổi root OU hay billing thật</td>
+</tr>
+<tr>
+<td>Viết hai SCP mẫu, kiểm tra bằng IAM Access Analyzer <code>validate-policy</code></td>
+<td><strong>Attach</strong> SCP vào organization thật</td>
+</tr>
+<tr>
+<td>Chạy test matrix allowed/denied bằng IAM policy simulator, mô phỏng SCP bằng permissions boundary (có nói rõ giới hạn)</td>
+<td>Coi kết quả simulator là bằng chứng SCP đã chạy trong production</td>
+</tr>
+<tr>
+<td>Phân tích nguy cơ khóa quyền và lập kế hoạch rollout guardrail</td>
+<td>Thử lockout trên account có người khác đang dùng</td>
+</tr>
+<tr>
+<td>Đánh giá Control Tower <strong>từ tài liệu</strong>: prerequisite, chi phí, vòng đời account, drift</td>
+<td>Dựng landing zone</td>
+</tr>
+<tr>
+<td>Nhánh tùy chọn: WAF trên ALB fixture. Chạy count, đo false positive, block, tinh chỉnh, rồi xóa</td>
+<td>Gắn WAF vào ALB, API hoặc CloudFront đang phục vụ người dùng</td>
+</tr>
+<tr>
+<td>Chứng minh WAF <strong>không</strong> thay authentication</td>
+<td>Coi WAF là lớp bảo mật duy nhất</td>
+</tr>
+<tr>
+<td>Review sáu trụ cột Well-Architected cho hệ thống đơn hàng (lab 06–13), viết ba ADR có phương án thay thế</td>
+<td>ADR không có bối cảnh, phương án bị loại và hệ quả</td>
+</tr>
+</tbody></table>
+</div>
+<p>Sản phẩm bàn giao (lưu trong <code>~/aws-lab-14</code>, không chứa secret hay ID thật):</p>
+<ul>
+<li><code>design.md</code></li>
+<li><code>scp-*.json</code></li>
+<li><code>scp-test-matrix.md</code></li>
+<li><code>control-tower-eval.md</code></li>
+<li><code>waf-report.md</code> (nếu chạy nhánh WAF)</li>
+<li><code>review.md</code></li>
+<li><code>adr/ADR-00{1,2,3}.md</code></li>
+</ul>
+<hr>
+<h2 id="quy-ước-placeholder"><a class="anchor" href="#quy-ước-placeholder">Quy ước placeholder</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Biến</th>
+<th>Ý nghĩa</th>
+<th>Ví dụ minh họa</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>aws-lab</code></td>
+<td>Named profile CLI đã cấu hình ở Lab 01</td>
+<td><code>aws-lab</code></td>
+</tr>
+<tr>
+<td><code>AWS_REGION</code></td>
+<td>Region học tập, cũng là Region duy nhất được SCP mẫu cho phép</td>
+<td><code>ap-southeast-1</code></td>
+</tr>
+<tr>
+<td><code>111122223333</code></td>
+<td>Account ID <strong>giả</strong> dùng trong tài liệu thiết kế và simulator</td>
+<td>không thay bằng ID thật trong file nộp bài</td>
+</tr>
+<tr>
+<td><code>MY_IP</code></td>
+<td>IP public của bạn (nhánh WAF)</td>
+<td><code>203.0.113.10</code></td>
+</tr>
+<tr>
+<td><code>ALB_ARN</code>, <code>ALB_DNS</code></td>
+<td>ALB fixture</td>
+<td><code>arn:aws:elasticloadbalancing:...:loadbalancer/app/lab14-alb/...</code></td>
+</tr>
+<tr>
+<td><code>ACL_ARN</code>, <code>ACL_ID</code></td>
+<td>Web ACL</td>
+<td><code>arn:aws:wafv2:...:regional/webacl/lab14-acl/...</code></td>
+</tr>
+</tbody></table>
+</div>
+<p>Tên cố định là <code>lab14-*</code>. Mọi tài nguyên AWS đều gắn tag <code>Project=aws-lab-14</code>. Log group WAF <strong>bắt buộc</strong> có tiền tố <code>aws-waf-logs-</code>.</p>
+<hr>
+<h2 id="điều-kiện-đầu-vào"><a class="anchor" href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></h2>
+<ul>
+<li><input type="checkbox"> Đã hoàn thành <a href="../02-identity-and-access/README.html">Lab 02</a> (IAM, policy evaluation), <a href="../05-compute-and-load-balancing/README.html">Lab 05</a> (ALB) và <a href="../13-reliability-and-performance/README.html">Lab 13</a> (RTO/RPO đo được, dùng cho ADR-003).</li>
+<li><input type="checkbox"> Công cụ: AWS CLI v2, <code>jq</code>, <code>curl</code>, Python 3.</li>
+<li><input type="checkbox"> Không dùng account production. <strong>Không</strong> cần quyền với AWS Organizations.</li>
+</ul>
+<h3 id="quyền-cần-thiết-không-cần-administratoraccess"><a class="anchor" href="#quyền-cần-thiết-không-cần-administratoraccess">Quyền cần thiết (không cần <code>AdministratorAccess</code>)</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Phần</th>
+<th>Quyền</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SCP (Bước 2)</td>
+<td><code>access-analyzer:ValidatePolicy</code>, <code>iam:SimulateCustomPolicy</code>. Cả hai chỉ đọc và không tạo tài nguyên.</td>
+</tr>
+<tr>
+<td>Nhánh WAF: mạng</td>
+<td><code>ec2:CreateVpc</code>, <code>CreateSubnet</code>, <code>CreateInternetGateway</code>, <code>AttachInternetGateway</code>, <code>CreateRouteTable</code>, <code>CreateRoute</code>, <code>AssociateRouteTable</code>, <code>CreateSecurityGroup</code>, <code>AuthorizeSecurityGroupIngress</code>, <code>CreateTags</code>, <code>Describe*</code>, cùng các quyền <code>Delete*</code>/<code>Detach*</code> tương ứng</td>
+</tr>
+<tr>
+<td>Nhánh WAF: ALB</td>
+<td><code>elasticloadbalancing:CreateLoadBalancer</code>, <code>CreateListener</code>, <code>AddTags</code>, <code>DescribeLoadBalancers</code>, <code>DeleteLoadBalancer</code>, <strong><code>SetWebAcl</code></strong> (bắt buộc khi associate). Cần <code>iam:CreateServiceLinkedRole</code> với điều kiện <code>iam:AWSServiceName = elasticloadbalancing.amazonaws.com</code> nếu đây là ALB đầu tiên trong account.</td>
+</tr>
+<tr>
+<td>Nhánh WAF: WAF</td>
+<td><code>wafv2:CreateWebACL</code>, <code>GetWebACL</code>, <code>UpdateWebACL</code>, <code>DeleteWebACL</code>, <code>ListWebACLs</code>, <code>AssociateWebACL</code>, <code>DisassociateWebACL</code>, <code>GetWebACLForResource</code>, <code>GetSampledRequests</code>, <code>PutLoggingConfiguration</code>, <code>DeleteLoggingConfiguration</code></td>
+</tr>
+<tr>
+<td>Nhánh WAF: log</td>
+<td><code>logs:CreateLogGroup</code>, <code>PutRetentionPolicy</code>, <code>DeleteLogGroup</code>, <code>StartQuery</code>, <code>GetQueryResults</code>. Thêm <code>logs:CreateLogDelivery</code>, <code>DeleteLogDelivery</code>, <code>PutResourcePolicy</code>, <code>DescribeResourcePolicies</code>, <code>DescribeLogGroups</code>, vì WAF cần các quyền này để tự tạo resource policy cho log group.</td>
+</tr>
+</tbody></table>
+</div>
+<p>Lab này <strong>không</strong> cần <code>iam:PassRole</code> vì không gán role nào cho dịch vụ.</p>
+<h3 id="chi-phí-ước-tính-giá-minh-họa-tra-lại-aws-waf-pricinghttpsawsamazoncomwafpricing-và-elb-pricinghttpsawsamazoncomelasticloadbalancingpricing"><a class="anchor" href="#chi-phí-ước-tính-giá-minh-họa-tra-lại-aws-waf-pricinghttpsawsamazoncomwafpricing-và-elb-pricinghttpsawsamazoncomelasticloadbalancingpricing">Chi phí ước tính (giá minh họa, tra lại <a href="https://aws.amazon.com/waf/pricing/" target="_blank" rel="noopener">AWS WAF pricing</a> và <a href="https://aws.amazon.com/elasticloadbalancing/pricing/" target="_blank" rel="noopener">ELB pricing</a>)</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tài nguyên</th>
+<th>Quy mô</th>
+<th>Đơn giá minh họa</th>
+<th>Chi phí cho ~2 giờ</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Phần thiết kế, Access Analyzer <code>validate-policy</code>, IAM simulator</td>
+<td>—</td>
+<td>không tính phí</td>
+<td>$0</td>
+</tr>
+<tr>
+<td>ALB</td>
+<td>1 ALB, gần như 0 LCU</td>
+<td>~$0,025/giờ</td>
+<td>~$0,05</td>
+</tr>
+<tr>
+<td>Public IPv4 của ALB</td>
+<td>2 địa chỉ (2 AZ)</td>
+<td>~$0,005/giờ mỗi IP</td>
+<td>~$0,02</td>
+</tr>
+<tr>
+<td>Web ACL</td>
+<td>1</td>
+<td>~$5/tháng, tính theo giờ</td>
+<td>~$0,014</td>
+</tr>
+<tr>
+<td>Rule (mỗi managed rule group tính là 1 rule)</td>
+<td>2</td>
+<td>~$1/rule/tháng, tính theo giờ</td>
+<td>~$0,006</td>
+</tr>
+<tr>
+<td>Request WAF</td>
+<td>&lt; 1.000</td>
+<td>~$0,60/triệu</td>
+<td>&lt; $0,001</td>
+</tr>
+<tr>
+<td>CloudWatch Logs (log WAF, retention 1 ngày)</td>
+<td>&lt; 1 MB</td>
+<td>~$0,50–0,70/GB nạp</td>
+<td>&lt; $0,001</td>
+</tr>
+<tr>
+<td><strong>Tổng nhánh WAF</strong></td>
+<td></td>
+<td></td>
+<td><strong>&lt; $0,15</strong></td>
+</tr>
+</tbody></table>
+</div>
+<ul>
+<li><strong>Quên cleanup một tháng:</strong> ALB khoảng $18, hai IPv4 khoảng $7, web ACL $5, rule $2, tổng khoảng <strong>$32/tháng</strong>.</li>
+<li>Hai rule group trong lab (<code>AWSManagedRulesCommonRuleSet</code>, <code>AWSManagedRulesSQLiRuleSet</code>) thuộc nhóm baseline, không có phí đăng ký thêm. Một số rule group khác như Bot Control, ATP hay ACFP <strong>có</strong> phí đăng ký và phí theo request riêng, nên không dùng trong lab.</li>
+<li>Tổng WCU của web ACL phải nằm trong ngưỡng cơ bản (1.500 WCU). Vượt ngưỡng này thì phải trả thêm phí. Hai rule group ở đây cộng lại khoảng 900 WCU.</li>
+<li><strong>Điều kiện dừng:</strong> chạy xong Bước 8 thì dọn dẹp ngay. Nếu phải nghỉ quá 1 giờ, chạy Bước 11 trước rồi làm lại sau.</li>
+</ul>
+<hr>
+<h2 id="sơ-đồ-kiến-trúc-lab-14"><a class="anchor" href="#sơ-đồ-kiến-trúc-lab-14">Sơ đồ kiến trúc Lab 14</a></h2>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Phần A — thiết kế (giấy + API chỉ đọc)
+  design.md ──▶ scp-*.json ──▶ validate-policy (Access Analyzer)
+                           └──▶ simulate-custom-policy
+                                  identity policy  = Allow *        (đóng vai admin trong member account)
+                                  boundary policy  = FullAWSAccess + Deny của SCP   (mô phỏng SCP)
+                                  context          = aws:RequestedRegion, aws:PrincipalArn
+                                  ──▶ scp-test-matrix.md (allowed / explicitDeny)
+
+Phần B — nhánh WAF tùy chọn (account học tập, Region AWS_REGION)
+  laptop (MY_IP) ──curl──▶ ALB lab14-alb :80 ──▶ listener: fixed-response 200 &quot;lab14-ok&quot;  (không có target)
+                            ▲
+                            │ associate
+                  Web ACL lab14-acl (REGIONAL, default Allow)
+                    P0 AWSManagedRulesSQLiRuleSet    count ─▶ block
+                    P1 AWSManagedRulesCommonRuleSet  count ─▶ block, override SizeRestrictions_BODY = count
+                    │ sampled requests (tối đa 3 giờ gần nhất)
+                    └ logging ──▶ CloudWatch Logs aws-waf-logs-lab14 (retention 1 ngày) ──▶ Logs Insights</code></pre></div>
+<p>ALB dùng listener <strong>fixed-response</strong>, nên không cần EC2 hay target group. WAF đánh giá request trước khi ALB áp dụng listener rule. Listener chỉ dùng HTTP, đủ cho lab nhưng production phải dùng HTTPS.</p>
+<hr>
+<h2 id="bước-0--biến-và-thư-mục-bàn-giao"><a class="anchor" href="#bước-0--biến-và-thư-mục-bàn-giao">Bước 0 — Biến và thư mục bàn giao</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export AWS_PROFILE=&quot;aws-lab&quot;
+export AWS_REGION=&quot;ap-southeast-1&quot;
+aws sts get-caller-identity --query '{Account:Account,Arn:Arn}' --output table
+export LAB_DIR=&quot;${HOME}/aws-lab-14&quot;
+mkdir -p &quot;${LAB_DIR}/adr&quot; &amp;&amp; cd &quot;${LAB_DIR}&quot;</code></pre></div>
+<p><em>Kỳ vọng:</em> <code>Arn</code> là một role hoặc user của account <strong>học tập</strong>, không phải account production. Thư mục <code>~/aws-lab-14</code> được <strong>giữ lại</strong> sau lab vì chứa sản phẩm bàn giao. Chỉ xóa nó khi bạn đã nộp bài xong.</p>
+<hr>
+<h2 id="bước-1--thiết-kế-multi-account-trên-giấy"><a class="anchor" href="#bước-1--thiết-kế-multi-account-trên-giấy">Bước 1 — Thiết kế multi-account trên giấy</a></h2>
+<p>Tạo <code>design.md</code> theo khung dưới đây. Phần đã điền là ví dụ cho hệ thống đơn hàng. Hãy sửa theo bối cảnh của bạn và tự trả lời ba câu hỏi ở cuối.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat &gt; design.md &lt;&lt;'EOF'
+# Thiết kế multi-account — hệ thống đơn hàng
+
+## Cây OU
+Root
+├── Management account 111122223333   (chỉ billing, Organizations, Identity Center; KHÔNG chạy workload)
+├── Security OU
+│   ├── log-archive     (bucket log tập trung: CloudTrail org trail, Config; chỉ ghi thêm, ít người đọc)
+│   └── security-tooling (delegated admin cho GuardDuty / Security Hub / IAM Access Analyzer)
+├── Infrastructure OU
+│   └── network-shared  (Transit Gateway hoặc VPC dùng chung, Route 53 Resolver, ECR dùng chung nếu cần)
+├── Workloads OU
+│   ├── NonProd OU
+│   │   ├── orders-dev
+│   │   └── orders-staging
+│   └── Prod OU
+│       └── orders-prod
+├── Sandbox OU          (thử nghiệm cá nhân; budget thấp; không kết nối mạng nội bộ)
+└── Suspended OU        (account chờ đóng; SCP deny gần như toàn bộ)
+
+## Account, owner và đường truy cập
+| Account | Owner | Ai vào, bằng permission set nào | Dữ liệu | SCP/OU áp dụng |
+|---|---|---|---|---|
+| management | Platform lead | 2 người, MFA, chỉ quản trị org/billing | billing | (SCP không áp dụng) |
+| log-archive | Security | Security: ReadOnly; không ai được xóa | log | Security OU: bảo vệ log |
+| security-tooling | Security | Security: SecurityAudit + vận hành công cụ | finding | Security OU |
+| orders-dev | Team Orders | Dev: PowerUser (không IAM user) | dữ liệu giả | Region + bảo vệ audit |
+| orders-prod | Team Orders | Dev: ReadOnly; deploy qua pipeline OIDC (Lab 12); ghi tay chỉ qua break-glass | dữ liệu thật | Region + bảo vệ audit + chặn xóa backup |
+
+## Break-glass
+- Role `BreakGlassEmergencyAdminRole` có trong mỗi account, được tạo bằng StackSets từ management account.
+- Chỉ assume được từ 2 principal đã định danh, có MFA, và phải ghi lý do vào ticket.
+- Mỗi lần assume tạo một event CloudTrail `AssumeRole` có tên role này, kích hoạt alarm gửi cho Security.
+- SCP chặn người khác tạo, sửa hoặc xóa role này (xem Bước 2).
+- Diễn tập mỗi quý: assume được không, alarm có kêu không.
+
+## Tự trả lời
+1. Vì sao orders-dev và orders-prod là hai account thay vì hai VPC trong một account? (quota, IAM, blast radius, chi phí)
+2. Nếu Identity Center ngừng hoạt động, ai vào orders-prod bằng đường nào, và ai được báo?
+3. Delegated admin của GuardDuty đặt ở account nào? Vì sao không đặt ở management account?
+EOF</code></pre></div>
+<p><em>Bằng chứng hiểu bài:</em> mỗi account có owner và đường truy cập cụ thể, và không account nào ghi &quot;admin cho tất cả&quot;. Management account không chạy workload. Break-glass có cả cơ chế phát hiện (alarm), không chỉ cơ chế mở cửa.</p>
+<hr>
+<h2 id="bước-2--scp-mẫu-validate-và-test-matrix"><a class="anchor" href="#bước-2--scp-mẫu-validate-và-test-matrix">Bước 2 — SCP mẫu, validate và test matrix</a></h2>
+<h3 id="21-scp-1--bảo-vệ-audit-organization-và-chính-role-break-glass"><a class="anchor" href="#21-scp-1--bảo-vệ-audit-organization-và-chính-role-break-glass">2.1. SCP 1 — bảo vệ audit, organization và chính role break-glass</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat &gt; scp-protect-audit.json &lt;&lt;'EOF'
+{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Sid&quot;: &quot;DenyAuditTampering&quot;,
+      &quot;Effect&quot;: &quot;Deny&quot;,
+      &quot;Action&quot;: [
+        &quot;cloudtrail:DeleteTrail&quot;,
+        &quot;cloudtrail:StopLogging&quot;,
+        &quot;cloudtrail:UpdateTrail&quot;,
+        &quot;cloudtrail:PutEventSelectors&quot;,
+        &quot;config:DeleteConfigurationRecorder&quot;,
+        &quot;config:StopConfigurationRecorder&quot;,
+        &quot;config:DeleteDeliveryChannel&quot;
+      ],
+      &quot;Resource&quot;: &quot;*&quot;,
+      &quot;Condition&quot;: {
+        &quot;ArnNotLike&quot;: {
+          &quot;aws:PrincipalArn&quot;: [
+            &quot;arn:aws:iam::*:role/BreakGlassEmergencyAdminRole&quot;,
+            &quot;arn:aws:iam::*:role/AWSControlTowerExecution&quot;
+          ]
+        }
+      }
+    },
+    {
+      &quot;Sid&quot;: &quot;DenyLeavingOrganization&quot;,
+      &quot;Effect&quot;: &quot;Deny&quot;,
+      &quot;Action&quot;: &quot;organizations:LeaveOrganization&quot;,
+      &quot;Resource&quot;: &quot;*&quot;
+    },
+    {
+      &quot;Sid&quot;: &quot;ProtectBreakGlassRole&quot;,
+      &quot;Effect&quot;: &quot;Deny&quot;,
+      &quot;Action&quot;: [
+        &quot;iam:CreateRole&quot;,
+        &quot;iam:DeleteRole&quot;,
+        &quot;iam:UpdateAssumeRolePolicy&quot;,
+        &quot;iam:AttachRolePolicy&quot;,
+        &quot;iam:DetachRolePolicy&quot;,
+        &quot;iam:PutRolePolicy&quot;,
+        &quot;iam:DeleteRolePolicy&quot;
+      ],
+      &quot;Resource&quot;: &quot;arn:aws:iam::*:role/BreakGlassEmergencyAdminRole&quot;,
+      &quot;Condition&quot;: {
+        &quot;ArnNotLike&quot;: {
+          &quot;aws:PrincipalArn&quot;: &quot;arn:aws:iam::*:role/BreakGlassEmergencyAdminRole&quot;
+        }
+      }
+    }
+  ]
+}
+EOF</code></pre></div>
+<p>Ghi chú về thiết kế:</p>
+<ul>
+<li><strong>Không</strong> cần ngoại lệ cho <code>aws-service-role/*</code>, vì SCP vốn không ảnh hưởng service-linked role.</li>
+<li><code>AWSControlTowerExecution</code> chỉ cần nếu dùng Control Tower. Thiếu ngoại lệ này thì Control Tower không quản lý được trail và Config.</li>
+<li>Statement thứ ba khép một lỗ hổng: nếu ai cũng tạo được role tên <code>BreakGlassEmergencyAdminRole</code>, ngoại lệ dựa trên tên sẽ trở thành cửa sau.</li>
+</ul>
+<h3 id="22-scp-2--chỉ-cho-phép-một-region-có-ngoại-lệ-dịch-vụ-global"><a class="anchor" href="#22-scp-2--chỉ-cho-phép-một-region-có-ngoại-lệ-dịch-vụ-global">2.2. SCP 2 — chỉ cho phép một Region, có ngoại lệ dịch vụ global</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat &gt; scp-region.json &lt;&lt;'EOF'
+{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Sid&quot;: &quot;DenyOutsideApprovedRegion&quot;,
+      &quot;Effect&quot;: &quot;Deny&quot;,
+      &quot;NotAction&quot;: [
+        &quot;iam:*&quot;,
+        &quot;organizations:*&quot;,
+        &quot;sts:*&quot;,
+        &quot;account:*&quot;,
+        &quot;route53:*&quot;,
+        &quot;route53domains:*&quot;,
+        &quot;cloudfront:*&quot;,
+        &quot;globalaccelerator:*&quot;,
+        &quot;waf:*&quot;,
+        &quot;wafv2:*&quot;,
+        &quot;shield:*&quot;,
+        &quot;budgets:*&quot;,
+        &quot;ce:*&quot;,
+        &quot;cur:*&quot;,
+        &quot;billing:*&quot;,
+        &quot;health:*&quot;,
+        &quot;support:*&quot;,
+        &quot;trustedadvisor:*&quot;,
+        &quot;sso:*&quot;,
+        &quot;s3:GetAccountPublicAccessBlock&quot;,
+        &quot;s3:ListAllMyBuckets&quot;
+      ],
+      &quot;Resource&quot;: &quot;*&quot;,
+      &quot;Condition&quot;: {
+        &quot;StringNotEquals&quot;: {
+          &quot;aws:RequestedRegion&quot;: [&quot;ap-southeast-1&quot;]
+        },
+        &quot;ArnNotLike&quot;: {
+          &quot;aws:PrincipalArn&quot;: [
+            &quot;arn:aws:iam::*:role/BreakGlassEmergencyAdminRole&quot;,
+            &quot;arn:aws:iam::*:role/AWSControlTowerExecution&quot;
+          ]
+        }
+      }
+    }
+  ]
+}
+EOF</code></pre></div>
+<p>Danh sách <code>NotAction</code> ở đây đã được <strong>rút gọn để minh họa</strong>. Trước khi dùng thật, so với ví dụ &quot;Deny access to AWS based on the requested AWS Region&quot; hiện hành trong tài liệu Organizations, hoặc dùng control Region deny của Control Tower. Lưu ý:</p>
+<ul>
+<li><strong>Không</strong> đưa <code>kms:*</code> hay <code>config:*</code> vào <code>NotAction</code>. Chúng là dịch vụ theo Region, nên miễn trừ chúng nghĩa là cho phép tạo KMS key hoặc Config ở mọi Region.</li>
+<li>Dịch vụ global (IAM, CloudFront...) thường được ký request tới <code>us-east-1</code>. Đó là lý do chúng phải nằm trong <code>NotAction</code>. Một số team chọn cách khác là cho phép thêm <code>us-east-1</code>.</li>
+<li>Nhiều điều kiện trong một statement được kết hợp bằng <strong>AND</strong>. Lệnh chỉ bị deny khi Region không được phép <strong>và</strong> principal không phải break-glass.</li>
+</ul>
+<h3 id="23-kiểm-tra-cú-pháp-và-kích-thước"><a class="anchor" href="#23-kiểm-tra-cú-pháp-và-kích-thước">2.3. Kiểm tra cú pháp và kích thước</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>for F in scp-protect-audit.json scp-region.json; do
+  printf '%-24s minified=%s ký tự\n' &quot;$F&quot; &quot;$(jq -c . &quot;$F&quot; | wc -c | tr -d ' ')&quot;
+done</code></pre></div>
+<p><em>Kỳ vọng:</em> cả hai file parse được và mỗi file nhỏ hơn <strong>5.120 ký tự</strong>, là giới hạn kích thước một SCP. Khoảng trắng cũng được tính, nên khi attach thật hãy gửi bản minified.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>for F in scp-protect-audit.json scp-region.json; do
+  echo &quot;== ${F}&quot;
+  aws accessanalyzer validate-policy --policy-type SERVICE_CONTROL_POLICY \
+    --policy-document &quot;file://${F}&quot; \
+    --query 'findings[].[findingType,issueCode,findingDetails]' --output text
+done</code></pre></div>
+<p><em>Kỳ vọng:</em> không có finding loại <code>ERROR</code> hoặc <code>SECURITY_WARNING</code>. Finding <code>SUGGESTION</code> hoặc <code>WARNING</code> cần được đọc và ghi lại lý do chấp nhận hoặc sửa.</p>
+<p><em>Negative case:</em> sửa tạm <code>&quot;Effect&quot;: &quot;Deny&quot;</code> thành <code>&quot;Effect&quot;: &quot;Dney&quot;</code> trong một bản sao rồi validate lại. Kết quả phải có <code>ERROR</code>, nghĩa là phải sửa trước khi attach.</p>
+<h3 id="24-test-matrix-bằng-iam-policy-simulator"><a class="anchor" href="#24-test-matrix-bằng-iam-policy-simulator">2.4. Test matrix bằng IAM policy simulator</a></h3>
+<p>Simulator không biết gì về SCP. Ta <strong>mô phỏng</strong> SCP bằng permissions boundary vì cơ chế của hai thứ giống nhau ở điểm quan trọng: cả hai đặt trần quyền chứ không cấp quyền, và Deny thắng. Boundary gồm <code>FullAWSAccess</code> (SCP mặc định) cộng các statement Deny ở trên. Identity policy là <code>Allow *</code>, đóng vai admin trong member account.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>jq -n '{Version:&quot;2012-10-17&quot;,Statement:[{Effect:&quot;Allow&quot;,Action:&quot;*&quot;,Resource:&quot;*&quot;}]}' &gt; id-admin.json
+jq -s '{Version:&quot;2012-10-17&quot;,
+        Statement:([{Sid:&quot;FullAWSAccess&quot;,Effect:&quot;Allow&quot;,Action:&quot;*&quot;,Resource:&quot;*&quot;}] + .[0].Statement + .[1].Statement)}' \
+   scp-protect-audit.json scp-region.json &gt; scp-as-boundary.json
+
+DEV=&quot;arn:aws:iam::111122223333:role/OrdersDeveloper&quot;
+BG=&quot;arn:aws:iam::111122223333:role/BreakGlassEmergencyAdminRole&quot;
+ROOT=&quot;arn:aws:iam::111122223333:root&quot;
+BG_RES=&quot;arn:aws:iam::111122223333:role/BreakGlassEmergencyAdminRole&quot;
+
+sim() {  # sim &lt;nhãn&gt; &lt;principal-arn&gt; &lt;action&gt; &lt;region&gt; [resource-arn]
+  local label=$1 principal=$2 action=$3 region=$4 res=${5:-*}
+  local d
+  d=$(aws iam simulate-custom-policy \
+        --policy-input-list file://id-admin.json \
+        --permissions-boundary-policy-input-list file://scp-as-boundary.json \
+        --action-names &quot;${action}&quot; --resource-arns &quot;${res}&quot; \
+        --context-entries \
+          &quot;ContextKeyName=aws:RequestedRegion,ContextKeyValues=${region},ContextKeyType=string&quot; \
+          &quot;ContextKeyName=aws:PrincipalArn,ContextKeyValues=${principal},ContextKeyType=string&quot; \
+        --query 'EvaluationResults[0].EvalDecision' --output text)
+  printf '| %s | %s | %s | %s | %s |\n' &quot;${label}&quot; &quot;${principal##*/}&quot; &quot;${action}&quot; &quot;${region}&quot; &quot;${d}&quot;
+}
+
+{
+  echo '| # | Principal | Action | Region | Kết quả simulator |'
+  echo '|---|---|---|---|---|'
+  sim 1 &quot;$DEV&quot;  ec2:RunInstances              ap-southeast-1
+  sim 2 &quot;$DEV&quot;  ec2:RunInstances              eu-central-1
+  sim 3 &quot;$DEV&quot;  iam:CreateRole                us-east-1
+  sim 4 &quot;$DEV&quot;  kms:CreateKey                 eu-central-1
+  sim 5 &quot;$DEV&quot;  cloudtrail:StopLogging        ap-southeast-1
+  sim 6 &quot;$BG&quot;   cloudtrail:StopLogging        ap-southeast-1
+  sim 7 &quot;$DEV&quot;  organizations:LeaveOrganization us-east-1
+  sim 8 &quot;$DEV&quot;  iam:UpdateAssumeRolePolicy    us-east-1 &quot;$BG_RES&quot;
+  sim 9 &quot;$ROOT&quot; ec2:RunInstances              eu-central-1
+} | tee scp-test-matrix.md</code></pre></div>
+<p><em>Kỳ vọng (minh họa):</em></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Principal</th>
+<th>Action</th>
+<th>Region</th>
+<th>Kết quả</th>
+<th>Vì sao</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>OrdersDeveloper</td>
+<td>ec2:RunInstances</td>
+<td>ap-southeast-1</td>
+<td><code>allowed</code></td>
+<td>Region được phép</td>
+</tr>
+<tr>
+<td>2</td>
+<td>OrdersDeveloper</td>
+<td>ec2:RunInstances</td>
+<td>eu-central-1</td>
+<td><code>explicitDeny</code></td>
+<td>SCP 2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>OrdersDeveloper</td>
+<td>iam:CreateRole</td>
+<td>us-east-1</td>
+<td><code>allowed</code></td>
+<td><code>iam:*</code> nằm trong <code>NotAction</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>OrdersDeveloper</td>
+<td>kms:CreateKey</td>
+<td>eu-central-1</td>
+<td><code>explicitDeny</code></td>
+<td>KMS là dịch vụ theo Region, không được miễn trừ</td>
+</tr>
+<tr>
+<td>5</td>
+<td>OrdersDeveloper</td>
+<td>cloudtrail:StopLogging</td>
+<td>ap-southeast-1</td>
+<td><code>explicitDeny</code></td>
+<td>SCP 1</td>
+</tr>
+<tr>
+<td>6</td>
+<td>BreakGlass…</td>
+<td>cloudtrail:StopLogging</td>
+<td>ap-southeast-1</td>
+<td><code>allowed</code></td>
+<td>Ngoại lệ <code>aws:PrincipalArn</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td>OrdersDeveloper</td>
+<td>organizations:LeaveOrganization</td>
+<td>us-east-1</td>
+<td><code>explicitDeny</code></td>
+<td>Không có ngoại lệ, kể cả break-glass</td>
+</tr>
+<tr>
+<td>8</td>
+<td>OrdersDeveloper</td>
+<td>iam:UpdateAssumeRolePolicy (trên role break-glass)</td>
+<td>us-east-1</td>
+<td><code>explicitDeny</code></td>
+<td>Bảo vệ cửa sau</td>
+</tr>
+<tr>
+<td>9</td>
+<td>root của member account</td>
+<td>ec2:RunInstances</td>
+<td>eu-central-1</td>
+<td><code>explicitDeny</code></td>
+<td>SCP <strong>có</strong> áp dụng cho root user của member account</td>
+</tr>
+</tbody></table>
+</div>
+<p>Nếu kết quả khác bảng trên, đọc <code>EvaluationResults[0].MatchedStatements</code> và <code>PermissionsBoundaryDecisionDetail</code> bằng cách bỏ <code>--query</code> trong <code>sim</code>. Lỗi hay gặp nhất là sai tên context key hoặc thiếu <code>--resource-arns</code> ở dòng 8.</p>
+<p>Ghi thêm vào <code>scp-test-matrix.md</code> những trường hợp simulator <strong>không</strong> mô phỏng được:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Trường hợp</th>
+<th>Kết quả theo tài liệu</th>
+<th>Ý nghĩa</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Bất kỳ principal nào trong <strong>management account</strong></td>
+<td>SCP không áp dụng</td>
+<td>Management account cần guardrail khác: ít người, MFA, không workload</td>
+</tr>
+<tr>
+<td>Service-linked role (<code>aws-service-role/...</code>)</td>
+<td>SCP không áp dụng</td>
+<td>Không cần ngoại lệ SLR trong SCP</td>
+</tr>
+<tr>
+<td>Principal từ <strong>account khác</strong> truy cập resource của bạn</td>
+<td>SCP của bạn không áp dụng cho họ</td>
+<td>Cần resource policy hoặc Resource Control Policy (RCP)</td>
+</tr>
+<tr>
+<td>SCP gắn ở OU cha và OU con</td>
+<td>Mọi tầng đều phải cho phép; Deny ở bất kỳ tầng nào đều thắng</td>
+<td>Simulator chỉ mô phỏng một tầng</td>
+</tr>
+<tr>
+<td>Gỡ <code>FullAWSAccess</code> khỏi một OU mà không thay bằng Allow khác</td>
+<td>Implicit deny <strong>mọi thứ</strong> ở OU đó</td>
+<td>Đây là kiểu lockout dễ gây ra nhất</td>
+</tr>
+</tbody></table>
+</div>
+<h3 id="25-phân-tích-nguy-cơ-khóa-quyền-và-kế-hoạch-rollout"><a class="anchor" href="#25-phân-tích-nguy-cơ-khóa-quyền-và-kế-hoạch-rollout">2.5. Phân tích nguy cơ khóa quyền và kế hoạch rollout</a></h3>
+<p>Thêm vào <code>scp-test-matrix.md</code>:</p>
+<div class="code"><span class="lang">markdown</span><button type="button">Copy</button><pre><code>## Nguy cơ lockout
+| Thay đổi | Ai bị ảnh hưởng | Phát hiện bằng | Gỡ bằng |
+|---|---|---|---|
+| Deny sts:AssumeRole hoặc deny theo PrincipalArn sai | Toàn bộ người dùng Identity Center (role AWSReservedSSO_*) | CloudTrail errorCode AccessDenied, thông điệp &quot;explicit deny in a service control policy&quot; | Detach SCP từ management account |
+| Gỡ FullAWSAccess | Mọi principal trong OU | Như trên, ngay lập tức | Attach lại FullAWSAccess từ management account |
+| Deny audit thiếu ngoại lệ AWSControlTowerExecution | Control Tower (drift, enroll lỗi) | Trạng thái landing zone / account trong Control Tower | Thêm ngoại lệ, re-register OU |
+
+## Rollout
+1. Sandbox OU chỉ có 1 account test; chạy lại test matrix bằng lệnh thật (không phải simulator).
+2. NonProd OU; theo dõi CloudTrail AccessDenied do SCP trong 1–2 tuần.
+3. Prod OU, có change ticket và người trực.
+4. Không bao giờ attach lần đầu ở Root.</code></pre></div>
+<hr>
+<h2 id="bước-3--đánh-giá-control-tower-từ-tài-liệu"><a class="anchor" href="#bước-3--đánh-giá-control-tower-từ-tài-liệu">Bước 3 — Đánh giá Control Tower từ tài liệu</a></h2>
+<p>Điền <code>control-tower-eval.md</code> dựa trên <a href="https://docs.aws.amazon.com/controltower/latest/userguide/" target="_blank" rel="noopener">Control Tower User Guide</a>. Cột &quot;Ghi chú tài liệu&quot; là gợi ý để bạn kiểm chứng. Hãy ghi link trang và ngày bạn đọc vào cột &quot;Nguồn&quot;.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Câu hỏi</th>
+<th>Ghi chú tài liệu (kiểm chứng lại)</th>
+<th>Áp dụng cho ta</th>
+<th>Nguồn</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Prerequisite</td>
+<td>Thiết lập từ management account. Cần email riêng cho account Log Archive và Audit (dùng sẵn có hoặc để Control Tower tạo). Chọn <strong>home Region</strong>, không đổi được sau khi thiết lập.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Account sẵn có</td>
+<td>Có thể enroll, nhưng phải xử lý trước các xung đột như Config recorder hoặc trail đã tồn tại và role <code>AWSControlTowerExecution</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Controls</td>
+<td>Gồm preventive (SCP/RCP), detective (Config rule) và proactive (CloudFormation hook). Mức áp dụng gồm mandatory, strongly recommended và elective.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Vòng đời account</td>
+<td>Tạo bằng Account Factory (Service Catalog) hoặc AFT (Terraform). Ngoài ra có thể unmanage hoặc đóng account. Account bị đóng vẫn nằm trong Suspended OU một thời gian.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Drift</td>
+<td>Sửa SCP, OU hoặc role do Control Tower quản lý từ bên ngoài sẽ gây drift. Phải repair hoặc re-register.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Chi phí</td>
+<td>Control Tower không thu phí riêng. Bạn trả cho dịch vụ nó bật: Config (theo configuration item và mỗi Region được quản lý), CloudTrail, S3, CloudWatch Logs, và KMS nếu dùng.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Không làm thay ta</td>
+<td>Không bảo đảm compliance, không bảo vệ ứng dụng (SQLi, authZ), không thay review IAM của workload</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Quyết định</td>
+<td>Dùng Control Tower hay tự dựng bằng Organizations + IaC? Ghi điều kiện để xem lại quyết định.</td>
+<td></td>
+<td></td>
+</tr>
+</tbody></table>
+</div>
+<p>Ước tính chi phí governance theo <strong>số account × số Region được quản lý</strong>. Ví dụ, 6 account × 2 Region thì Config ghi ở 12 nơi. Việc giới hạn số governed Region là cách giảm chi phí lớn nhất, và phải quyết định từ đầu.</p>
+<hr>
+<h2 id="nhánh-tùy-chọn-waf-bước-48"><a class="anchor" href="#nhánh-tùy-chọn-waf-bước-48">Nhánh tùy chọn WAF (Bước 4–8)</a></h2>
+<p>Bỏ qua nhánh này nếu thiếu quyền hoặc budget. Thay vào đó, đọc output minh họa ở từng bước và vẫn viết ADR-002 ở Bước 10.</p>
+<h2 id="bước-4--fixture-vpc-tối-thiểu-và-alb-fixed-response"><a class="anchor" href="#bước-4--fixture-vpc-tối-thiểu-và-alb-fixed-response">Bước 4 — Fixture: VPC tối thiểu và ALB fixed-response</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>TAG='{Key=Project,Value=aws-lab-14}'
+MY_IP=$(curl -s https://checkip.amazonaws.com) &amp;&amp; echo &quot;MY_IP=${MY_IP}&quot;
+AZ1=$(aws ec2 describe-availability-zones --query 'AvailabilityZones[?State==`available`]|[0].ZoneName' --output text)
+AZ2=$(aws ec2 describe-availability-zones --query 'AvailabilityZones[?State==`available`]|[1].ZoneName' --output text)
+
+VPC_ID=$(aws ec2 create-vpc --cidr-block 10.14.0.0/16 \
+  --tag-specifications &quot;ResourceType=vpc,Tags=[{Key=Name,Value=lab14-vpc},${TAG}]&quot; \
+  --query Vpc.VpcId --output text)
+SUB1=$(aws ec2 create-subnet --vpc-id &quot;$VPC_ID&quot; --cidr-block 10.14.1.0/24 --availability-zone &quot;$AZ1&quot; \
+  --tag-specifications &quot;ResourceType=subnet,Tags=[{Key=Name,Value=lab14-public-a},${TAG}]&quot; \
+  --query Subnet.SubnetId --output text)
+SUB2=$(aws ec2 create-subnet --vpc-id &quot;$VPC_ID&quot; --cidr-block 10.14.2.0/24 --availability-zone &quot;$AZ2&quot; \
+  --tag-specifications &quot;ResourceType=subnet,Tags=[{Key=Name,Value=lab14-public-b},${TAG}]&quot; \
+  --query Subnet.SubnetId --output text)
+IGW_ID=$(aws ec2 create-internet-gateway \
+  --tag-specifications &quot;ResourceType=internet-gateway,Tags=[{Key=Name,Value=lab14-igw},${TAG}]&quot; \
+  --query InternetGateway.InternetGatewayId --output text)
+aws ec2 attach-internet-gateway --vpc-id &quot;$VPC_ID&quot; --internet-gateway-id &quot;$IGW_ID&quot;
+RT_ID=$(aws ec2 create-route-table --vpc-id &quot;$VPC_ID&quot; \
+  --tag-specifications &quot;ResourceType=route-table,Tags=[{Key=Name,Value=lab14-rt},${TAG}]&quot; \
+  --query RouteTable.RouteTableId --output text)
+aws ec2 create-route --route-table-id &quot;$RT_ID&quot; --destination-cidr-block 0.0.0.0/0 --gateway-id &quot;$IGW_ID&quot; &gt;/dev/null
+aws ec2 associate-route-table --route-table-id &quot;$RT_ID&quot; --subnet-id &quot;$SUB1&quot; &gt;/dev/null
+aws ec2 associate-route-table --route-table-id &quot;$RT_ID&quot; --subnet-id &quot;$SUB2&quot; &gt;/dev/null
+
+SG_ID=$(aws ec2 create-security-group --group-name lab14-alb-sg --description &quot;lab14 ALB, chi MY_IP&quot; \
+  --vpc-id &quot;$VPC_ID&quot; --tag-specifications &quot;ResourceType=security-group,Tags=[${TAG}]&quot; \
+  --query GroupId --output text)
+aws ec2 authorize-security-group-ingress --group-id &quot;$SG_ID&quot; \
+  --ip-permissions &quot;IpProtocol=tcp,FromPort=80,ToPort=80,IpRanges=[{CidrIp=${MY_IP}/32,Description=lab14}]&quot; &gt;/dev/null
+
+read -r ALB_ARN ALB_DNS &lt;&lt;&lt; &quot;$(aws elbv2 create-load-balancer --name lab14-alb --type application \
+  --scheme internet-facing --subnets &quot;$SUB1&quot; &quot;$SUB2&quot; --security-groups &quot;$SG_ID&quot; \
+  --tags Key=Project,Value=aws-lab-14 \
+  --query 'LoadBalancers[0].[LoadBalancerArn,DNSName]' --output text)&quot;
+aws elbv2 wait load-balancer-available --load-balancer-arns &quot;$ALB_ARN&quot;
+aws elbv2 create-listener --load-balancer-arn &quot;$ALB_ARN&quot; --protocol HTTP --port 80 \
+  --default-actions 'Type=fixed-response,FixedResponseConfig={StatusCode=200,ContentType=text/plain,MessageBody=lab14-ok}' &gt;/dev/null
+echo &quot;ALB_DNS=${ALB_DNS}&quot;</code></pre></div>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>sleep 30   # DNS của ALB mới có thể cần thêm thời gian
+curl -s &quot;http://${ALB_DNS}/orders?id=123&quot;; echo</code></pre></div>
+<p><em>Kỳ vọng:</em> in ra <code>lab14-ok</code>. Nếu curl treo, kiểm tra lại SG (IP của bạn có thể đã đổi) và route <code>0.0.0.0/0</code> tới IGW.</p>
+<hr>
+<h2 id="bước-5--web-acl-ở-chế-độ-count-bật-logging-associate"><a class="anchor" href="#bước-5--web-acl-ở-chế-độ-count-bật-logging-associate">Bước 5 — Web ACL ở chế độ count, bật logging, associate</a></h2>
+<p>Rule được sinh bằng một hàm, nhờ vậy ba chế độ dùng ở Bước 5–7 chỉ khác nhau ở đúng chỗ cần khác:</p>
+<ul>
+<li><code>count</code>: cả hai rule group chỉ đếm.</li>
+<li><code>strict</code>: dùng action gốc của rule group, tức Block.</li>
+<li><code>tuned</code>: như <code>strict</code> nhưng ép <code>SizeRestrictions_BODY</code> về Count.</li>
+</ul>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>waf_rules() {  # waf_rules count|strict|tuned
+  jq -n --arg mode &quot;$1&quot; '
+    def vis($m): {SampledRequestsEnabled:true, CloudWatchMetricsEnabled:true, MetricName:$m};
+    def ov: if $mode == &quot;count&quot; then {Count:{}} else {None:{}} end;
+    [
+      { Name:&quot;aws-sqli&quot;, Priority:0,
+        Statement:{ManagedRuleGroupStatement:{VendorName:&quot;AWS&quot;, Name:&quot;AWSManagedRulesSQLiRuleSet&quot;}},
+        OverrideAction:ov, VisibilityConfig:vis(&quot;lab14-sqli&quot;) },
+      { Name:&quot;aws-common&quot;, Priority:1,
+        Statement:{ManagedRuleGroupStatement:(
+          {VendorName:&quot;AWS&quot;, Name:&quot;AWSManagedRulesCommonRuleSet&quot;}
+          + (if $mode == &quot;tuned&quot;
+             then {RuleActionOverrides:[{Name:&quot;SizeRestrictions_BODY&quot;, ActionToUse:{Count:{}}}]}
+             else {} end))},
+        OverrideAction:ov, VisibilityConfig:vis(&quot;lab14-common&quot;) }
+    ]'
+}
+waf_rules count &gt; rules-count.json &amp;&amp; jq -c '.[] | {Name, OverrideAction}' rules-count.json
+
+read -r ACL_ARN ACL_ID &lt;&lt;&lt; &quot;$(aws wafv2 create-web-acl --name lab14-acl --scope REGIONAL \
+  --default-action Allow={} --rules file://rules-count.json \
+  --visibility-config SampledRequestsEnabled=true,CloudWatchMetricsEnabled=true,MetricName=lab14-acl \
+  --tags Key=Project,Value=aws-lab-14 \
+  --query 'Summary.[ARN,Id]' --output text)&quot;
+echo &quot;ACL_ID=${ACL_ID}&quot;</code></pre></div>
+<p>Bật logging <strong>trước</strong> khi gửi traffic. Log là nguồn dữ liệu đầy đủ, còn sampled requests chỉ là mẫu.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+aws logs create-log-group --log-group-name aws-waf-logs-lab14 --tags Project=aws-lab-14
+aws logs put-retention-policy --log-group-name aws-waf-logs-lab14 --retention-in-days 1
+LG_ARN=&quot;arn:aws:logs:${AWS_REGION}:${ACCOUNT_ID}:log-group:aws-waf-logs-lab14&quot;
+aws wafv2 put-logging-configuration \
+  --logging-configuration &quot;ResourceArn=${ACL_ARN},LogDestinationConfigs=${LG_ARN}&quot; &gt;/dev/null
+
+aws wafv2 associate-web-acl --web-acl-arn &quot;$ACL_ARN&quot; --resource-arn &quot;$ALB_ARN&quot;
+aws wafv2 get-web-acl-for-resource --resource-arn &quot;$ALB_ARN&quot; --query 'WebACL.Name' --output text</code></pre></div>
+<p><em>Kỳ vọng:</em> in ra <code>lab14-acl</code>.</p>
+<p><em>Negative case:</em> thử <code>put-logging-configuration</code> với log group tên <code>lab14-waf</code> (thiếu tiền tố <code>aws-waf-logs-</code>). Lệnh phải bị từ chối với <code>WAFInvalidParameterException</code>. Không cần tạo log group đó, lỗi tên xảy ra trước.</p>
+<p>Nếu associate báo <code>WAFUnavailableEntityException</code>, ALB hoặc web ACL vừa tạo chưa sẵn sàng. Chờ 30–60 giây rồi thử lại.</p>
+<hr>
+<h2 id="bước-6--traffic-giả-lập-ở-chế-độ-count-và-đo-false-positive"><a class="anchor" href="#bước-6--traffic-giả-lập-ở-chế-độ-count-và-đo-false-positive">Bước 6 — Traffic giả lập ở chế độ count và đo false positive</a></h2>
+<p>Bộ request gồm ba request <strong>hợp lệ</strong> và hai request <strong>tấn công</strong>. Request &quot;big-body&quot; là một đơn hàng hợp lệ có ghi chú dài khoảng 10 KB. Đó là kiểu dữ liệu thật mà rule giới hạn kích thước hay bắt nhầm.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>python3 -c 'import json; print(json.dumps({&quot;order_id&quot;:&quot;o-1&quot;,&quot;note&quot;:&quot;giao giờ hành chính &quot; * 500}))' &gt; big.json
+wc -c big.json
+
+hit() {  # hit &lt;nhãn&gt; &lt;curl args...&gt;
+  local label=$1; shift
+  printf '%-10s %s\n' &quot;${label}&quot; &quot;$(curl -s -o /dev/null -w '%{http_code}' &quot;$@&quot;)&quot;
+}
+traffic() {
+  hit normal   &quot;http://${ALB_DNS}/orders?id=123&quot;
+  hit bigbody  -X POST -H 'Content-Type: application/json' --data-binary @big.json &quot;http://${ALB_DNS}/orders&quot;
+  hit admin    &quot;http://${ALB_DNS}/admin/orders&quot;
+  hit sqli     &quot;http://${ALB_DNS}/orders?id=1%20UNION%20SELECT%20password%20FROM%20users--&quot;
+  hit lfi      &quot;http://${ALB_DNS}/download?file=..%2F..%2F..%2Fetc%2Fpasswd&quot;
+}
+for i in 1 2 3; do traffic; done | sort | uniq -c</code></pre></div>
+<p><em>Kỳ vọng ở chế độ count (minh họa):</em> mọi dòng đều là <code>200</code>, kể cả <code>sqli</code> và <code>lfi</code>, vì count không chặn.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>   3 admin      200
+   3 bigbody    200
+   3 lfi        200
+   3 normal     200
+   3 sqli       200</code></pre></div>
+<p>Chờ 2–3 phút rồi xem rule nào đã &quot;đếm&quot; request nào:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>sampled() {  # sampled &lt;rule-metric-name&gt;
+  local end=$(date +%s)
+  aws wafv2 get-sampled-requests --web-acl-arn &quot;$ACL_ARN&quot; --rule-metric-name &quot;$1&quot; --scope REGIONAL \
+    --time-window StartTime=$((end - 3600)),EndTime=${end} --max-items 100 --output json \
+  | jq -r '.SampledRequests[] | [.Action, .Request.Method, .Request.URI, (.RuleNameWithinRuleGroup // &quot;-&quot;)] | @tsv' \
+  | sort | uniq -c
+}
+echo &quot;== SQLi rule group&quot;;   sampled lab14-sqli
+echo &quot;== Common rule group&quot;; sampled lab14-common</code></pre></div>
+<p><em>Kỳ vọng (minh họa, tên rule cụ thể có thể khác theo phiên bản rule group):</em></p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>== SQLi rule group
+   3 COUNT  GET   /orders     SQLi_QueryArguments
+== Common rule group
+   3 COUNT  POST  /orders     SizeRestrictions_BODY
+   3 COUNT  GET   /download   GenericLFI_QUERYARGUMENTS</code></pre></div>
+<p>Phân loại kết quả vào <code>waf-report.md</code>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Request</th>
+<th>Hợp lệ?</th>
+<th>Rule đếm</th>
+<th>Phân loại</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>sqli</td>
+<td>Không</td>
+<td>SQLi_QueryArguments</td>
+<td>True positive</td>
+</tr>
+<tr>
+<td>lfi</td>
+<td>Không</td>
+<td>GenericLFI_QUERYARGUMENTS</td>
+<td>True positive</td>
+</tr>
+<tr>
+<td>bigbody</td>
+<td><strong>Có</strong></td>
+<td>SizeRestrictions_BODY</td>
+<td><strong>False positive</strong></td>
+</tr>
+<tr>
+<td>normal, admin</td>
+<td>Có</td>
+<td>—</td>
+<td>True negative</td>
+</tr>
+</tbody></table>
+</div>
+<p>Đối chiếu bằng log, nguồn đầy đủ hơn sampled requests:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>q() {  # q &lt;logs insights query&gt; ; khoảng 1 giờ gần nhất
+  local id; id=$(aws logs start-query --log-group-name aws-waf-logs-lab14 \
+    --start-time $(( $(date +%s) - 3600 )) --end-time $(date +%s) --query-string &quot;$1&quot; --query queryId --output text)
+  while :; do
+    local r; r=$(aws logs get-query-results --query-id &quot;$id&quot; --output json)
+    case $(jq -r .status &lt;&lt;&lt; &quot;$r&quot;) in
+      Complete) jq -r '.results[] | map(.value) | @tsv' &lt;&lt;&lt; &quot;$r&quot;; return ;;
+      Failed|Cancelled|Timeout) echo &quot;query lỗi&quot;; return 1 ;;
+    esac
+    sleep 2
+  done
+}
+q 'fields httpRequest.httpMethod as method, httpRequest.uri as uri, action
+   | parse @message /&quot;name&quot;:&quot;(?&lt;label&gt;awswaf:managed:aws:[^&quot;]+)&quot;/
+   | stats count(*) as n by action, method, uri, label | sort uri'</code></pre></div>
+<p><em>Kỳ vọng:</em> request <code>POST /orders</code> có label kết thúc bằng <code>SizeRestrictions_Body</code> hoặc tương tự, và <code>action</code> = <code>ALLOW</code> vì đang ở chế độ count. Log có thể đến chậm vài phút so với request.</p>
+<hr>
+<h2 id="bước-7--block-nguyên-bản-để-thấy-false-positive-rồi-tinh-chỉnh"><a class="anchor" href="#bước-7--block-nguyên-bản-để-thấy-false-positive-rồi-tinh-chỉnh">Bước 7 — Block &quot;nguyên bản&quot; để thấy false positive, rồi tinh chỉnh</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>waf_apply() {  # waf_apply count|strict|tuned  — luôn lấy LockToken mới
+  waf_rules &quot;$1&quot; &gt; &quot;rules-$1.json&quot;
+  local lock; lock=$(aws wafv2 get-web-acl --name lab14-acl --scope REGIONAL --id &quot;$ACL_ID&quot; --query LockToken --output text)
+  aws wafv2 update-web-acl --name lab14-acl --scope REGIONAL --id &quot;$ACL_ID&quot; --lock-token &quot;$lock&quot; \
+    --default-action Allow={} --rules &quot;file://rules-$1.json&quot; \
+    --visibility-config SampledRequestsEnabled=true,CloudWatchMetricsEnabled=true,MetricName=lab14-acl &gt;/dev/null \
+  &amp;&amp; echo &quot;đã áp dụng: $1&quot;
+}
+wait_sqli_blocked() {  # thay đổi WAF cần thời gian lan truyền
+  for i in $(seq 1 24); do
+    [ &quot;$(curl -s -o /dev/null -w '%{http_code}' &quot;http://${ALB_DNS}/orders?id=1%20UNION%20SELECT%20password%20FROM%20users--&quot;)&quot; = 403 ] &amp;&amp; { echo &quot;đã có hiệu lực&quot;; return; }
+    sleep 5
+  done; echo &quot;sau 2 phút vẫn chưa thấy 403&quot;
+}
+
+waf_apply strict &amp;&amp; wait_sqli_blocked
+traffic</code></pre></div>
+<p><em>Kỳ vọng ở <code>strict</code> (minh họa), đây là <strong>negative case</strong> của tuning:</em></p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>normal     200
+bigbody    403   ← khách hàng hợp lệ bị chặn: false positive thành sự cố
+admin      200
+sqli       403
+lfi        403</code></pre></div>
+<p>Tinh chỉnh ở phạm vi <strong>nhỏ nhất</strong>: chỉ ép một rule con về Count, giữ nguyên phần còn lại của rule group.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>waf_apply tuned &amp;&amp; sleep 60
+traffic</code></pre></div>
+<p><em>Kỳ vọng ở <code>tuned</code>:</em> <code>bigbody</code> trở lại <code>200</code>, còn <code>sqli</code> và <code>lfi</code> vẫn <code>403</code>.</p>
+<p>Ghi vào <code>waf-report.md</code> cái giá phải trả: rule <code>SizeRestrictions_BODY</code> giờ chỉ đếm. Ngoài ra, ALB chỉ chuyển cho WAF phần đầu của body (8 KB), nên nội dung nằm sau giới hạn đó <strong>không</strong> được rule khác soi. Trong production, cách hẹp hơn là một rule tùy chỉnh dựa trên <strong>label</strong> <code>SizeRestrictions_Body</code>, chỉ cho phép body lớn ở đúng path <code>POST /orders</code> và chặn ở mọi path khác. Hãy tự viết rule đó làm bài tập mở rộng.</p>
+<hr>
+<h2 id="bước-8--waf-không-phải-authentication"><a class="anchor" href="#bước-8--waf-không-phải-authentication">Bước 8 — WAF không phải authentication</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>curl -s -w '  [%{http_code}]\n' &quot;http://${ALB_DNS}/admin/orders&quot;</code></pre></div>
+<p><em>Kỳ vọng:</em> <code>lab14-ok  [200]</code>. WAF cho request <strong>không có danh tính</strong> đi qua <code>/admin</code>, vì nó chỉ soi mẫu tấn công chứ không biết ai được phép làm gì. Authentication và authorization phải nằm ở ứng dụng hoặc ở lớp xác thực như Cognito, ALB authenticate action hay JWT authorizer (Lab 09). WAF chỉ giảm bớt traffic xấu đi tới lớp đó.</p>
+<p>Bạn có thể chặn <code>/admin</code> bằng rule WAF theo path, nhưng đó là <strong>network control</strong>, không phải phân quyền. Nó cũng sẽ chặn luôn admin hợp lệ.</p>
+<hr>
+<h2 id="bước-9--review-sáu-trụ-cột-cho-hệ-thống-đơn-hàng"><a class="anchor" href="#bước-9--review-sáu-trụ-cột-cho-hệ-thống-đơn-hàng">Bước 9 — Review sáu trụ cột cho hệ thống đơn hàng</a></h2>
+<p>Tạo <code>review.md</code>. Mỗi dòng phải có <strong>bằng chứng</strong> (lab nào, số đo nào), không chỉ &quot;đã làm&quot;. Bảng dưới là ví dụ, hãy bổ sung ít nhất một rủi ro của riêng bạn cho mỗi trụ cột.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Trụ cột</th>
+<th>Câu hỏi review</th>
+<th>Bằng chứng hiện có</th>
+<th>Rủi ro / khoảng trống</th>
+<th>Cải tiến</th>
+<th>Ưu tiên</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Operational excellence</td>
+<td>Deploy và rollback có tự động, có runbook không?</td>
+<td>Lab 12 (change set, rollback), Lab 13 (runbook restore đã chạy lại)</td>
+<td>Chưa có deploy staging → prod có gate</td>
+<td>Pipeline OIDC qua environment <code>prod</code> có reviewer</td>
+<td>Cao</td>
+</tr>
+<tr>
+<td>Security</td>
+<td>Quyền tối thiểu, secret, log kiểm toán, lớp edge?</td>
+<td>Lab 10 (KMS, Secrets Manager, CloudTrail), Lab 12 (OIDC), Lab 14 (SCP, WAF)</td>
+<td>Dev và prod chung account; chưa có SCP thật</td>
+<td>ADR-001; rollout SCP theo Bước 2.5</td>
+<td>Cao</td>
+</tr>
+<tr>
+<td>Reliability</td>
+<td>RTO/RPO đo được? Retry có kiểm soát?</td>
+<td>Lab 13: RTO và RPO của restore đã đo; retry budget</td>
+<td>Chưa có bản sao khác Region</td>
+<td>ADR-003</td>
+<td>Trung bình</td>
+</tr>
+<tr>
+<td>Performance efficiency</td>
+<td>Có SLO và baseline trước khi tối ưu?</td>
+<td>Lab 13: p95 với sample size; Lab 07: index giảm thời gian query</td>
+<td>Chưa đo dưới tải đọc từ cache</td>
+<td>Đo lại khi bật cache Lab 07 phần C</td>
+<td>Thấp</td>
+</tr>
+<tr>
+<td>Cost optimization</td>
+<td>Ai sở hữu chi phí, có budget và tag không?</td>
+<td>Lab 03 (budget), tag <code>Project</code> ở mọi lab</td>
+<td>NAT gateway (Lab 08) và ALB tính phí cả khi idle</td>
+<td>Tắt nonprod ngoài giờ; xem VPC endpoint thay NAT</td>
+<td>Trung bình</td>
+</tr>
+<tr>
+<td>Sustainability</td>
+<td>Có dùng tài nguyên vừa đủ, dọn tài nguyên thừa không?</td>
+<td>arm64/Graviton (Lab 08, 09), retention log ngắn, lifecycle S3 (Lab 06)</td>
+<td>Môi trường nonprod chạy 24/7</td>
+<td>Scale-to-zero nonprod; giữ retention theo yêu cầu, không mặc định &quot;vĩnh viễn&quot;</td>
+<td>Thấp</td>
+</tr>
+</tbody></table>
+</div>
+<p>Kết thúc <code>review.md</code> bằng <strong>lộ trình cải tiến</strong> gồm 3–5 mục. Mỗi mục có owner, thước đo hoàn thành và ADR liên quan nếu có.</p>
+<hr>
+<h2 id="bước-10--ba-adr"><a class="anchor" href="#bước-10--ba-adr">Bước 10 — Ba ADR</a></h2>
+<p>Mỗi ADR phải có ít nhất một phương án bị loại kèm lý do, và hệ quả có cả mặt xấu. Không dùng con số không có nguồn như &quot;giảm 99% rủi ro&quot;.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat &gt; adr/ADR-001-multi-account.md &lt;&lt;'EOF'
+# ADR-001: Tách dev/staging/prod thành account riêng trong AWS Organizations
+
+- Trạng thái: Proposed
+- Ngày: 2026-10-31
+- Người quyết định: &lt;owner&gt;
+
+## Bối cảnh
+Hệ thống đơn hàng (lab 06–13) đang chạy dev và prod trong cùng một account. Load test ở dev dùng chung
+quota Lambda concurrency và DynamoDB của account với prod; quyền IAM của dev đủ để sửa tài nguyên prod
+nếu policy viết sai; chi phí chỉ tách được bằng tag.
+
+## Quyết định
+Dùng Organizations với cây OU trong design.md. Truy cập người qua IAM Identity Center; deploy qua OIDC
+(ADR của Lab 12). SCP bảo vệ audit và giới hạn Region, rollout theo scp-test-matrix.md.
+
+## Phương án đã cân nhắc
+1. Một account, tách bằng VPC + tag + IAM condition: rẻ và đơn giản, nhưng quota và IAM vẫn chung;
+   một policy sai là đủ chạm prod. Loại.
+2. Control Tower ngay từ đầu: có baseline sẵn, nhưng thêm chi phí Config theo account × Region và
+   cần thời gian học drift/lifecycle. Hoãn; xem lại khi &gt; 5 account (xem control-tower-eval.md).
+
+## Hệ quả
++ Ranh giới IAM và quota rõ ràng; chi phí theo account.
++ SCP đặt được trần quyền cho cả admin của member account.
+- Thêm việc: networking giữa account, pipeline đa account, quản lý Identity Center.
+- Chia sẻ tài nguyên giữa account (ECR, KMS) cần resource policy, dễ sai.
+- Tách account KHÔNG tự chặn rò rỉ: trust policy cross-account viết lỏng vẫn mở đường từ dev sang prod.
+EOF
+
+cat &gt; adr/ADR-002-waf-rollout.md &lt;&lt;'EOF'
+# ADR-002: WAF managed rules đi qua giai đoạn count có tiêu chí thoát, rồi mới block
+
+- Trạng thái: Proposed
+- Ngày: 2026-10-31
+
+## Bối cảnh
+API đơn hàng nhận traffic công khai qua ALB. Lab 14 cho thấy rule giới hạn kích thước body chặn một đơn
+hàng hợp lệ (false positive), trong khi rule SQLi/LFI bắt đúng request tấn công giả lập.
+
+## Quyết định
+1. Rule group mới chạy ở count với logging bật.
+2. Thoát count khi: đủ lưu lượng thực đại diện (ít nhất một chu kỳ nghiệp vụ, ví dụ một tuần có ngày cao điểm)
+   và mọi rule con có match đã được phân loại true/false positive trong log.
+3. False positive xử lý ở phạm vi nhỏ nhất: override đúng rule con, hoặc scope-down theo path/label;
+   không tắt cả rule group.
+4. Theo dõi BlockedRequests theo rule sau khi bật block; có lệnh rollback về count trong runbook.
+
+## Phương án đã cân nhắc
+1. Block ngay: bảo vệ sớm, nhưng lab đã chứng minh chặn nhầm khách hàng hợp lệ. Loại.
+2. Không dùng WAF, chỉ dựa vào validate input ở ứng dụng: vẫn bắt buộc phải làm, nhưng thiếu lớp chặn
+   sớm và log tập trung cho traffic xấu. Không thay thế, làm song song.
+
+## Hệ quả
++ Giảm rủi ro chặn nhầm khi bật block.
+- Trong giai đoạn count, request tấn công vẫn đi tới ứng dụng — ứng dụng phải tự an toàn.
+- Chi phí cố định web ACL + rule + log; phải đặt retention log.
+- WAF không thay authentication/authorization (Lab 14 Bước 8).
+EOF
+
+cat &gt; adr/ADR-003-dr.md &lt;&lt;'EOF'
+# ADR-003: DR cho dữ liệu đơn hàng — backup &amp; restore sang Region thứ hai, chưa dùng pilot light
+
+- Trạng thái: Proposed
+- Ngày: 2026-10-31
+
+## Bối cảnh
+Yêu cầu nghiệp vụ (giả định): RPO ≤ 24 giờ, RTO ≤ 8 giờ khi mất cả một Region; mất một AZ phải tự chịu được.
+Lab 13 đo được: restore DynamoDB trong cùng Region mất &lt;số đo của bạn&gt; phút; PITR cho RPO ~ vài phút trong Region.
+Multi-AZ đã có sẵn (DynamoDB, RDS Multi-AZ ở Lab 07).
+
+## Quyết định
+Dùng AWS Backup copy job sang Region thứ hai cho DynamoDB và RDS, hằng ngày. Hạ tầng dựng lại bằng IaC
+(Lab 12). Drill restore khác Region mỗi quý, ghi số đo vào runbook.
+
+## Phương án đã cân nhắc
+1. Pilot light (DynamoDB global table, Aurora Global Database, hạ tầng tối thiểu ở Region 2): RPO giây–phút,
+   RTO thấp hơn, nhưng chi phí replica chạy liên tục và vận hành phức tạp hơn. Vượt yêu cầu hiện tại; xem lại
+   nếu RPO yêu cầu &lt; 1 giờ.
+2. Chỉ PITR trong cùng Region: rẻ nhất, nhưng không chịu được mất Region và không chống được xóa nhầm
+   ở cấp account. Loại.
+
+## Hệ quả
++ Đáp ứng yêu cầu với chi phí lưu trữ backup + phí copy liên Region.
+- RTO phụ thuộc thời gian restore + dựng hạ tầng: CHƯA đo khác Region — drill đầu tiên là điều kiện để Accepted.
+- Dữ liệu ghi sau bản copy gần nhất sẽ mất (đúng với RPO 24 giờ).
+- Cần KMS key ở Region 2 và quyền copy; backup vault nên ở account riêng để chống xóa cùng lúc.
+EOF
+ls adr/</code></pre></div>
+<hr>
+<h2 id="bước-11--dọn-dẹp-nhánh-waf-theo-dependency"><a class="anchor" href="#bước-11--dọn-dẹp-nhánh-waf-theo-dependency">Bước 11 — Dọn dẹp nhánh WAF (theo dependency)</a></h2>
+<p>Thứ tự dọn: logging config → disassociate → web ACL → log group → ALB → SG (chờ ENI của ALB biến mất) → subnet → route table → IGW → VPC.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws wafv2 delete-logging-configuration --resource-arn &quot;$ACL_ARN&quot; 2&gt;/dev/null
+aws wafv2 disassociate-web-acl --resource-arn &quot;$ALB_ARN&quot; 2&gt;/dev/null
+sleep 10
+LOCK=$(aws wafv2 get-web-acl --name lab14-acl --scope REGIONAL --id &quot;$ACL_ID&quot; --query LockToken --output text)
+aws wafv2 delete-web-acl --name lab14-acl --scope REGIONAL --id &quot;$ACL_ID&quot; --lock-token &quot;$LOCK&quot;
+aws logs delete-log-group --log-group-name aws-waf-logs-lab14 2&gt;/dev/null
+
+aws elbv2 delete-load-balancer --load-balancer-arn &quot;$ALB_ARN&quot;
+aws elbv2 wait load-balancers-deleted --load-balancer-arns &quot;$ALB_ARN&quot;
+for i in $(seq 1 20); do
+  aws ec2 delete-security-group --group-id &quot;$SG_ID&quot; 2&gt;/dev/null &amp;&amp; { echo &quot;đã xóa SG&quot;; break; }
+  sleep 15   # ENI của ALB cần thêm thời gian để giải phóng
+done
+aws ec2 delete-subnet --subnet-id &quot;$SUB1&quot;
+aws ec2 delete-subnet --subnet-id &quot;$SUB2&quot;
+aws ec2 delete-route-table --route-table-id &quot;$RT_ID&quot;
+aws ec2 detach-internet-gateway --internet-gateway-id &quot;$IGW_ID&quot; --vpc-id &quot;$VPC_ID&quot;
+aws ec2 delete-internet-gateway --internet-gateway-id &quot;$IGW_ID&quot;
+aws ec2 delete-vpc --vpc-id &quot;$VPC_ID&quot;</code></pre></div>
+<p><em>Negative case khi dọn:</em> nếu chạy <code>delete-web-acl</code> trước <code>disassociate-web-acl</code>, lệnh bị từ chối với <code>WAFAssociatedItemException</code>. Đó là lý do phải theo đúng thứ tự trên.</p>
+<h3 id="kiểm-tra-inventory-sau-cleanup"><a class="anchor" href="#kiểm-tra-inventory-sau-cleanup">Kiểm tra inventory sau cleanup</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>echo &quot;== Web ACL&quot;; aws wafv2 list-web-acls --scope REGIONAL --query &quot;WebACLs[?starts_with(Name,'lab14')].Name&quot; --output text
+echo &quot;== ALB&quot;;     aws elbv2 describe-load-balancers --query &quot;LoadBalancers[?starts_with(LoadBalancerName,'lab14')].LoadBalancerName&quot; --output text
+echo &quot;== VPC&quot;;     aws ec2 describe-vpcs --filters Name=tag:Project,Values=aws-lab-14 --query 'Vpcs[].VpcId' --output text
+echo &quot;== ENI&quot;;     aws ec2 describe-network-interfaces --filters Name=group-name,Values=lab14-alb-sg --query 'NetworkInterfaces[].NetworkInterfaceId' --output text
+echo &quot;== Log&quot;;     aws logs describe-log-groups --log-group-name-prefix aws-waf-logs-lab14 --query 'logGroups[].logGroupName' --output text</code></pre></div>
+<p><em>Kỳ vọng:</em> mọi dòng đều rỗng. Phần thiết kế (Bước 1–3, 9–10) không tạo tài nguyên AWS nào. Tài nguyên được giữ lại có chủ đích là thư mục <code>~/aws-lab-14</code> trên máy bạn, $0.</p>
+<h3 id="nếu-lab-dừng-giữa-chừng-hoặc-mất-shell"><a class="anchor" href="#nếu-lab-dừng-giữa-chừng-hoặc-mất-shell">Nếu lab dừng giữa chừng hoặc mất shell</a></h3>
+<p>Tìm lại ID theo tên và tag, rồi chạy lại Bước 11. Lệnh nào báo &quot;không tồn tại&quot; (<code>WAFNonexistentItemException</code>, <code>LoadBalancerNotFound</code>, <code>InvalidVpcID.NotFound</code>...) thì nghĩa là bước đó đã xong.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export AWS_PROFILE=&quot;aws-lab&quot; AWS_REGION=&quot;ap-southeast-1&quot;
+read -r ACL_ARN ACL_ID &lt;&lt;&lt; &quot;$(aws wafv2 list-web-acls --scope REGIONAL \
+  --query &quot;WebACLs[?Name=='lab14-acl'] | [0].[ARN,Id]&quot; --output text)&quot;
+ALB_ARN=$(aws elbv2 describe-load-balancers --names lab14-alb --query 'LoadBalancers[0].LoadBalancerArn' --output text 2&gt;/dev/null)
+VPC_ID=$(aws ec2 describe-vpcs --filters Name=tag:Project,Values=aws-lab-14 --query 'Vpcs[0].VpcId' --output text)
+SG_ID=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values=&quot;$VPC_ID&quot; Name=group-name,Values=lab14-alb-sg --query 'SecurityGroups[0].GroupId' --output text)
+SUB1=$(aws ec2 describe-subnets --filters Name=tag:Name,Values=lab14-public-a --query 'Subnets[0].SubnetId' --output text)
+SUB2=$(aws ec2 describe-subnets --filters Name=tag:Name,Values=lab14-public-b --query 'Subnets[0].SubnetId' --output text)
+RT_ID=$(aws ec2 describe-route-tables --filters Name=tag:Name,Values=lab14-rt --query 'RouteTables[0].RouteTableId' --output text)
+IGW_ID=$(aws ec2 describe-internet-gateways --filters Name=attachment.vpc-id,Values=&quot;$VPC_ID&quot; --query 'InternetGateways[0].InternetGatewayId' --output text)
+echo &quot;ACL=${ACL_ID} ALB=${ALB_ARN##*/} VPC=${VPC_ID} SG=${SG_ID} SUB=${SUB1},${SUB2} RT=${RT_ID} IGW=${IGW_ID}&quot;</code></pre></div>
+<p>Giá trị nào là <code>None</code> thì bỏ qua lệnh xóa tương ứng. Nếu ALB đã bị xóa nhưng web ACL vẫn còn, <code>disassociate-web-acl</code> sẽ báo lỗi. Khi đó xóa web ACL trực tiếp, vì association đã mất cùng với ALB. Nếu <code>IGW_ID</code> là <code>None</code> nhưng vẫn còn IGW tag <code>lab14-igw</code> ở trạng thái detached, tìm nó bằng <code>Name=tag:Name,Values=lab14-igw</code>.</p>
+<hr>
+<h2 id="checklist-hoàn-thành"><a class="anchor" href="#checklist-hoàn-thành">Checklist hoàn thành</a></h2>
+<ul>
+<li><input type="checkbox"> <code>design.md</code>: mỗi account có owner và đường truy cập. Management account không chạy workload. Break-glass có cả cơ chế phát hiện.</li>
+<li><input type="checkbox"> Hai SCP qua được <code>validate-policy</code> mà không có <code>ERROR</code>, và mỗi bản minified nhỏ hơn 5.120 ký tự.</li>
+<li><input type="checkbox"> Test matrix có đủ 9 dòng với kết quả simulator thật, cộng bảng các trường hợp simulator không mô phỏng được.</li>
+<li><input type="checkbox"> Giải thích được: SCP không cấp quyền; không áp dụng cho management account và service-linked role; có áp dụng cho root user của member account.</li>
+<li><input type="checkbox"> Có kế hoạch rollout không bắt đầu ở Root, và biết cách gỡ khi bị lockout.</li>
+<li><input type="checkbox"> <code>control-tower-eval.md</code> có nguồn, ngày đọc và một quyết định kèm điều kiện xem lại.</li>
+<li><input type="checkbox"> (Tùy chọn) WAF: có bảng phân loại true/false positive từ chế độ count, thấy <code>bigbody</code> bị 403 ở <code>strict</code> và 200 ở <code>tuned</code>, còn <code>sqli</code>/<code>lfi</code> 403.</li>
+<li><input type="checkbox"> (Tùy chọn) Chứng minh được <code>/admin</code> vẫn 200 khi có WAF.</li>
+<li><input type="checkbox"> <code>review.md</code> đủ sáu trụ cột, có bằng chứng và lộ trình cải tiến.</li>
+<li><input type="checkbox"> Ba ADR, mỗi cái có phương án bị loại và hệ quả xấu.</li>
+<li><input type="checkbox"> Inventory sau cleanup rỗng.</li>
+</ul>
+<hr>
+<h2 id="troubleshooting-nhanh"><a class="anchor" href="#troubleshooting-nhanh">Troubleshooting nhanh</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Triệu chứng</th>
+<th>Nguyên nhân khả dĩ</th>
+<th>Bằng chứng / Khắc phục</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Bị <code>AccessDenied</code> sau khi bật guardrail</td>
+<td>SCP ở OU này <strong>hoặc OU cha</strong> deny; hoặc OU thiếu <code>FullAWSAccess</code>; hoặc điều kiện ngoại lệ sai ARN</td>
+<td>CloudTrail <code>errorMessage</code> có cụm &quot;explicit deny in a service control policy&quot; (hoặc &quot;no service control policy allows&quot;). Liệt kê SCP từng tầng bằng <code>organizations list-policies-for-target</code>. Sửa đúng statement đó, <strong>không</strong> gỡ cả SCP nếu không cần. Lockout toàn bộ: dùng management account (SCP không áp dụng) hoặc break-glass đã thiết kế.</td>
+</tr>
+<tr>
+<td>Simulator trả <code>allowed</code> dù kỳ vọng <code>explicitDeny</code></td>
+<td>Thiếu hoặc sai context key, sai <code>--resource-arns</code>, hoặc <code>NotAction</code> miễn trừ action đó</td>
+<td>Bỏ <code>--query</code> để xem <code>MatchedStatements</code>. So action với danh sách <code>NotAction</code>.</td>
+</tr>
+<tr>
+<td><code>validate-policy</code> báo <code>ERROR</code></td>
+<td>Sai cú pháp, action hoặc condition key không tồn tại</td>
+<td>Đọc <code>findingDetails</code> và <code>locations</code>. Sửa rồi validate lại.</td>
+</tr>
+<tr>
+<td>WAF chặn nhầm khách hàng hợp lệ</td>
+<td>Một rule con match dữ liệu nghiệp vụ, như body lớn hay ký tự giống SQL trong ghi chú</td>
+<td>Từ log hoặc sampled request, xác định <code>terminatingRuleId</code> và <code>RuleNameWithinRuleGroup</code>, rồi kiểm tra priority và scope. Override <strong>đúng rule con</strong> về Count hoặc scope-down theo path/label. Không chuyển cả rule group về count, và không tắt WAF.</td>
+</tr>
+<tr>
+<td><code>get-sampled-requests</code> trả rỗng</td>
+<td>Sai <code>--rule-metric-name</code> (phải khớp <code>MetricName</code> của rule), time window quá 3 giờ, hoặc chưa đủ thời gian</td>
+<td>Kiểm tra <code>MetricName</code> trong <code>rules-*.json</code>. Chờ vài phút. Dùng log làm nguồn chính.</td>
+</tr>
+<tr>
+<td><code>update-web-acl</code> báo <code>WAFOptimisticLockException</code></td>
+<td>LockToken đã cũ vì có lần update khác xen giữa</td>
+<td><code>waf_apply</code> luôn lấy token mới. Chạy lại.</td>
+</tr>
+<tr>
+<td>Đổi sang block nhưng request tấn công vẫn 200</td>
+<td>Thay đổi chưa lan truyền, hoặc web ACL chưa được associate</td>
+<td><code>get-web-acl-for-resource</code>, rồi chờ <code>wait_sqli_blocked</code>.</td>
+</tr>
+<tr>
+<td>Chi phí governance tăng</td>
+<td>Config ghi configuration item ở nhiều account × Region; trail thêm data event; log không có retention</td>
+<td>Cost Explorer lọc theo service và account (dữ liệu có độ trễ). Đếm governed Region. Kiểm tra event selector của trail. Đặt retention và lifecycle cho log. Giảm phạm vi theo chủ đích, <strong>không</strong> tắt Config hay trail do Control Tower quản lý (sẽ gây drift).</td>
+</tr>
+</tbody></table>
+</div>
+<hr>
+<h2 id="tiếp-theo"><a class="anchor" href="#tiếp-theo">Tiếp theo</a></h2>
+<p>Đây là bài cuối của lộ trình. Bài tập cuối khóa: chọn một hệ thống, có thể là hệ thống đơn hàng, rồi nộp các phần sau.</p>
+<ul>
+<li>Sơ đồ kiến trúc.</li>
+<li>Kết quả happy path và failure case <strong>có bằng chứng</strong>, lấy từ các lab bạn đã chạy.</li>
+<li>Ít nhất một ADR có phương án thay thế.</li>
+<li>Ước tính chi phí.</li>
+<li>Checklist cleanup.</li>
+</ul>
+<p>Bài làm được đánh giá bằng bằng chứng (số đo, output, log), không phải bằng việc đã bấm đủ bước.</p>
+<p>Quay lại <a href="../../plans/README.md">README lộ trình</a> để xem tổng quan và chọn chủ đề cần ôn lại.</p>
+
+<footer>Sinh tự động từ <code>labs/14-architecture-and-governance/README.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

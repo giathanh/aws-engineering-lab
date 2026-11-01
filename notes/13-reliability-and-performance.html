@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bài 13 — Độ tin cậy và Hiệu năng: SLI/SLO, Kiểm thử Tải, Thiết kế Phục hồi và Khôi phục Thảm họa (DR)</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="01-foundations.html">01. Lý thuyết</a><a href="../labs/01-foundations/README.html">01. Lab</a><a href="02-identity-and-access.html">02. Lý thuyết</a><a href="../labs/02-identity-and-access/README.html">02. Lab</a><a href="03-cost-management.html">03. Lý thuyết</a><a href="../labs/03-cost-management/README.html">03. Lab</a><a href="04-networking.html">04. Lý thuyết</a><a href="../labs/04-networking/README.html">04. Lab</a><a href="05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../labs/05-compute-and-load-balancing/README.html">05. Lab</a><a href="06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../labs/06-storage-and-content-delivery/README.html">06. Lab</a><a href="07-databases-and-cache.html">07. Lý thuyết</a><a href="../labs/07-databases-and-cache/README.html">07. Lab</a><a href="08-containers.html">08. Lý thuyết</a><a href="../labs/08-containers/README.html">08. Lab</a><a href="09-serverless.html">09. Lý thuyết</a><a href="../labs/09-serverless/README.html">09. Lab</a><a href="10-observability-and-application-security.html">10. Lý thuyết</a><a href="../labs/10-observability-and-application-security/README.html">10. Lab</a><a href="11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../labs/11-messaging-and-workflows/README.html">11. Lab</a><a href="12-iac-and-cicd.html">12. Lý thuyết</a><a href="../labs/12-iac-and-cicd/README.html">12. Lab</a><a href="13-reliability-and-performance.html" class="active">13. Lý thuyết</a><a href="../labs/13-reliability-and-performance/README.html">13. Lab</a><a href="14-architecture-and-governance.html">14. Lý thuyết</a><a href="../labs/14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#mục-tiêu">Mục tiêu</a></li><li><a href="#phần-1--văn-hóa-sre-sli-slo-sla-và-quản-trị-ngân-sách-lỗi-error-budget-50-phút">Phần 1 — Văn hóa SRE: SLI, SLO, SLA và Quản trị Ngân sách Lỗi (Error Budget) (50 phút)</a></li><li><a href="#phần-2--hiệu-năng-và-phân-tích-trễ-cú-lừa-của-số-trung-bình-50-phút">Phần 2 — Hiệu năng và Phân tích Trễ: &quot;Cú lừa&quot; của Số Trung bình (50 phút)</a></li><li><a href="#phần-3--các-mẫu-thiết-kế-phục-hồi-resilience-patterns-50-phút">Phần 3 — Các Mẫu Thiết kế Phục hồi (Resilience Patterns) (50 phút)</a></li><li><a href="#phần-4--phương-pháp-kiểm-thử-tải-load-testing-methodology-45-phút">Phần 4 — Phương pháp Kiểm thử Tải (Load Testing Methodology) (45 phút)</a></li><li><a href="#phần-5--chiến-lược-phục-hồi-thảm-họa-disaster-recovery-rpo-và-rto-55-phút">Phần 5 — Chiến lược Phục hồi Thảm họa (Disaster Recovery): RPO và RTO (55 phút)</a></li><li><a href="#phần-6--giới-thiệu-bài-thực-hành-lab-13">Phần 6 — Giới thiệu bài thực hành (Lab 13)</a></li><li><a href="#phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi phổ biến (25 phút)</a></li><li><a href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></li><li><a href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></li><li><a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></li><li><a href="#đáp-án-gợi-ý">Đáp án gợi ý</a></li></ol></aside>
+<main>
+<h1 id="bài-13--độ-tin-cậy-và-hiệu-năng-slislo-kiểm-thử-tải-thiết-kế-phục-hồi-và-khôi-phục-thảm-họa-dr"><a class="anchor" href="#bài-13--độ-tin-cậy-và-hiệu-năng-slislo-kiểm-thử-tải-thiết-kế-phục-hồi-và-khôi-phục-thảm-họa-dr">Bài 13 — Độ tin cậy và Hiệu năng: SLI/SLO, Kiểm thử Tải, Thiết kế Phục hồi và Khôi phục Thảm họa (DR)</a></h1>
+<blockquote>
+<p><strong>Đối tượng:</strong> developer có kinh nghiệm nhưng mới học AWS.
+<strong>Thời lượng:</strong> khoảng 6–10 giờ, chia hai buổi. Buổi 1 gồm phần 1–3 (Văn hóa SRE, Quản trị SLO/Error Budget, Phân tích Trễ &amp; Nghẽn, và Các Mẫu Thiết kế Phục hồi). Buổi 2 gồm phần 4–7 (Phương pháp Kiểm thử Tải, Chiến lược Khôi phục Thảm họa RTO/RPO và <a href="../labs/13-reliability-and-performance/README.html">lab thực hành</a>).
+<strong>Kế hoạch gốc:</strong> <a href="../plans/13-reliability-and-performance.md">plans/13-reliability-and-performance.md</a>
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Xem <a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a> ở cuối bài.</p>
+</blockquote>
+<h2 id="mục-tiêu"><a class="anchor" href="#mục-tiêu">Mục tiêu</a></h2>
+<p>Sau bài này, bạn có thể:</p>
+<ol>
+<li>Thiết lập khung đo lường độ tin cậy chuẩn <strong>Site Reliability Engineering (SRE)</strong>: phân biệt <strong>SLI</strong>, <strong>SLO</strong> và <strong>SLA</strong>, quản lý ngân sách lỗi (<strong>Error Budget</strong>) theo cửa sổ trượt (<strong>Rolling Measurement Window</strong>) và thiết lập cảnh báo tốc độ đốt ngân sách (<strong>Burn Rate Alarms</strong>).</li>
+<li>Làm chủ các chỉ số hiệu năng phân tán: hiểu rõ tại sao số trung bình (<strong>Average</strong>) là một &quot;cú lừa&quot; nguy hiểm, phân tích độ trễ phân vị (<strong>Latency Percentiles: p50, p90, p95, p99, p99.9</strong>), đánh giá độ bão hòa tài nguyên (<strong>Saturation</strong>) và xác định điểm nghẽn cổ chai (<strong>Bottleneck</strong>).</li>
+<li>Triển khai các mẫu thiết kế phục hồi (<strong>Resilience Patterns</strong>): thời hạn chót (<strong>Deadlines &amp; Timeouts</strong>), ngân sách thử lại (<strong>Retry Budget</strong>), thuật toán <strong>Exponential Backoff với Full Jitter</strong> chống sụp đổ dây chuyền (<strong>Retry Storm</strong>), ngắt mạch (<strong>Circuit Breaker</strong>) và kiểm soát áp lực ngược (<strong>Backpressure</strong>).</li>
+<li>Thiết kế quy trình kiểm thử tải khoa học (<strong>Load Testing Methodology</strong>): đo đạc Baseline, giai đoạn Ramp-up, Steady-state, Soak/Stress test, Spike test, và tuân thủ các quy tắc pháp lý kiểm thử tải của AWS.</li>
+<li>Xây dựng chiến lược <strong>Khôi phục Thảm họa (Disaster Recovery - DR)</strong>: đo lường thực tế <strong>RPO</strong> và <strong>RTO</strong>, so sánh 4 mô hình DR (Backup &amp; Restore, Pilot Light, Warm Standby, Multi-Region Active-Active) theo bài toán đánh đổi chi phí, và thực hiện bài diễn tập khôi phục (<strong>DR Drill</strong>).</li>
+</ol>
+<hr>
+<h2 id="phần-1--văn-hóa-sre-sli-slo-sla-và-quản-trị-ngân-sách-lỗi-error-budget-50-phút"><a class="anchor" href="#phần-1--văn-hóa-sre-sli-slo-sla-và-quản-trị-ngân-sách-lỗi-error-budget-50-phút">Phần 1 — Văn hóa SRE: SLI, SLO, SLA và Quản trị Ngân sách Lỗi (Error Budget) (50 phút)</a></h2>
+<p>Trong kỹ nghệ phần mềm hiện đại, việc theo đuổi mục tiêu &quot;hệ thống không bao giờ có lỗi (100% Availability)&quot; là bất khả thi và lãng phí nguồn lực kinh tế một cách vô ích. Thay vào đó, trường phái SRE (Site Reliability Engineering) chấp nhận một tỷ lệ lỗi có kiểm soát để duy trì tốc độ đổi mới sản phẩm.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Phân cấp Khái niệm Đo lường Độ tin cậy:
+┌────────────────────────────────────────────────────────┐
+│ SLA (Service Level Agreement): Cam kết Pháp lý         │
+│ &quot;Nếu hệ thống sẵn sàng dưới 99.9%, hoàn tiền cho khách&quot;│
+│  ┌──────────────────────────────────────────────────┐  │
+│  │ SLO (Service Level Objective): Mục tiêu Nội bộ   │  │
+│  │ &quot;Đội ngũ kỹ thuật phấn đấu đạt 99.95% sẵn sàng&quot;  │  │
+│  │  ┌────────────────────────────────────────────┐  │  │
+│  │  │ SLI (Service Level Indicator): Chỉ số Đo   │  │  │
+│  │  │ &quot;Tỷ lệ requests thành công đo được là 99.98%│  │  │
+│  │  └────────────────────────────────────────────┘  │  │
+│  └──────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────┘</code></pre></div>
+<h3 id="1-phân-biệt-sli-slo-và-sla"><a class="anchor" href="#1-phân-biệt-sli-slo-và-sla">1. Phân biệt SLI, SLO và SLA</a></h3>
+<ul>
+<li><strong>SLI (Chỉ số):</strong> Số liệu thực tế đo được theo thời gian thực. Ví dụ: <code>Tỷ lệ response HTTP &lt; 500ms đạt mã 200 OK / Tổng số requests nhận được</code>.</li>
+<li><strong>SLO (Mục tiêu):</strong> Ngưỡng cam kết nội bộ giữa đội ngũ Kỹ thuật và Sản phẩm. Ví dụ: <code>99.9% requests phải thành công trong bất kỳ cửa sổ 30 ngày nào</code>.</li>
+<li><strong>SLA (Thỏa thuận):</strong> Hợp đồng pháp lý ràng buộc với khách hàng kèm chế tài phạt tiền nếu vi phạm. Luôn luôn đặt <strong>SLO nghiêm ngặt hơn SLA</strong> (ví dụ: SLO 99.95%, SLA 99.9%) để nội bộ có thời gian khắc phục sự cố trước khi bị phạt hợp đồng.</li>
+</ul>
+<h3 id="2-ngân-sách-lỗi-error-budget-và-cửa-sổ-trượt-rolling-30-day-window"><a class="anchor" href="#2-ngân-sách-lỗi-error-budget-và-cửa-sổ-trượt-rolling-30-day-window">2. Ngân sách Lỗi (Error Budget) và Cửa sổ Trượt (Rolling 30-Day Window)</a></h3>
+<ul>
+<li><strong>Công thức:</strong> <code>Error Budget = 100% - SLO</code>.<ul>
+<li>Nếu SLO là <strong>99.9%</strong>, bạn có một ngân sách lỗi là <strong>0.1%</strong>. Với 10,000,000 requests mỗi tháng, bạn được phép có tối đa 10,000 requests bị lỗi.</li>
+</ul>
+</li>
+<li><strong>Quy tắc Vận hành:</strong><ul>
+<li><strong>Khi Error Budget còn dư dả:</strong> Đội ngũ được tự do triển khai các tính năng mới, thử nghiệm kiến trúc mới với tốc độ phát hành nhanh.</li>
+<li><strong>Khi Error Budget bị cạn kiệt (Burned Out):</strong> Đóng băng phát hành tính năng mới (<strong>Feature Freeze</strong>); toàn bộ kỹ sư phải tập trung 100% thời gian vào việc sửa lỗi hạ tầng, tối ưu độ tin cậy và viết bài học kinh nghiệm (Post-mortem).</li>
+</ul>
+</li>
+</ul>
+<h3 id="3-cảnh-báo-tốc-độ-đốt-ngân-sách-burn-rate-alarms"><a class="anchor" href="#3-cảnh-báo-tốc-độ-đốt-ngân-sách-burn-rate-alarms">3. Cảnh báo Tốc độ Đốt Ngân sách (Burn Rate Alarms)</a></h3>
+<p>Đừng đợi đến khi Error Budget cạn sạch mới bật còi báo động! Hãy theo dõi tốc độ đốt (<strong>Burn Rate</strong>):</p>
+<ul>
+<li>Tốc độ đốt $1\times$: Bạn sẽ tiêu hết 100% ngân sách lỗi đúng sau 30 ngày (bình thường).</li>
+<li>Tốc độ đốt $14.4\times$: Bạn đã đốt hết 2% ngân sách chỉ trong 1 giờ! Đây là một sự cố nghiêm trọng đòi hỏi phải đánh thức kỹ sư trực chiến (On-call Pager) ngay lập tức.</li>
+</ul>
+<hr>
+<h2 id="phần-2--hiệu-năng-và-phân-tích-trễ-cú-lừa-của-số-trung-bình-50-phút"><a class="anchor" href="#phần-2--hiệu-năng-và-phân-tích-trễ-cú-lừa-của-số-trung-bình-50-phút">Phần 2 — Hiệu năng và Phân tích Trễ: &quot;Cú lừa&quot; của Số Trung bình (50 phút)</a></h2>
+<p>Khi kiểm tra hiệu năng hệ thống, hầu hết các dashboard hiển thị một dòng kẻ: <code>Average Latency = 45ms</code>. Kỹ sư vội kết luận hệ thống chạy siêu nhanh. Nhưng thực tế người dùng lại liên tục phàn nàn web bị giật và quay tròn!</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Sự Phân phối của Độ trễ (Long-Tail Latency Distribution):
+Số lượng
+Requests
+  ▲
+  │   █ (p50 = 25ms - 50% người dùng)
+  │  ███
+  │ █████ (Average = 45ms - &quot;Cú lừa&quot;)
+  │███████             █ (p95 = 450ms)
+  │████████            ██       █ (p99 = 2,800ms)
+  └───────────────────────────────────────────────► Độ trễ (ms)</code></pre></div>
+<h3 id="1-tại-sao-số-trung-bình-average-là-cú-lừa"><a class="anchor" href="#1-tại-sao-số-trung-bình-average-là-cú-lừa">1. Tại sao Số Trung bình (Average) là &quot;Cú lừa&quot;?</a></h3>
+<p>Số trung bình bị che giấu hoàn toàn bởi số đông các request nhỏ (như kiểm tra health check hoặc đọc cache). Một request duyệt trang nhanh 5ms sẽ triệt tiêu một request thanh toán giỏ hàng bị nghẽn tới 10 giây! Kết quả trung bình vẫn đẹp, nhưng khách hàng VIP sắp trả tiền thì đã bỏ đi vì web bị đơ.</p>
+<h3 id="2-độ-trễ-phân-vị-latency-percentiles-p50-p95-p99-p999"><a class="anchor" href="#2-độ-trễ-phân-vị-latency-percentiles-p50-p95-p99-p999">2. Độ trễ Phân vị (Latency Percentiles): p50, p95, p99, p99.9</a></h3>
+<ul>
+<li><strong>p50 (Median):</strong> 50% khách hàng có độ trễ nhỏ hơn giá trị này (đại diện cho người dùng thông thường).</li>
+<li><strong>p95:</strong> 95% requests nhanh hơn ngưỡng này; 5% chậm hơn.</li>
+<li><strong>p99 (Long-Tail):</strong> Phản ánh trải nghiệm của 1% người dùng đen đủi nhất. Trong thương mại điện tử, 1% người dùng này thường chính là những khách hàng mua nhiều hàng nhất (giỏ hàng có 100 món, phải chạy hàng loạt truy vấn database phức tạp).</li>
+<li><strong>Quy tắc toán học quan trọng:</strong> <strong>Tuyệt đối không được cộng các percentile của từng service để suy ra percentile end-to-end!</strong>
+$\text{p99}(A + B) \neq \text{p99}(A) + \text{p99}(B)$. Một request đơn lẻ có thể nhanh ở Service A nhưng lại gặp xui xẻo rơi vào phân vị chậm ở Service B. Muốn đo end-to-end, bạn bắt buộc phải đo trực tiếp tại điểm vào của khách hàng.</li>
+</ul>
+<h3 id="3-độ-bão-hòa-saturation-và-nút-thắt-cổ-chai-bottleneck"><a class="anchor" href="#3-độ-bão-hòa-saturation-và-nút-thắt-cổ-chai-bottleneck">3. Độ Bão hòa (Saturation) và Nút thắt Cổ chai (Bottleneck)</a></h3>
+<ul>
+<li><strong>Thông lượng (Throughput / RPS):</strong> Số lượng request hệ thống xử lý trong 1 giây.</li>
+<li><strong>Độ bão hòa (Saturation):</strong> Tỷ lệ tài nguyên đã bị chiếm dụng:<ul>
+<li>CPU / Memory Utilization.</li>
+<li><strong>Database Connection Pool Exhaustion:</strong> CPU máy chủ chỉ 15%, nhưng 100% kết nối kết nối tới RDS MySQL đã bị chiếm hết. Các thread ứng dụng phải xếp hàng chờ giải phóng connection, khiến độ trễ p99 vọt lên hàng nghìn mili-giây.</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2 id="phần-3--các-mẫu-thiết-kế-phục-hồi-resilience-patterns-50-phút"><a class="anchor" href="#phần-3--các-mẫu-thiết-kế-phục-hồi-resilience-patterns-50-phút">Phần 3 — Các Mẫu Thiết kế Phục hồi (Resilience Patterns) (50 phút)</a></h2>
+<p>Khi một dịch vụ downstream bị chậm hoặc chập chờn, việc các client liên tục thử lại (retry) một cách mù quáng sẽ tạo ra thảm họa dây chuyền (<strong>Cascading Failure</strong>).</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Mối Nguy từ Thundering Herd &amp; Sức mạnh của Jitter:
+1. Thử lại Cố định (Fixed Retry - Sụp đổ dây chuyền):
+   Tất cả Client đồng loạt bắn tải lại cùng một giây!
+   Tải (RPS) ▲     ████            ████            ████ (Hạ tầng downstream
+             │     ████            ████            ████  tiếp tục bị đè sập)
+             └────────────────────────────────────────► Thời gian
+
+2. Exponential Backoff kết hợp Full Jitter (Rải đều tải):
+   Tải (RPS) ▲   █  █  █   █   █     █     █     █      (Tải được rải mịn,
+             │  ████████████████████████████████████    downstream kịp hồi phục)
+             └────────────────────────────────────────► Thời gian</code></pre></div>
+<h3 id="1-thuật-toán-exponential-backoff-và-full-jitter"><a class="anchor" href="#1-thuật-toán-exponential-backoff-và-full-jitter">1. Thuật toán Exponential Backoff và Full Jitter</a></h3>
+<ul>
+<li><strong>Exponential Backoff:</strong> Khi gặp lỗi, thay vì thử lại ngay, client chờ một khoảng thời gian tăng theo cấp số nhân: $T = \text{base} \times 2^{\text{attempt}}$ (ví dụ: 1s, 2s, 4s, 8s...).</li>
+<li><strong>Full Jitter:</strong> Nếu 10,000 thiết bị di động cùng bị ngắt kết nối vào lúc 12:00:00, dù có backoff theo cấp số nhân, toàn bộ 10,000 máy vẫn sẽ đồng loạt bắn lại vào các mốc 12:00:01, 12:00:02, 12:00:04... tạo thành các đợt sóng thần triệt hạ máy chủ (<strong>Thundering Herd / Retry Storm</strong>).<ul>
+<li>Thuật toán <strong>Full Jitter</strong> rải đều độ trễ ngẫu nhiên:
+$$T_{\text{sleep}} = \text{random}(0, \min(\text{cap}, \text{base} \times 2^{\text{attempt}}))$$</li>
+<li>Jitter phá sự đồng bộ: các retry không còn dồn vào cùng một thời điểm. Nhưng jitter <strong>rải</strong> tải chứ <strong>không giảm</strong> tổng số attempt; nếu dependency chỉ chịu được ít hơn tải gốc + retry, nó vẫn quá tải. Vì vậy jitter phải đi kèm giới hạn số lần retry, retry budget và backpressure (Lab 13 Bước 4 cho số liệu cụ thể).</li>
+<li>Chỉ retry ở <strong>một</strong> tầng. Mỗi tầng retry 3 lần qua 4 tầng có thể nhân tải lên 3⁴ = 81 lần.</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-ngân-sách-thử-lại-retry-budget-và-deadlines"><a class="anchor" href="#2-ngân-sách-thử-lại-retry-budget-và-deadlines">2. Ngân sách Thử lại (Retry Budget) và Deadlines</a></h3>
+<ul>
+<li><p><strong>Retry Budget:</strong> Giới hạn tổng số lượng request thử lại trong toàn hệ thống không được vượt quá <strong>10–20% tổng lưu lượng</strong>. Nếu downstream đang sập, việc cố gắng thử lại vô tận chỉ làm lãng phí năng nguyên CPU. Khi hết ngân sách thử lại, lập tức trả về lỗi cho tầng trên.</p>
+</li>
+<li><p><strong>Deadlines (Context Propagation):</strong> Nếu người dùng trình duyệt chỉ sẵn sàng đợi tối đa 2.5 giây, hãy truyền deadline này dọc theo các HTTP headers (<code>X-Deadline: 2500ms</code>). Nếu Service C nhận được request khi thời gian còn lại chỉ còn 50ms (không đủ để query database), Service C nên hủy luôn request ngay lập tức thay vì tốn công thực thi một kết quả mà người dùng chắc chắn sẽ đóng trang trước khi nhận.</p>
+</li>
+<li><p><strong>Backpressure:</strong> khi quá tải, trả lỗi sớm có tín hiệu (<code>429</code>/<code>503</code> kèm <code>Retry-After</code>, hoặc để message nằm trong queue) thay vì nhận thêm việc rồi xử lý chậm cho tất cả.</p>
+</li>
+</ul>
+<h3 id="3-mẫu-thiết-kế-ngắt-mạch-circuit-breaker-pattern"><a class="anchor" href="#3-mẫu-thiết-kế-ngắt-mạch-circuit-breaker-pattern">3. Mẫu Thiết kế Ngắt mạch (Circuit Breaker Pattern)</a></h3>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Máy Trạng thái của Circuit Breaker:
+                  ┌───────────────────────────────────┐
+                  │          CLOSED (Bình thường)     │
+                  │ - Mọi request đều được chuyển tiếp│
+                  └─────────────────┬─────────────────┘
+                                    │ Tỷ lệ lỗi vượt ngưỡng (ví dụ &gt; 50%)
+                                    ▼
+┌─────────────────────────────────────────────────────┐
+│                   OPEN (Ngắt mạch)                  │
+│ - Chặn 100% request; trả về fallback error tức thì  │
+│ - Bảo vệ downstream không bị sập hoàn toàn          │
+└───────────────────────────┬─────────────────────────┘
+                            │ Hết thời gian chờ (Sleep window: 30s)
+                            ▼
+                  ┌───────────────────────────────────┐
+                  │         HALF-OPEN (Thử nghiệm)    │
+                  │ - Cho phép 1 vài request đi qua...│
+                  └─────────┬───────────────┬─────────┘
+        Thành công trở lại  │               │ Lại gặp lỗi!
+        (Đóng mạch)         ▼               ▼ (Mở mạch tiếp)</code></pre></div>
+<hr>
+<h2 id="phần-4--phương-pháp-kiểm-thử-tải-load-testing-methodology-45-phút"><a class="anchor" href="#phần-4--phương-pháp-kiểm-thử-tải-load-testing-methodology-45-phút">Phần 4 — Phương pháp Kiểm thử Tải (Load Testing Methodology) (45 phút)</a></h2>
+<p>Kiểm thử tải không phải là việc tải một công cụ về và bắn tối đa luồng vào IP của máy chủ. Kiểm thử thiếu kiểm soát có thể khiến tài khoản AWS bị khóa vì vi phạm chính sách bảo mật hoặc phát sinh hóa đơn tiền điện toán khổng lồ.</p>
+<h3 id="1-các-giai-đoạn-của-một-bài-kiểm-thử-tải-chuẩn-mực"><a class="anchor" href="#1-các-giai-đoạn-của-một-bài-kiểm-thử-tải-chuẩn-mực">1. Các Giai đoạn của một Bài Kiểm thử Tải Chuẩn mực</a></h3>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Biểu đồ Tải của một Buổi Load Testing Khoa học:
+Tải (RPS)
+  ▲
+  │                       ┌───────────────────┐ (Steady-State: Chạy ổn định
+  │                      ╱│                   │  trong 30–60 phút)
+  │                     ╱ │                   │
+  │     ┌──────────────┘  │                   │
+  │    ╱ (Ramp-up)        │                   │
+  │   ╱                   │                   │
+  ├──┘ (Baseline: Đo chuẩn│                   └───────────┐ (Recovery: Đo khả năng
+  │     trong 5 phút)     │                               │  hồi phục sau khi xả tải)
+  └───────────────────────┴───────────────────────────────┴────────────────────────► Thời gian</code></pre></div>
+<ul>
+<li><strong>Giai đoạn 1 — Baseline:</strong> Bắn tải nhẹ (ví dụ 50 RPS) để xác lập chỉ số chuẩn của hệ thống trong điều kiện lý tưởng.</li>
+<li><strong>Giai đoạn 2 — Ramp-up:</strong> Tăng dần tốc độ tải theo bậc thang để hệ thống Auto Scaling và Database kịp làm nóng (Warm-up) và giãn nở tài nguyên.</li>
+<li><strong>Giai đoạn 3 — Steady-State (Soak Test):</strong> Giữ nguyên mức tải mục tiêu trong 30–60 phút để phát hiện các lỗi rò rỉ bộ nhớ (<strong>Memory Leak</strong>) hoặc tắc nghẽn Connection Pool theo thời gian.</li>
+<li><strong>Giai đoạn 4 — Spike Test:</strong> Đột ngột tăng gấp 5 lần tải trong 10 giây để kiểm tra xem hệ thống có tự bảo vệ bằng cơ chế Throttling hay sập hoàn toàn.</li>
+<li><strong>Giai đoạn 5 — Recovery:</strong> Ngắt tải và theo dõi xem hệ thống mất bao lâu để đưa độ trễ và CPU trở lại mức bình thường.</li>
+</ul>
+<h3 id="2-quy-định-của-aws-về-kiểm-thử-tải-và-mô-phỏng-sự-cố-aws-fis"><a class="anchor" href="#2-quy-định-của-aws-về-kiểm-thử-tải-và-mô-phỏng-sự-cố-aws-fis">2. Quy định của AWS về Kiểm thử Tải và Mô phỏng Sự cố (AWS FIS)</a></h3>
+<ul>
+<li><strong>Chính sách AWS Customer Support Policy:</strong> Bạn được phép kiểm thử tải lên các tài nguyên do chính bạn sở hữu (EC2, ALB, API Gateway). Tuy nhiên, <strong>tuyệt đối không được bắn tải làm ảnh hưởng đến tài nguyên dùng chung</strong> của người dùng khác hoặc hạ tầng Control Plane của AWS.</li>
+<li><strong>AWS Fault Injection Service (AWS FIS):</strong> Dịch vụ tiêm lỗi có kiểm soát của AWS (Chaos Engineering). FIS cho phép bạn lập trình mô phỏng các sự cố nghiêm trọng như: Tắt đột ngột 1 Availability Zone, tăng độ trễ mạng nhân tạo hoặc làm nghẽn CPU máy chủ. Quan trọng nhất, FIS luôn có <strong>Stop Conditions</strong> — tự động dừng ngay bài test nếu CloudWatch Alarm báo động SLO bị đe dọa.</li>
+</ul>
+<hr>
+<h2 id="phần-5--chiến-lược-phục-hồi-thảm-họa-disaster-recovery-rpo-và-rto-55-phút"><a class="anchor" href="#phần-5--chiến-lược-phục-hồi-thảm-họa-disaster-recovery-rpo-và-rto-55-phút">Phần 5 — Chiến lược Phục hồi Thảm họa (Disaster Recovery): RPO và RTO (55 phút)</a></h2>
+<p>Khi cả một trung tâm dữ liệu gặp sự cố thiên tai, mất điện diện rộng hoặc tài khoản bị tấn công mã hóa dữ liệu (Ransomware), khả năng sống còn của doanh nghiệp phụ thuộc vào chiến lược Disaster Recovery (DR).</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Hai Thước đo Sống còn của Disaster Recovery:
+                     Thời điểm Xảy ra Sự cố Thảm họa
+                                    │
+    ◄───────────────────────────────┼───────────────────────────────►
+      Khứ hồi Quá khứ               │  Tương lai Phục hồi
+                                    │
+  [Bản Backup Gần Nhất]             │               [Hệ Thống Chạy Lại]
+            │                       │                        │
+            ◄─────── RPO ───────────►◄───────── RTO ─────────►
+               (Mất bao nhiêu dữ liệu?) (Mất bao lâu để mở lại?)</code></pre></div>
+<ul>
+<li><strong>RPO (Recovery Point Objective - Mục tiêu Điểm Phục hồi):</strong> Lượng dữ liệu tối đa mà doanh nghiệp chấp nhận bị mất (tính theo đơn vị thời gian). Nếu backup chạy mỗi đêm lúc 00:00 và sự cố xảy ra lúc 14:00, bạn đã mất 14 giờ dữ liệu giao dịch!</li>
+<li><strong>RTO (Recovery Time Objective - Mục tiêu Thời gian Phục hồi):</strong> Khoảng thời gian tối đa từ lúc sự cố xảy ra cho đến khi hệ thống hoạt động trở lại bình thường phục vụ khách hàng.</li>
+</ul>
+<h3 id="bảng-đánh-đổi-4-chiến-lược-khôi-phục-thảm-họa"><a class="anchor" href="#bảng-đánh-đổi-4-chiến-lược-khôi-phục-thảm-họa">Bảng Đánh đổi 4 Chiến lược Khôi phục Thảm họa</a></h3>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>4 Chiến lược Phục hồi Thảm họa theo Chi phí vs Tốc độ:
+Chi phí ▲                                                   [Multi-Region
+        │                                                   Active-Active]
+        │                                                   (RTO ~ 0, RPO ~ 0)
+        │                                    [Warm Standby]
+        │                                    (RTO tính bằng phút)
+        │                     [Pilot Light]
+        │                     (RTO tính bằng chục phút)
+        │     [Backup &amp;
+        │      Restore] (RTO tính bằng giờ)
+        └─────────────────────────────────────────────────────────────► Tốc độ Khôi phục</code></pre></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Chiến lược DR</th>
+<th>Mô tả Kiến trúc</th>
+<th>RPO</th>
+<th>RTO</th>
+<th>Đánh đổi Chi phí</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>1. Backup &amp; Restore</strong></td>
+<td>Định kỳ sao lưu dữ liệu sang S3 ở Region khác. Khi có sự cố, dựng lại toàn bộ hạ tầng bằng IaC và nạp lại dữ liệu.</td>
+<td>Tính bằng <strong>giờ</strong></td>
+<td>Tính bằng <strong>giờ / ngày</strong></td>
+<td><strong>Rẻ nhất</strong> (Không tốn tiền chạy máy chủ dự phòng). Phù hợp cho hệ thống nội bộ, phi kinh doanh.</td>
+</tr>
+<tr>
+<td><strong>2. Pilot Light</strong></td>
+<td>Dữ liệu cốt lõi (Database) luôn được đồng bộ liên tục sang Region thứ hai. Máy chủ ứng dụng tắt hoàn toàn (chỉ lưu sẵn AMI hoặc Launch Template). Khi thảm họa, bật máy chủ ứng dụng lên.</td>
+<td>Tính bằng <strong>phút</strong></td>
+<td>Tính bằng <strong>chục phút</strong></td>
+<td><strong>Trung bình thấp</strong> (Chỉ tốn phí duy trì Database bản sao kích thước nhỏ).</td>
+</tr>
+<tr>
+<td><strong>3. Warm Standby</strong></td>
+<td>Một phiên bản thu nhỏ (Scale down) của toàn bộ hệ thống luôn chạy 24/7 ở Region thứ hai. Khi sự cố, kích hoạt Auto Scaling phình to lên 100% dung lượng.</td>
+<td>Tính bằng <strong>giây</strong> (bằng độ trễ replication bất đồng bộ)</td>
+<td>Tính bằng <strong>phút</strong></td>
+<td><strong>Trung bình cao</strong> (Phải trả tiền cho toàn bộ cụm hạ tầng dự phòng tối thiểu).</td>
+</tr>
+<tr>
+<td><strong>4. Multi-Region Active-Active</strong></td>
+<td>Hệ thống chạy đồng thời 100% công suất trên cả 2 Region (sử dụng Route 53 Geolocation / Latency Routing và DynamoDB Global Tables).</td>
+<td><strong>Gần 0</strong>: vài giây với replication bất đồng bộ; bằng 0 chỉ khi dùng chế độ nhất quán mạnh đa Region (đổi bằng độ trễ ghi)</td>
+<td><strong>Gần như tức thì</strong></td>
+<td><strong>Cực kỳ đắt đỏ</strong> (Gấp đôi đến gấp ba chi phí hạ tầng, yêu cầu xử lý bài toán xung đột dữ liệu phân tán).</td>
+</tr>
+</tbody></table>
+</div>
+<h3 id="mỗi-cơ-chế-chống-một-loại-sự-cố-khác-nhau"><a class="anchor" href="#mỗi-cơ-chế-chống-một-loại-sự-cố-khác-nhau">Mỗi cơ chế chống một loại sự cố khác nhau</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Sự cố</th>
+<th>Multi-AZ</th>
+<th>Backup / PITR</th>
+<th>Multi-Region</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Một instance/AZ hỏng</td>
+<td>✅ tự failover</td>
+<td>❌ (quá chậm, không cần)</td>
+<td>✅ nhưng quá đắt cho mục đích này</td>
+</tr>
+<tr>
+<td>Xóa nhầm dữ liệu, bug ghi sai, ransomware</td>
+<td>❌ lỗi được sao chép ngay sang standby</td>
+<td>✅ quay về thời điểm trước sự cố</td>
+<td>❌ lỗi cũng được replicate sang Region kia</td>
+</tr>
+<tr>
+<td>Cả Region gặp sự cố</td>
+<td>❌</td>
+<td>⚠️ chỉ khi backup được <strong>copy sang Region khác</strong></td>
+<td>✅</td>
+</tr>
+</tbody></table>
+</div>
+<p>Không cơ chế nào thay được cơ chế khác: hệ thống quan trọng thường cần Multi-AZ <strong>và</strong> backup/PITR, rồi mới cân nhắc multi-Region.</p>
+<blockquote>
+<p>[!IMPORTANT]
+<strong>Điểm cốt tử:</strong> <strong>Không bao giờ tin vào RTO/RPO trên lý thuyết cấu hình!</strong>
+Bạn chỉ thực sự biết RTO của mình là bao lâu khi bạn <strong>thực hiện diễn tập thực tế (Disaster Recovery Drill)</strong>: Xóa thử bảng dữ liệu trên môi trường kiểm thử, bấm đồng hồ đo thời gian restore từ backup và kiểm tra xem có bản ghi nào bị lỗi hay không.</p>
+</blockquote>
+<hr>
+<h2 id="phần-6--giới-thiệu-bài-thực-hành-lab-13"><a class="anchor" href="#phần-6--giới-thiệu-bài-thực-hành-lab-13">Phần 6 — Giới thiệu bài thực hành (Lab 13)</a></h2>
+<p>Trong bài thực hành đính kèm, bạn sẽ trực tiếp triển khai:</p>
+<ol>
+<li>Viết SLO cho thao tác đọc đơn hàng trước khi đo.</li>
+<li>Load test bảng DynamoDB của lab với trần rate/concurrency/duration và điều kiện dừng; báo cáo p50/p95/p99 kèm sample size.</li>
+<li>Chứng minh bằng số liệu vì sao không cộng percentile các tầng.</li>
+<li>Mô phỏng retry storm cục bộ: fixed retry, full jitter, jitter + retry budget; đọc đánh đổi giữa bảo vệ dependency và fail nhanh.</li>
+<li>Backup on-demand và PITR; &quot;sự cố&quot; xóa nhầm item; restore sang bảng tách biệt bằng cả hai cách, đo thời gian, so tập ID để thấy RPO khác nhau.</li>
+<li>Viết runbook có số đo thật và chạy lại drill theo runbook.</li>
+<li>Dọn dẹp an toàn toàn bộ tài nguyên.</li>
+</ol>
+<p>👉 Mở bài hướng dẫn chi tiết tại: <strong><a href="../labs/13-reliability-and-performance/README.html">labs/13-reliability-and-performance/README.md</a></strong>.</p>
+<hr>
+<h2 id="phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút"><a class="anchor" href="#phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi phổ biến (25 phút)</a></h2>
+<h3 id="1-độ-trễ-p99-tăng-vọt-nhưng-mức-sử-dụng-cpu-máy-chủ-vẫn-dưới-20"><a class="anchor" href="#1-độ-trễ-p99-tăng-vọt-nhưng-mức-sử-dụng-cpu-máy-chủ-vẫn-dưới-20">1. Độ trễ p99 tăng vọt nhưng mức sử dụng CPU máy chủ vẫn dưới 20%</a></h3>
+<ul>
+<li><strong>Nguyên nhân 1:</strong> Nghẽn kết nối cơ sở dữ liệu (<strong>Connection Pool Exhaustion</strong>). Số lượng request vượt quá kích thước pool của ứng dụng (ví dụ pool size = 20), khiến hàng trăm thread phải xếp hàng chờ giải phóng connection.</li>
+<li><strong>Nguyên nhân 2:</strong> Nút thắt cổ chai nằm ở một dịch vụ bên thứ ba (Downstream API / Payment Gateway) không có thời hạn chờ (<strong>Timeout</strong>) thích hợp.</li>
+<li><strong>Cách khắc phục:</strong> Dùng <strong>AWS X-Ray Tracing</strong> để bóc tách thời gian từng chặng; tăng kích thước connection pool hoặc triển khai <strong>Amazon RDS Proxy</strong> để tái sử dụng kết nối; đặt Client-side Timeout ngắn hơn cho tất cả các cuộc gọi ra ngoài.</li>
+</ul>
+<h3 id="2-sự-cố-cơn-bão-thử-lại-retry-storm-đánh-sập-máy-chủ-sau-khi-vừa-khởi-động-lại"><a class="anchor" href="#2-sự-cố-cơn-bão-thử-lại-retry-storm-đánh-sập-máy-chủ-sau-khi-vừa-khởi-động-lại">2. Sự cố &quot;Cơn bão thử lại&quot; (Retry Storm) đánh sập máy chủ sau khi vừa khởi động lại</a></h3>
+<ul>
+<li><strong>Nguyên nhân:</strong> Khi máy chủ gặp sự cố và khởi động lại, hàng ngàn client cùng lúc phát hiện timeout và liên tục gửi lại request mà không có khoảng nghỉ trễ ngẫu nhiên (thiếu Jitter). Lượng tải tăng gấp 5 lần ngày thường đè bẹp máy chủ ngay khi vừa mở cổng mạng.</li>
+<li><strong>Cách khắc phục:</strong> Cài đặt thuật toán Full Jitter trên toàn bộ SDK client; triển khai <strong>Rate Limiting / Backpressure</strong> tại tầng API Gateway; thiết lập Circuit Breaker để ngắt mạch tạm thời cho đến khi backend hoàn toàn ổn định.</li>
+</ul>
+<h3 id="3-diễn-tập-khôi-phục-restore-backup-thất-bại-hoặc-chạy-quá-chậm-vượt-quá-rto"><a class="anchor" href="#3-diễn-tập-khôi-phục-restore-backup-thất-bại-hoặc-chạy-quá-chậm-vượt-quá-rto">3. Diễn tập khôi phục (Restore Backup) thất bại hoặc chạy quá chậm vượt quá RTO</a></h3>
+<ul>
+<li><strong>Nguyên nhân 1:</strong> IAM Role thực hiện khôi phục thiếu quyền truy cập vào khóa <strong>AWS KMS CMK</strong> dùng để mã hóa bản backup gốc.</li>
+<li><strong>Nguyên nhân 3:</strong> Chọn sai mốc thời gian (giờ địa phương thay vì UTC, PITR chưa bắt kịp), hoặc kiểm tra bằng số lượng bản ghi thay vì so tập khóa với nguồn tham chiếu.</li>
+<li><strong>Nguyên nhân 2:</strong> Bản backup chứa hàng terabyte dữ liệu, thời gian tải về và đánh lại chỉ mục (Index rebuilding) mất nhiều giờ mà không được dự tính trước trong kế hoạch RTO.</li>
+<li><strong>Cách khắc phục:</strong> Chuẩn hóa Key Policy cho phép dịch vụ khôi phục truy cập KMS; định kỳ tổ chức diễn tập DR ít nhất một quý một lần để cập nhật số liệu RTO thực tế vào sổ tay vận hành (Runbook).</li>
+</ul>
+<hr>
+<h2 id="câu-hỏi-tự-kiểm-tra"><a class="anchor" href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></h2>
+<ol>
+<li>Tại sao việc dựa vào chỉ số độ trễ trung bình (Average Latency) để đánh giá sức khỏe hệ thống có thể dẫn đến nhận định sai lầm nghiêm trọng? Phân tích ý nghĩa của độ trễ phân vị p99 trong bài toán thương mại điện tử.</li>
+<li>Trình bày sự khác biệt giữa hai thuật toán Exponential Backoff thông thường và Exponential Backoff kết hợp Full Jitter. Thuật toán Full Jitter giải quyết triệt để vấn đề &quot;Thundering Herd&quot; như thế nào?</li>
+<li>Phân biệt vai trò của RPO và RTO trong chiến lược khôi phục thảm họa (Disaster Recovery). Tại sao việc lưu trữ bản sao lưu (Backup) là chưa đủ để khẳng định doanh nghiệp đạt được mục tiêu RTO?</li>
+<li>So sánh hai mô hình Pilot Light và Warm Standby về mặt kiến trúc, chi phí và thời gian khôi phục khi có sự cố Region xảy ra.</li>
+<li>Mô tả nguyên lý hoạt động của ba trạng thái Closed, Open và Half-Open trong mẫu thiết kế Ngắt mạch (Circuit Breaker). Mẫu hình này bảo vệ hệ thống phân tán ra sao?</li>
+</ol>
+<hr>
+<h2 id="tài-liệu-tham-khảo-chính-thức"><a class="anchor" href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></h2>
+<ul>
+<li><a href="https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/" target="_blank" rel="noopener">AWS Well-Architected Framework: Reliability Pillar</a></li>
+<li><a href="https://docs.aws.amazon.com/wellarchitected/latest/performance-efficiency-pillar/" target="_blank" rel="noopener">AWS Well-Architected Framework: Performance Efficiency Pillar</a></li>
+<li><a href="https://docs.aws.amazon.com/prescriptive-guidance/latest/disaster-recovery-options/" target="_blank" rel="noopener">AWS Prescriptive Guidance: Disaster Recovery Options in the Cloud</a></li>
+<li><a href="https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/" target="_blank" rel="noopener">Amazon Builders&#39; Library: Timeouts, retries, and backoff with jitter</a></li>
+<li><a href="https://docs.aws.amazon.com/fis/latest/userguide/" target="_blank" rel="noopener">AWS Fault Injection Service (FIS) User Guide</a></li>
+</ul>
+<h2 id="trạng-thái-kiểm-chứng"><a class="anchor" href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></h2>
+<ul>
+<li><strong>Đối chiếu tài liệu (2026-10-31):</strong> burn rate alert; full jitter theo Amazon Builders&#39; Library; DynamoDB PITR (<code>LatestRestorableDateTime</code>, restore sang bảng mới, cấu hình không đi theo bảng restore); on-demand backup không tự xóa theo bảng; chiến lược DR theo AWS Prescriptive Guidance.</li>
+<li><strong>Đã chạy thật:</strong> mô phỏng retry (Bước 4) và ví dụ percentile (Bước 3) của lab chạy cục bộ với seed cố định; số liệu trong lab là kết quả thật.</li>
+<li><strong>Chưa chạy thử trên AWS:</strong> phần load test và restore DynamoDB chưa được thực thi trên account thật; output là minh họa.</li>
+<li><strong>Chi phí:</strong> lab dưới $0.02 (DynamoDB on-demand, vài MB, hai lần restore).</li>
+</ul>
+<hr>
+<h2 id="đáp-án-gợi-ý"><a class="anchor" href="#đáp-án-gợi-ý">Đáp án gợi ý</a></h2>
+<details>
+<summary>Mở để xem đáp án</summary>
+
+<ol>
+<li><strong>Ý nghĩa của p99 vs Average:</strong><ul>
+<li>Số trung bình bị pha loãng bởi hàng ngàn requests nhanh (nhẹ tải, cache hit), che giấu hoàn toàn các giao dịch bị nghẽn.</li>
+<li>Trong thương mại điện tử, 1% người dùng ở phân vị p99 thường là những khách hàng mua sắm giỏ hàng lớn (nhiều mặt hàng, áp dụng nhiều mã giảm giá, kiểm tra tồn kho phức tạp). Nếu p99 lên tới 5-10 giây, những khách hàng mang lại doanh thu cao nhất cho doanh nghiệp sẽ bỏ sang đối thủ.</li>
+</ul>
+</li>
+<li><strong>Backoff thông thường vs Full Jitter:</strong><ul>
+<li><strong>Backoff thông thường:</strong> Thời gian chờ tăng gấp đôi sau mỗi lần thử ($1s, 2s, 4s$). Nhưng nếu hàng ngàn client cùng gặp lỗi ở một thời điểm, tất cả đều thức dậy đồng loạt vào giây thứ 1, giây thứ 2, giây thứ 4... tạo thành các đợt bắn tải tập trung (Thundering Herd) dìm chết downstream vừa gượng dậy.</li>
+<li><strong>Full Jitter:</strong> Lấy giá trị ngẫu nhiên từ 0 đến khoảng backoff tối đa, nên các client không còn thức dậy cùng lúc và các đợt tải đồng bộ bị phá vỡ.</li>
+<li>Nhưng jitter <strong>không giải quyết triệt để</strong>: tổng số attempt gần như không đổi, chỉ được rải ra. Nếu downstream không chịu nổi tải gốc cộng retry, nó vẫn quá tải. Cần thêm giới hạn số lần retry, retry budget, circuit breaker và backpressure.</li>
+</ul>
+</li>
+<li><strong>RPO, RTO và Sai lầm về Backup:</strong><ul>
+<li><strong>RPO:</strong> Dữ liệu tối đa chấp nhận mất (Khứ hồi).</li>
+<li><strong>RTO:</strong> Thời gian tối đa chấp nhận ngừng hoạt động (Tương lai).</li>
+<li>Chỉ có file backup <strong>chưa chứng minh được RTO</strong> vì: Bạn chưa biết mất bao lâu để tải file backup về, giải nén, nạp vào database, xây dựng lại indexes, và kiểm thử tính tương thích của ứng dụng. Nếu backup có dung lượng 5TB và mất 12 tiếng để restore, RTO thực tế của bạn là 12 tiếng dù hợp đồng chỉ cho phép 1 tiếng!</li>
+</ul>
+</li>
+<li><strong>Pilot Light vs Warm Standby:</strong><ul>
+<li><strong>Pilot Light:</strong> Chỉ có cơ sở dữ liệu được đồng bộ liên tục; máy chủ ứng dụng hoàn toàn tắt. RTO khoảng 20-45 phút (cần thời gian khởi động EC2/ECS). Chi phí rất tiết kiệm.</li>
+<li><strong>Warm Standby:</strong> Toàn bộ hệ thống (cả Database và máy chủ ứng dụng) luôn chạy ở quy mô tối thiểu (ví dụ 10-20% công suất). RTO chỉ tính bằng vài phút (chỉ cần scale up số lượng máy chủ). Chi phí cao hơn do phải duy trì máy chủ chạy 24/7.</li>
+</ul>
+</li>
+<li><strong>Circuit Breaker:</strong><ul>
+<li><strong>Closed:</strong> Hệ thống bình thường, mọi request đi qua. Đếm tỷ lệ lỗi.</li>
+<li><strong>Open:</strong> Khi lỗi vượt ngưỡng (ví dụ &gt; 50%), mạch ngắt ngay lập tức. Mọi request mới bị từ chối tức thì (fail fast), không gọi tới downstream đang kiệt sức.</li>
+<li><strong>Half-Open:</strong> Sau một khoảng thời gian chờ (ví dụ 30s), cho một lượng nhỏ request đi qua thử nghiệm. Nếu thành công -&gt; Đóng mạch trở lại (Closed). Nếu vẫn lỗi -&gt; Tiếp tục mở mạch (Open).</li>
+</ul>
+</li>
+</ol>
+</details>
+
+
+<footer>Sinh tự động từ <code>notes/13-reliability-and-performance.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bài 09 — Kiến trúc Không Máy chủ (Serverless): AWS Lambda và Amazon API Gateway</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="01-foundations.html">01. Lý thuyết</a><a href="../labs/01-foundations/README.html">01. Lab</a><a href="02-identity-and-access.html">02. Lý thuyết</a><a href="../labs/02-identity-and-access/README.html">02. Lab</a><a href="03-cost-management.html">03. Lý thuyết</a><a href="../labs/03-cost-management/README.html">03. Lab</a><a href="04-networking.html">04. Lý thuyết</a><a href="../labs/04-networking/README.html">04. Lab</a><a href="05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../labs/05-compute-and-load-balancing/README.html">05. Lab</a><a href="06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../labs/06-storage-and-content-delivery/README.html">06. Lab</a><a href="07-databases-and-cache.html">07. Lý thuyết</a><a href="../labs/07-databases-and-cache/README.html">07. Lab</a><a href="08-containers.html">08. Lý thuyết</a><a href="../labs/08-containers/README.html">08. Lab</a><a href="09-serverless.html" class="active">09. Lý thuyết</a><a href="../labs/09-serverless/README.html">09. Lab</a><a href="10-observability-and-application-security.html">10. Lý thuyết</a><a href="../labs/10-observability-and-application-security/README.html">10. Lab</a><a href="11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../labs/11-messaging-and-workflows/README.html">11. Lab</a><a href="12-iac-and-cicd.html">12. Lý thuyết</a><a href="../labs/12-iac-and-cicd/README.html">12. Lab</a><a href="13-reliability-and-performance.html">13. Lý thuyết</a><a href="../labs/13-reliability-and-performance/README.html">13. Lab</a><a href="14-architecture-and-governance.html">14. Lý thuyết</a><a href="../labs/14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#mục-tiêu">Mục tiêu</a></li><li><a href="#phần-1--vòng-đời-aws-lambda-execution-environment-memory-timeout-và-cold-start-45-phút">Phần 1 — Vòng đời AWS Lambda: Execution Environment, Memory, Timeout và Cold Start (45 phút)</a></li><li><a href="#phần-2--ba-mô-hình-kích-hoạt-synchronous-asynchronous-và-event-source-mapping-50-phút">Phần 2 — Ba Mô hình Kích hoạt: Synchronous, Asynchronous và Event Source Mapping (50 phút)</a></li><li><a href="#phần-3--quản-lý-tương-tranh-throttling-và-tính-lũy-kế-idempotency-50-phút">Phần 3 — Quản lý Tương tranh, Throttling và Tính Lũy kế Idempotency (50 phút)</a></li><li><a href="#phần-4--amazon-api-gateway-http-api-vs-rest-api-và-proxy-integration-50-phút">Phần 4 — Amazon API Gateway: HTTP API vs REST API và Proxy Integration (50 phút)</a></li><li><a href="#phần-5--đóng-gói-phiên-bản-phân-chia-tải-và-kinh-tế-học-serverless-45-phút">Phần 5 — Đóng gói, Phiên bản, Phân chia Tải và Kinh tế học Serverless (45 phút)</a></li><li><a href="#phần-6--giới-thiệu-bài-thực-hành-lab-09">Phần 6 — Giới thiệu bài thực hành (Lab 09)</a></li><li><a href="#phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi phổ biến (25 phút)</a></li><li><a href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></li><li><a href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></li><li><a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></li><li><a href="#đáp-án-gợi-ý">Đáp án gợi ý</a></li></ol></aside>
+<main>
+<h1 id="bài-09--kiến-trúc-không-máy-chủ-serverless-aws-lambda-và-amazon-api-gateway"><a class="anchor" href="#bài-09--kiến-trúc-không-máy-chủ-serverless-aws-lambda-và-amazon-api-gateway">Bài 09 — Kiến trúc Không Máy chủ (Serverless): AWS Lambda và Amazon API Gateway</a></h1>
+<blockquote>
+<p><strong>Đối tượng:</strong> developer có kinh nghiệm nhưng mới học AWS.
+<strong>Thời lượng:</strong> khoảng 5–7 giờ, chia hai buổi. Buổi 1 gồm phần 1–3 (Môi trường thực thi Lambda, 3 mô hình Invocation &amp; Quản lý Concurrency). Buổi 2 gồm phần 4–7 (Amazon API Gateway, Version/Alias, Kinh tế học Serverless và <a href="../labs/09-serverless/README.html">lab thực hành</a>).
+<strong>Kế hoạch gốc:</strong> <a href="../plans/09-serverless.md">plans/09-serverless.md</a>
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Xem <a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a> ở cuối bài.</p>
+</blockquote>
+<h2 id="mục-tiêu"><a class="anchor" href="#mục-tiêu">Mục tiêu</a></h2>
+<p>Sau bài này, bạn có thể:</p>
+<ol>
+<li>Hiểu sâu vòng đời môi trường thực thi (<strong>Lambda Execution Environment</strong>), hàm xử lý (<strong>Handler</strong>), mối quan hệ tỷ lệ thuận giữa <strong>Memory &amp; vCPU</strong>, hiện tượng <strong>Cold Start</strong> và kỹ thuật tối ưu hóa khởi động.</li>
+<li>Phân biệt rõ 3 mô hình kích hoạt hàm Lambda: <strong>Đồng bộ (Synchronous)</strong>, <strong>Bất đồng bộ (Asynchronous)</strong> và <strong>Ánh xạ nguồn sự kiện (Event Source Mapping)</strong>; cơ chế xử lý lỗi, retry và <strong>Dead Letter Queue (DLQ)</strong>.</li>
+<li>Làm chủ bài toán tương tranh (<strong>Concurrency</strong>): phân biệt <strong>Reserved Concurrency</strong> (bảo vệ cơ sở dữ liệu hạ nguồn) với <strong>Provisioned Concurrency</strong> (triệt tiêu Cold Start), xử lý hiện tượng nghẽn (<strong>Throttling - HTTP 429</strong>) và thiết kế tính lũy kế (<strong>Idempotency</strong>).</li>
+<li>Lựa chọn chính xác giữa <strong>API Gateway HTTP API</strong> (hiện đại, tối ưu chi phí, nhẹ) và <strong>REST API</strong> (đầy đủ tính năng doanh nghiệp); cơ chế tích hợp <strong>Lambda Proxy Integration (Payload Format Version 2.0)</strong>.</li>
+<li>Đóng gói mã nguồn (<strong>Zip archive vs Container Image</strong>), quản lý phiên bản (<strong>Version &amp; Alias</strong>) và phân tích mô hình kinh tế Serverless (so sánh chi phí giữa Lambda với EC2/Fargate luôn chạy).</li>
+</ol>
+<hr>
+<h2 id="phần-1--vòng-đời-aws-lambda-execution-environment-memory-timeout-và-cold-start-45-phút"><a class="anchor" href="#phần-1--vòng-đời-aws-lambda-execution-environment-memory-timeout-và-cold-start-45-phút">Phần 1 — Vòng đời AWS Lambda: Execution Environment, Memory, Timeout và Cold Start (45 phút)</a></h2>
+<h3 id="kiến-trúc-không-máy-chủ-serverless-computing"><a class="anchor" href="#kiến-trúc-không-máy-chủ-serverless-computing">Kiến trúc Không Máy chủ (Serverless Computing)</a></h3>
+<p>AWS Lambda cho phép bạn chạy mã nguồn mà không cần cấp phát hay quản lý máy chủ. Bạn chỉ cần tải code lên, Lambda sẽ tự động lo liệu toàn bộ việc co giãn, vá lỗi hệ điều hành và tính sẵn sàng cao.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Vòng đời một Lambda Execution Environment (MicroVM Firecracker):
+┌────────────────────────────────────────────────────────────────────────┐
+│ 1. INIT Phase (Cold Start - Chạy 1 lần khi tạo container vi mô)        │
+│    - Tải mã nguồn hàm từ S3                                            │
+│    - Khởi động Runtime (Node.js, Python, Java...)                      │
+│    - Chạy mã ngoài Handler: Khởi tạo AWS SDK clients, DB connections   │
+├────────────────────────────────────────────────────────────────────────┤
+│ 2. INVOKE Phase (Chạy mỗi khi có request)                              │
+│    - Nhận sự kiện (event, context)                                     │
+│    - Thực thi hàm `handler(event, context)`                            │
+│    - Trả kết quả về cho caller                                         │
+├────────────────────────────────────────────────────────────────────────┤
+│ 3. SHUTDOWN Phase (Khi môi trường không có request sau một thời gian)  │
+│    - Dọn dẹp runtime, đóng kết nối và tiêu diệt MicroVM                │
+└────────────────────────────────────────────────────────────────────────┘</code></pre></div>
+<h3 id="handler-function-và-tối-ưu-hóa-code"><a class="anchor" href="#handler-function-và-tối-ưu-hóa-code">Handler Function và Tối ưu hóa Code</a></h3>
+<p>Hàm xử lý (<strong>Handler</strong>) là điểm vào (Entry point) được AWS Lambda gọi khi thực thi code.</p>
+<div class="code"><span class="lang">python</span><button type="button">Copy</button><pre><code>import os
+import boto3
+
+# MÃ NGOÀI HANDLER (Chạy trong INIT Phase - Chỉ chạy 1 lần duy nhất trong Cold Start):
+# Khởi tạo SDK client ở đây để tái sử dụng qua hàng ngàn lần INVOKE sau đó!
+dynamodb = boto3.resource('dynamodb')
+table = dynamodb.Table(os.environ['ORDERS_TABLE'])
+
+def lambda_handler(event, context):
+    # MÃ TRONG HANDLER (Chạy mỗi lần có request đến - Warm Execution):
+    order_id = event.get('order_id')
+    print(f&quot;Đang xử lý đơn hàng: {order_id}, Request ID: {context.aws_request_id}&quot;)
+    return {&quot;status&quot;: &quot;SUCCESS&quot;, &quot;order_id&quot;: order_id}</code></pre></div>
+<blockquote>
+<p>[!TIP]
+<strong>Quy tắc vàng hiệu năng:</strong> Luôn khởi tạo kết nối Database, HTTP client và AWS SDK bên ngoài hàm Handler. Nếu bạn viết <code>boto3.resource(&#39;dynamodb&#39;)</code> bên trong <code>lambda_handler</code>, hàm của bạn sẽ phải khởi tạo lại kết nối trên từng request, gây lãng phí CPU và tăng độ trễ nghiêm trọng.</p>
+</blockquote>
+<h3 id="tương-quan-giữa-memory-và-cpu"><a class="anchor" href="#tương-quan-giữa-memory-và-cpu">Tương quan giữa Memory và CPU</a></h3>
+<p>Trong Lambda, bạn <strong>chỉ có thể chọn dung lượng Memory</strong> (từ 128 MB đến 10,240 MB). Bạn <strong>không thể chọn số lượng vCPU độc lập</strong>:</p>
+<ul>
+<li>AWS tự động phân bổ năng lực tính toán CPU tỷ lệ thuận với lượng RAM được cấu hình.</li>
+<li>Tại mốc <strong>1,769 MB RAM</strong>, hàm Lambda được cấp phát chính xác <strong>1 vCPU đầy đủ</strong>.</li>
+<li>Trên 1,769 MB, hàm có nhiều hơn 1 vCPU (tối đa 6 vCPU ở 10,240 MB), nhưng code phải chạy đa luồng/đa tiến trình mới tận dụng được phần vượt 1 vCPU. Với các tác vụ tốn CPU (mã hóa, nén ảnh), tăng RAM có thể làm hàm chạy nhanh hơn nhiều, khiến tổng chi phí <code>Thời gian thực thi x RAM</code> có khi <strong>rẻ hơn</strong> cấu hình RAM thấp. Đo bằng số liệu thật (ví dụ công cụ AWS Lambda Power Tuning) thay vì đoán.</li>
+</ul>
+<h3 id="timeout"><a class="anchor" href="#timeout">Timeout</a></h3>
+<p>Thời gian chạy tối đa của một hàm Lambda là <strong>15 phút (900 giây)</strong>.</p>
+<ul>
+<li>Với API sau API Gateway, client chỉ chờ tới <strong>timeout của integration</strong>: HTTP API tối đa <strong>30 giây</strong>; REST API mặc định <strong>29 giây</strong> (regional/private REST API có thể xin tăng quota). Đặt timeout của function <strong>nhỏ hơn</strong> timeout integration, và chuyển việc dài sang xử lý bất đồng bộ (SQS, Step Functions).</li>
+</ul>
+<h3 id="hiện-tượng-khởi-động-lạnh-cold-start"><a class="anchor" href="#hiện-tượng-khởi-động-lạnh-cold-start">Hiện tượng Khởi động Lạnh (Cold Start)</a></h3>
+<ul>
+<li><strong>Cold Start:</strong> Xảy ra khi một request đến mà không có sẵn môi trường thực thi nào đang rảnh (ví dụ: request đầu tiên sau khi deploy, hoặc khi lưu lượng tăng đột biến đòi hỏi scale-out thêm container mới). Lambda phải chạy qua cả pha INIT và INVOKE, khiến request đầu tiên có thể mất thêm từ vài trăm mili-giây đến vài giây.</li>
+<li><strong>Warm Start:</strong> Các request tiếp theo được chuyển thẳng tới container đã khởi tạo sẵn và chỉ tốn thời gian chạy pha INVOKE (vài mili-giây).</li>
+<li><strong>Yếu tố ảnh hưởng Cold Start:</strong><ul>
+<li>Ngôn ngữ: Python, Node.js, Go thường có Cold Start vài trăm mili-giây. Java, .NET thường lâu hơn (1–3s) do khởi động JVM/CLR; Lambda SnapStart giảm đáng kể cho Java (và một số runtime khác).</li>
+<li>Gắn VPC: từ 2019 Lambda dùng Hyperplane ENI nên cold start do VPC không còn đáng kể như trước, nhưng việc tạo ENI lần đầu khi cấu hình vẫn mất thời gian.</li>
+<li>Kích thước package: Dung lượng code và thư viện càng gọn nhẹ thì kéo về càng nhanh.</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2 id="phần-2--ba-mô-hình-kích-hoạt-synchronous-asynchronous-và-event-source-mapping-50-phút"><a class="anchor" href="#phần-2--ba-mô-hình-kích-hoạt-synchronous-asynchronous-và-event-source-mapping-50-phút">Phần 2 — Ba Mô hình Kích hoạt: Synchronous, Asynchronous và Event Source Mapping (50 phút)</a></h2>
+<p>Hiểu rõ 3 mô hình kích hoạt là điều kiện tiên quyết để thiết kế kiến trúc Serverless có khả năng phục hồi lỗi cao:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>3 Mô hình Kích hoạt Lambda:
+1. Đồng bộ (Synchronous):
+   Client (Web) ──Request──&gt; API Gateway ──Sync Invoke──&gt; AWS Lambda ──HTTP 200──&gt; Trả kết quả ngay
+
+2. Bất đồng bộ (Asynchronous):
+   S3 / SNS / EventBridge ──Async Event──&gt; AWS Lambda Internal Queue ──&gt; AWS Lambda
+                                                     │
+                                                     └── Lỗi 2 lần? ──&gt; Dead Letter Queue (SQS)
+
+3. Ánh xạ nguồn sự kiện (Event Source Mapping - Polling):
+   DynamoDB Streams / SQS / Kinesis &lt;──Poll theo lô── Lambda ESM Component ──&gt; Gọi Lambda</code></pre></div>
+<h3 id="1-đồng-bộ-synchronous-invocation"><a class="anchor" href="#1-đồng-bộ-synchronous-invocation">1. Đồng bộ (Synchronous Invocation)</a></h3>
+<ul>
+<li><strong>Nguồn kích hoạt:</strong> Amazon API Gateway, Application Load Balancer, AWS CLI (<code>--invocation-type RequestResponse</code>), hoặc gọi trực tiếp từ code microservice khác.</li>
+<li><strong>Hành vi:</strong> Client gửi request và <strong>treo kết nối chờ đợi</strong> cho đến khi hàm Lambda chạy xong và trả về kết quả (hoặc timeout).</li>
+<li><strong>Xử lý lỗi:</strong> Nếu hàm văng lỗi hoặc timeout, Lambda <strong>không tự động retry</strong>. Trách nhiệm xử lý lỗi và retry thuộc về phía Client gọi hàm (lưu ý: AWS SDK của client có thể tự retry một số lỗi, nên handler vẫn cần idempotent).</li>
+</ul>
+<h3 id="2-bất-đồng-bộ-asynchronous-invocation"><a class="anchor" href="#2-bất-đồng-bộ-asynchronous-invocation">2. Bất đồng bộ (Asynchronous Invocation)</a></h3>
+<ul>
+<li><strong>Nguồn kích hoạt:</strong> Amazon S3 (khi có file mới upload), Amazon SNS, EventBridge, AWS CLI (<code>--invocation-type Event</code>).</li>
+<li><strong>Hành vi:</strong> Dịch vụ gọi gửi event vào hàng đợi nội bộ do AWS quản lý và nhận ngay phản hồi <code>HTTP 202 Accepted</code>. Client không chờ code chạy.</li>
+<li><strong>Xử lý lỗi tự động:</strong> Nếu hàm chạy thất bại, Lambda <strong>tự động thử lại 2 lần</strong> (Tổng cộng 3 lần chạy). Giữa các lần thử có cơ chế giãn cách thời gian (Exponential Backoff).</li>
+<li><strong>Dead Letter Queue (DLQ) / Lambda Destinations:</strong> Nếu sau 3 lần vẫn thất bại (hoặc event quá tuổi tối đa, mặc định 6 giờ), event sẽ bị hủy bỏ trừ khi bạn cấu hình DLQ (SQS/SNS) hoặc <strong>on-failure destination</strong> (SQS, SNS, Lambda, EventBridge; destination chứa thêm thông tin lỗi). Có thể giảm số lần retry (0–2) và tuổi tối đa của event.</li>
+</ul>
+<h3 id="3-ánh-xạ-nguồn-sự-kiện-event-source-mapping---esm"><a class="anchor" href="#3-ánh-xạ-nguồn-sự-kiện-event-source-mapping---esm">3. Ánh xạ Nguồn Sự kiện (Event Source Mapping - ESM)</a></h3>
+<ul>
+<li><strong>Nguồn kích hoạt:</strong> Amazon SQS, Amazon Kinesis Data Streams, Amazon DynamoDB Streams.</li>
+<li><strong>Hành vi:</strong> Dịch vụ nguồn không chủ động gọi Lambda. Thay vào đó, một bộ điều phối nội bộ của AWS (<strong>ESM Poller</strong>) liên tục thăm dò (poll) dữ liệu từ hàng đợi/luồng, gom thành từng lô (Batch), rồi chuyển lô đó vào hàm Lambda xử lý.</li>
+<li><strong>Xử lý lỗi (khác nhau theo nguồn):</strong><ul>
+<li><strong>SQS:</strong> nếu hàm thất bại, <strong>cả batch</strong> quay lại hàng đợi sau <code>Visibility Timeout</code> (trừ khi bật <code>ReportBatchItemFailures</code> và trả về danh sách message lỗi). Sau <code>maxReceiveCount</code> lần, message sang DLQ <strong>của queue</strong> (cấu hình trên SQS, không phải trên Lambda).</li>
+<li><strong>Kinesis / DynamoDB Streams:</strong> Lambda retry batch lỗi cho tới khi record hết hạn trong stream, và <strong>chặn</strong> các record sau trong cùng shard. Cấu hình <code>MaximumRetryAttempts</code>, <code>BisectBatchOnFunctionError</code> và on-failure destination để không kẹt shard.</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>[!IMPORTANT]
+Không có &quot;một cơ chế retry của Lambda&quot;. Retry phụ thuộc <strong>cách gọi</strong>: synchronous do caller quyết định; asynchronous do Lambda retry 2 lần; event source mapping theo quy tắc của từng nguồn.</p>
+</blockquote>
+<hr>
+<h2 id="phần-3--quản-lý-tương-tranh-throttling-và-tính-lũy-kế-idempotency-50-phút"><a class="anchor" href="#phần-3--quản-lý-tương-tranh-throttling-và-tính-lũy-kế-idempotency-50-phút">Phần 3 — Quản lý Tương tranh, Throttling và Tính Lũy kế Idempotency (50 phút)</a></h2>
+<h3 id="hạn-ngạch-tương-tranh-concurrency-quota"><a class="anchor" href="#hạn-ngạch-tương-tranh-concurrency-quota">Hạn ngạch Tương tranh (Concurrency Quota)</a></h3>
+<ul>
+<li>Concurrency là số lượng môi trường thực thi của hàm Lambda đang đồng thời xử lý request tại một thời điểm cụ thể.</li>
+<li>Công thức: <code>Concurrency = (Số request mỗi giây - RPS) x (Thời gian xử lý trung bình mỗi request tính bằng giây)</code>.</li>
+<li><em>Ví dụ:</em> 1,000 RPS với thời gian xử lý là 100ms (0.1s) =&gt; Cần <code>1,000 x 0.1 = 100 concurrent executions</code>.</li>
+<li>Mặc định, mỗi tài khoản AWS có một hạn mức tương tranh dùng chung là <strong>1,000</strong> trên mỗi Region (account mới có thể thấp hơn; kiểm tra bằng <code>aws lambda get-account-settings</code>). Lambda luôn giữ lại một phần unreserved tối thiểu (100 với quota 1,000), nên không thể reserve hết.</li>
+</ul>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Phân biệt Reserved Concurrency vs Provisioned Concurrency:
+┌────────────────────────────────────────────────────────────────────────┐
+│ Toàn bộ Tài khoản AWS Region (Hạn ngạch 1,000 Concurrency)             │
+│                                                                        │
+│  ┌─────────────────────────┐  ┌─────────────────────────────────────┐  │
+│  │ Unreserved Concurrency  │  │ Reserved Concurrency: 100           │  │
+│  │ (900 Concurrency)       │  │ (Dành riêng cho Order Processing)   │  │
+│  │ Dùng chung cho toàn bộ  │  │                                     │  │
+│  │ các Lambda khác         │  │  ┌───────────────────────────────┐  │  │
+│  │                         │  │  │ Provisioned Concurrency: 20   │  │  │
+│  │                         │  │  │ (20 microVM luôn bật sẵn RAM) │  │  │
+│  │                         │  │  └───────────────────────────────┘  │  │
+│  └─────────────────────────┘  └─────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────────────┘</code></pre></div>
+<h3 id="reserved-concurrency-tương-tranh-dành-riêng"><a class="anchor" href="#reserved-concurrency-tương-tranh-dành-riêng">Reserved Concurrency (Tương tranh Dành riêng)</a></h3>
+<ul>
+<li><strong>Bảo đảm tài nguyên:</strong> Đảm bảo hàm luôn có sẵn một số lượng tương tranh nhất định, không bị các hàm khác trong tài khoản chiếm dụng hết.</li>
+<li><strong>Trần cứng bảo vệ hạ nguồn:</strong> Reserved concurrency đồng thời là <strong>giới hạn tối đa</strong>. Giả sử hàm Lambda kết nối tới database RDS PostgreSQL chỉ chịu được tối đa 50 kết nối. Nếu không đặt Reserved Concurrency, khi có đợt sale lớn, Lambda có thể scale lên 500 environment đồng thời và đánh sập database. Đặt <code>Reserved Concurrency = 50</code> giới hạn cứng số environment (mỗi environment giữ một kết nối nếu khởi tạo ngoài handler). Đặt <code>0</code> để tạm dừng hoàn toàn một function.</li>
+<li>Reserved concurrency <strong>không tính phí</strong> thêm.</li>
+</ul>
+<h3 id="provisioned-concurrency-tương-tranh-cấp-phát-sẵn"><a class="anchor" href="#provisioned-concurrency-tương-tranh-cấp-phát-sẵn">Provisioned Concurrency (Tương tranh Cấp phát sẵn)</a></h3>
+<ul>
+<li>Khởi tạo sẵn một số lượng môi trường thực thi đã chạy xong pha INIT (đã nạp sẵn code và kết nối SDK).</li>
+<li><strong>Loại bỏ Cold Start trong phạm vi đã cấp:</strong> request nằm trong số environment đã cấp sẵn không bị cold start; vượt số đó thì Lambda scale như bình thường và vẫn có cold start. Gắn với <strong>version hoặc alias</strong>, không gắn với <code>$LATEST</code>.</li>
+<li><strong>Tính phí</strong> theo thời gian bật, kể cả khi không có request. Chỉ dùng khi đã đo được cold start ảnh hưởng tới SLO.</li>
+</ul>
+<h3 id="hiện-tượng-nghẽn-throttling"><a class="anchor" href="#hiện-tượng-nghẽn-throttling">Hiện tượng Nghẽn (Throttling)</a></h3>
+<ul>
+<li>Khi số lượng request vượt quá hạn ngạch Concurrency, Lambda sẽ từ chối xử lý:<ul>
+<li>Gọi đồng bộ: Lambda trả lỗi <code>TooManyRequestsException</code> (HTTP 429) cho caller; API Gateway phía trước sẽ chuyển thành lỗi cho client.</li>
+<li>Gọi bất đồng bộ: Lambda tự động giữ event trong hàng đợi nội bộ tối đa 6 giờ và thử lại khi có tài nguyên rảnh.</li>
+</ul>
+</li>
+</ul>
+<h3 id="thiết-kế-tính-lũy-kế-idempotency"><a class="anchor" href="#thiết-kế-tính-lũy-kế-idempotency">Thiết kế Tính Lũy kế (Idempotency)</a></h3>
+<p>Vì mạng Internet có thể bị chập chờn và các cơ chế Retry tự động có thể gửi cùng một request nhiều lần, mã nguồn xử lý thanh toán/đơn hàng bắt buộc phải đảm bảo tính <strong>Idempotent</strong> (Thực hiện thao tác 1 lần hay 10 lần thì kết quả nghiệp vụ vẫn chỉ trừ tiền và tạo đơn đúng 1 lần):</p>
+<ul>
+<li>Sử dụng <strong>Idempotency Key</strong> (thường là UUID sinh ra từ client khi bấm nút đặt hàng).</li>
+<li>Lưu trạng thái Idempotency Key vào bảng DynamoDB kèm thời gian sống (TTL). Nếu phát hiện key đã được xử lý thành công trước đó, hàm trả về ngay kết quả cũ mà không thực hiện trừ tiền lần thứ hai.</li>
+</ul>
+<hr>
+<h2 id="phần-4--amazon-api-gateway-http-api-vs-rest-api-và-proxy-integration-50-phút"><a class="anchor" href="#phần-4--amazon-api-gateway-http-api-vs-rest-api-và-proxy-integration-50-phút">Phần 4 — Amazon API Gateway: HTTP API vs REST API và Proxy Integration (50 phút)</a></h2>
+<p>Amazon API Gateway là dịch vụ quản lý cổng API mạnh mẽ, đóng vai trò &quot;cửa ngõ&quot; đón nhận toàn bộ lưu lượng HTTP từ Internet và định tuyến vào Lambda hoặc các dịch vụ AWS khác.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Luồng tích hợp qua API Gateway HTTP API (Proxy Integration v2.0):
+Client ──HTTP POST /orders──&gt; API Gateway HTTP API ──Event JSON (v2.0)──&gt; AWS Lambda
+                                                                               │
+Client &lt;──HTTP 201 Created──── API Gateway &lt;──Trả về JSON {statusCode, body}──┘</code></pre></div>
+<h3 id="lựa-chọn-http-api-vs-rest-api"><a class="anchor" href="#lựa-chọn-http-api-vs-rest-api">Lựa chọn HTTP API vs REST API</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tính năng</th>
+<th>API Gateway HTTP API (v2)</th>
+<th>API Gateway REST API (v1)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Đặc điểm kiến trúc</strong></td>
+<td>Ra đời sau, tối ưu cho Serverless hiện đại, siêu nhẹ, độ trễ thấp</td>
+<td>Thế hệ đầu tiên, đầy đủ tính năng doanh nghiệp phức tạp</td>
+</tr>
+<tr>
+<td><strong>Chi phí</strong></td>
+<td><strong>Rẻ hơn ~70%</strong> ($1.00 / triệu request)</td>
+<td>$3.50 / triệu request</td>
+</tr>
+<tr>
+<td><strong>Xác thực (Authentication)</strong></td>
+<td>JWT authorizer (OIDC/OAuth 2.0, ví dụ Cognito) tích hợp sẵn, Lambda authorizer, IAM SigV4</td>
+<td>Cognito User Pools authorizer, Lambda authorizer, IAM SigV4, API key (không phải auth)</td>
+</tr>
+<tr>
+<td><strong>Tích hợp WAF</strong></td>
+<td>Không hỗ trợ trực tiếp (cần đưa qua CloudFront)</td>
+<td>Hỗ trợ gắn trực tiếp AWS WAF</td>
+</tr>
+<tr>
+<td><strong>Tính năng mở rộng</strong></td>
+<td>CORS cấu hình sẵn; throttling theo stage/route</td>
+<td>API Keys, Usage Plans (giới hạn theo từng client), cache, request validation, private endpoint</td>
+</tr>
+<tr>
+<td><strong>Lỗi khi Lambda ném exception/timeout</strong></td>
+<td><code>500 Internal Server Error</code></td>
+<td><code>502 Bad Gateway</code></td>
+</tr>
+<tr>
+<td><strong>Khuyến nghị sử dụng</strong></td>
+<td><strong>Ưu tiên số 1</strong> cho các dịch vụ Web/Mobile API hiện đại</td>
+<td>Dùng khi bắt buộc cần phân phối API Key cho đối tác thứ ba hoặc tích hợp WAF trực tiếp</td>
+</tr>
+</tbody></table>
+</div>
+<h3 id="lambda-proxy-integration-và-chuẩn-payload-format-v20"><a class="anchor" href="#lambda-proxy-integration-và-chuẩn-payload-format-v20">Lambda Proxy Integration và Chuẩn Payload Format v2.0</a></h3>
+<p>Khi sử dụng <strong>Proxy Integration</strong>, API Gateway sẽ đóng gói toàn bộ HTTP request (Path, Query parameters, Headers, Body) thành một JSON payload và chuyển nguyên vẹn vào tham số <code>event</code> của Lambda.</p>
+<p>Ngược lại, hàm Lambda <strong>bắt buộc phải trả về một Dictionary/Object</strong> đúng cấu trúc quy chuẩn để API Gateway có thể biên dịch ngược lại thành HTTP response gửi cho trình duyệt:</p>
+<div class="code"><span class="lang">json</span><button type="button">Copy</button><pre><code>{
+  &quot;statusCode&quot;: 200,
+  &quot;headers&quot;: {
+    &quot;Content-Type&quot;: &quot;application/json&quot;,
+    &quot;Access-Control-Allow-Origin&quot;: &quot;*&quot;
+  },
+  &quot;body&quot;: &quot;{\&quot;message\&quot;: \&quot;Đơn hàng đã được tạo thành công!\&quot;}&quot;
+}</code></pre></div>
+<blockquote>
+<p>[!WARNING]
+Trường <code>body</code> phải là <strong>chuỗi</strong> (JSON đã stringify). Hành vi khi vi phạm khác nhau theo format:</p>
+<ul>
+<li><strong>REST API / payload format 1.0:</strong> response không đúng cấu trúc → <code>502 Bad Gateway</code> (<code>Malformed Lambda proxy response</code>).</li>
+<li><strong>HTTP API, payload format 2.0:</strong> nếu function trả JSON hợp lệ <strong>không có</strong> <code>statusCode</code>, API Gateway <strong>đoán</strong>: status <code>200</code>, <code>content-type: application/json</code>, body là toàn bộ object. Vì vậy một response &quot;quên&quot; <code>statusCode</code> vẫn trả <code>200</code>, lỗi bị che đi. Luôn trả đủ <code>statusCode</code>, <code>headers</code>, <code>body</code> để không phụ thuộc phỏng đoán.</li>
+</ul>
+</blockquote>
+<hr>
+<h2 id="phần-5--đóng-gói-phiên-bản-phân-chia-tải-và-kinh-tế-học-serverless-45-phút"><a class="anchor" href="#phần-5--đóng-gói-phiên-bản-phân-chia-tải-và-kinh-tế-học-serverless-45-phút">Phần 5 — Đóng gói, Phiên bản, Phân chia Tải và Kinh tế học Serverless (45 phút)</a></h2>
+<h3 id="định-dạng-đóng-gói-packaging-formats"><a class="anchor" href="#định-dạng-đóng-gói-packaging-formats">Định dạng Đóng gói (Packaging Formats)</a></h3>
+<ol>
+<li><strong>Zip Archive (Tối đa 50 MB nén, 250 MB giải nén):</strong> Định dạng truyền thống, tải lên nhanh nhất, tối ưu cho phần lớn các thư viện nhẹ.</li>
+<li><strong>Container Image (Tối đa 10 GB):</strong> Cho phép bạn đóng gói code và toàn bộ các dependencies nặng (như thư viện Machine Learning PyTorch, TensorFlow, FFmpeg) vào Dockerfile và đẩy lên ECR.</li>
+</ol>
+<h3 id="quản-lý-phiên-bản-version-và-định-danh-alias"><a class="anchor" href="#quản-lý-phiên-bản-version-và-định-danh-alias">Quản lý Phiên bản (Version) và Định danh (Alias)</a></h3>
+<ul>
+<li>Khi phát triển, code của bạn nằm ở phiên bản <code>$LATEST</code> (có thể thay đổi).</li>
+<li>Khi release lên production, bạn thực hiện xuất bản một phiên bản bất biến (<strong>Version</strong>, ví dụ: <code>Version 1</code>, <code>Version 2</code>).</li>
+<li><strong>Alias (Bí danh):</strong> Là một con trỏ trỏ tới một Version cụ thể (ví dụ alias <code>PROD</code> trỏ tới Version 1).</li>
+<li><strong>Canary Deployment (Phân tách tải có trọng số):</strong> Cho phép alias <code>PROD</code> trỏ tới Version 1 (90% lưu lượng) và Version 2 mới deploy (10% lưu lượng) để kiểm thử thực tế an toàn trước khi chuyển đổi 100%.</li>
+</ul>
+<h3 id="so-sánh-kinh-tế-học-serverless-vs-máy-chủ-luôn-chạy-ec2fargate"><a class="anchor" href="#so-sánh-kinh-tế-học-serverless-vs-máy-chủ-luôn-chạy-ec2fargate">So sánh Kinh tế học: Serverless vs Máy chủ Luôn chạy (EC2/Fargate)</a></h3>
+<ul>
+<li><strong>EC2 / Fargate:</strong> Bạn phải trả tiền 24/7 cho năng lực tính toán đã cấp phát, bất kể lúc nửa đêm có người truy cập hay không. Phù hợp cho tải công việc đều đặn, chạy liên tục và dự đoán trước được dung lượng.</li>
+<li><strong>AWS Lambda:</strong> <strong>Thanh toán theo request và GB-giây thực chạy.</strong> Khi không có request, phí compute bằng $0 (vẫn có phí log, storage và Provisioned Concurrency nếu bật). Free Tier có thể giảm thêm nhưng điều kiện khác nhau theo loại account, nên đừng dùng nó làm căn cứ thiết kế. Phù hợp cho lưu lượng biến thiên, tác vụ theo sự kiện, batch nhỏ.</li>
+<li><strong>Điểm hòa vốn:</strong> với tải cao và đều 24/7, chi phí Lambda (+ API Gateway theo request) có thể vượt Fargate/EC2 chạy liên tục. Tính bằng số request/tháng và thời gian chạy trung bình trước khi chọn.</li>
+</ul>
+<h3 id="lambda-gắn-vpc"><a class="anchor" href="#lambda-gắn-vpc">Lambda gắn VPC</a></h3>
+<ul>
+<li>Mặc định Lambda chạy ngoài VPC của bạn và ra Internet được. Khi gắn vào subnet (để tới RDS/ElastiCache private), function <strong>mất đường Internet</strong> trừ khi subnet có route tới NAT Gateway; gán public IP không có tác dụng.</li>
+<li>Gọi dịch vụ AWS từ Lambda trong VPC cần NAT hoặc VPC endpoint. Chỉ gắn VPC khi thật sự cần tài nguyên private.</li>
+</ul>
+<hr>
+<h2 id="phần-6--giới-thiệu-bài-thực-hành-lab-09"><a class="anchor" href="#phần-6--giới-thiệu-bài-thực-hành-lab-09">Phần 6 — Giới thiệu bài thực hành (Lab 09)</a></h2>
+<p>Trong bài thực hành đính kèm, bạn sẽ trực tiếp triển khai:</p>
+<ol>
+<li>Viết hàm Lambda Python (arm64) theo payload format 2.0, chỉ log các trường cần thiết.</li>
+<li>Execution role chỉ có quyền ghi log; log group tạo trước với retention.</li>
+<li><strong>HTTP API</strong> với route <code>POST /orders</code>, <code>GET /orders/{orderId}</code>, resource-based policy giới hạn theo API.</li>
+<li>Giới hạn chi phí bằng throttling ở stage và reserved concurrency.</li>
+<li>Kiểm thử 200/201/400/404 và phân biệt 404 của API Gateway với 404 của function.</li>
+<li>Negative case: exception và timeout (HTTP API trả <code>500</code>), response thiếu <code>statusCode</code> (format 2.0 tự suy ra <code>200</code>), throttling <code>429</code>; đọc nguyên nhân trong log.</li>
+<li>Tùy chọn: S3 trigger với prefix tách biệt.</li>
+<li>Cleanup và kiểm tra inventory.</li>
+</ol>
+<p>👉 Mở bài hướng dẫn chi tiết tại: <strong><a href="../labs/09-serverless/README.html">labs/09-serverless/README.md</a></strong>.</p>
+<hr>
+<h2 id="phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút"><a class="anchor" href="#phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi phổ biến (25 phút)</a></h2>
+<h3 id="1-api-gateway-trả-về-5xx-http-api-500-rest-api-502"><a class="anchor" href="#1-api-gateway-trả-về-5xx-http-api-500-rest-api-502">1. API Gateway trả về 5xx (HTTP API: <code>500</code>, REST API: <code>502</code>)</a></h3>
+<ul>
+<li><strong>Nguyên nhân cốt lõi:</strong> function ném exception, timeout, hoặc (với REST API/format 1.0) định dạng phản hồi không đúng chuẩn proxy. Nếu log của function <strong>không có dòng nào</strong> cho request đó, nghi API Gateway không được phép invoke (thiếu resource-based policy).</li>
+<li><strong>Cách khắc phục:</strong><ul>
+<li>Kiểm tra xem output của hàm có chứa đủ 2 trường bắt buộc: <code>statusCode</code> (số nguyên) và <code>body</code> (chuỗi string) không.</li>
+<li>Kiểm tra xem hàm Lambda có bị crash hoặc văng ngoại lệ trước khi kịp return response hay không bằng cách tra cứu log trong CloudWatch.</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-hàm-lambda-bị-kết-thúc-bởi-lỗi-task-timed-out"><a class="anchor" href="#2-hàm-lambda-bị-kết-thúc-bởi-lỗi-task-timed-out">2. Hàm Lambda bị kết thúc bởi lỗi Task Timed Out</a></h3>
+<ul>
+<li><strong>Triệu chứng:</strong> <code>Task timed out after 3.00 seconds</code>.</li>
+<li><strong>Nguyên nhân:</strong> Thời gian timeout mặc định khi tạo hàm thường là 3 giây. Nếu hàm phải gọi ra mạng bên ngoài, gọi database hoặc query bên thứ ba, 3 giây có thể không đủ.</li>
+<li><strong>Cách khắc phục:</strong> Tăng thông số timeout của hàm lên 10–15 giây trong cấu hình hàm (<code>aws lambda update-function-configuration --timeout 15</code>).</li>
+</ul>
+<h3 id="3-vòng-lặp-kích-hoạt-đệ-quy-vô-tận-recursive-loop-hazard"><a class="anchor" href="#3-vòng-lặp-kích-hoạt-đệ-quy-vô-tận-recursive-loop-hazard">3. Vòng lặp kích hoạt đệ quy vô tận (Recursive Loop Hazard)</a></h3>
+<ul>
+<li><strong>Kịch bản sự cố:</strong> Hàm Lambda được kích hoạt bởi sự kiện S3 <code>ObjectCreated</code>, sau đó trong code của hàm lại ghi một file log mới vào chính bucket đó với cùng prefix.</li>
+<li><strong>Hệ quả:</strong> Mỗi lần hàm chạy lại sinh ra 1 file mới -&gt; S3 lại kích hoạt thêm 1 lần chạy mới -&gt; Hàm chạy hàng triệu lần trong vài phút làm cháy hạn ngạch Concurrency và gây tốn kém chi phí khổng lồ.</li>
+<li><strong>Cách phòng chống:</strong> Luôn luôn ghi file đầu ra sang một Bucket khác hoặc sử dụng một Prefix hoàn toàn tách biệt (ví dụ: trigger chỉ lắng nghe prefix <code>uploads/</code>, còn output ghi vào <code>processed/</code>). Lambda có <strong>recursive loop detection</strong> cho một số nguồn (SQS, SNS, S3) và dừng vòng lặp sau khoảng 16 lần gọi liên tiếp, nhưng đó là lưới an toàn, không thay cho thiết kế; đặt thêm reserved concurrency làm trần chi phí.</li>
+</ul>
+<hr>
+<h2 id="câu-hỏi-tự-kiểm-tra"><a class="anchor" href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></h2>
+<ol>
+<li>Trình bày vòng đời của một Lambda Execution Environment. Tại sao việc khởi tạo các kết nối Database hoặc AWS SDK client bên ngoài hàm Handler lại giúp tối ưu hóa hiệu năng vượt bậc?</li>
+<li>So sánh hành vi xử lý lỗi và cơ chế thử lại (Retry) giữa hai mô hình: Kích hoạt đồng bộ (Synchronous) và Kích hoạt bất đồng bộ (Asynchronous)?</li>
+<li>Phân biệt mục đích sử dụng giữa <strong>Reserved Concurrency</strong> và <strong>Provisioned Concurrency</strong>? Trong trường hợp nào bạn bắt buộc phải cấu hình Reserved Concurrency để bảo vệ hệ thống?</li>
+<li>Trình bày ít nhất 3 lý do vì sao Amazon API Gateway HTTP API được ưa chuộng hơn REST API trong các kiến trúc Serverless hiện đại?</li>
+<li>Khi một hàm Lambda hoạt động phía sau API Gateway với chế độ Lambda Proxy Integration, tại sao trường <code>body</code> trong response trả về bắt buộc phải là một chuỗi string thay vì một JSON object trực tiếp? Điều gì xảy ra nếu vi phạm?</li>
+</ol>
+<hr>
+<h2 id="tài-liệu-tham-khảo-chính-thức"><a class="anchor" href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></h2>
+<ul>
+<li><a href="https://docs.aws.amazon.com/lambda/latest/dg/welcome.html" target="_blank" rel="noopener">AWS Lambda Developer Guide</a></li>
+<li><a href="https://docs.aws.amazon.com/lambda/latest/dg/runtimes-context.html" target="_blank" rel="noopener">Lambda Execution Environment lifecycle</a></li>
+<li><a href="https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html" target="_blank" rel="noopener">Managing Concurrency for a Lambda function</a></li>
+<li><a href="https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api.html" target="_blank" rel="noopener">Working with HTTP APIs in Amazon API Gateway</a></li>
+<li><a href="https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html" target="_blank" rel="noopener">AWS Lambda Operating System and architecture specifications</a></li>
+</ul>
+<h2 id="trạng-thái-kiểm-chứng"><a class="anchor" href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></h2>
+<ul>
+<li><strong>Đối chiếu tài liệu (2026-10-31):</strong> payload format 2.0 và quy tắc suy ra response khi thiếu <code>statusCode</code>; timeout integration (HTTP API 30 giây, REST API 29 giây mặc định); retry theo từng kiểu invoke; reserved/provisioned concurrency; recursive loop detection; arm64 có đơn giá GB-giây thấp hơn x86_64 khoảng 20%.</li>
+<li><strong>Chưa chạy thử trên AWS:</strong> lệnh trong lab chưa được thực thi trên account thật; output (đặc biệt mã lỗi 500/503 của HTTP API) là minh họa, cần đối chiếu khi chạy.</li>
+<li><strong>Chi phí:</strong> lab dưới $0.01 ngay cả khi không có Free Tier (vài trăm request). Rủi ro chính là API public bị lạm dụng, nên lab bật throttling và reserved concurrency.</li>
+</ul>
+<hr>
+<h2 id="đáp-án-gợi-ý"><a class="anchor" href="#đáp-án-gợi-ý">Đáp án gợi ý</a></h2>
+<details>
+<summary>Mở để xem đáp án</summary>
+
+<ol>
+<li>Vòng đời gồm 3 pha: INIT (nạp code, khởi tạo runtime, chạy mã bên ngoài handler) -&gt; INVOKE (thực thi handler xử lý request) -&gt; SHUTDOWN (dọn dẹp tài nguyên).
+Khởi tạo Database/SDK bên ngoài handler giúp tận dụng pha INIT chỉ chạy một lần duy nhất trong quá trình Cold Start. Các request tiếp theo (Warm Start) sẽ tái sử dụng lại các kết nối đã mở sẵn mà không mất công đàm phán SSL hay thiết lập kết nối TCP mới, giúp giảm độ trễ từ hàng trăm mili-giây xuống chỉ còn vài mili-giây.</li>
+<li>So sánh:<ul>
+<li><strong>Đồng bộ (Synchronous):</strong> Caller chờ kết quả trực tiếp. Nếu hàm lỗi, Lambda không retry; việc xử lý lỗi hoàn toàn do Caller tự chịu trách nhiệm.</li>
+<li><strong>Bất đồng bộ (Asynchronous):</strong> Caller nhận <code>202 Accepted</code> ngay và không chờ. Event được đưa vào hàng đợi nội bộ. Nếu hàm lỗi, Lambda sẽ <strong>tự động thử lại 2 lần</strong> với cơ chế giãn cách thời gian. Nếu sau 3 lần vẫn lỗi, event được chuyển vào Dead Letter Queue (SQS/SNS) nếu có cấu hình.</li>
+</ul>
+</li>
+<li>Phân biệt:<ul>
+<li><strong>Reserved Concurrency:</strong> Giới hạn và dành riêng một mức tương tranh cố định cho hàm. Dùng làm &quot;cầu dao an toàn&quot; để bảo vệ cơ sở dữ liệu hạ nguồn (như RDS) không bị quá tải kết nối khi lưu lượng tăng đột biến.</li>
+<li><strong>Provisioned Concurrency:</strong> Giữ ấm sẵn một số lượng container vi mô đã nạp sẵn code và runtime trong RAM để phục vụ request tức thời, triệt tiêu 100% độ trễ Cold Start cho các hệ thống thanh toán hoặc ứng dụng tài chính nhạy cảm về độ trễ.</li>
+</ul>
+</li>
+<li>Ba lý do:<ul>
+<li><strong>Chi phí rẻ hơn tới 70%:</strong> Chỉ $1.00 cho mỗi triệu request (so với $3.50 của REST API).</li>
+<li><strong>Độ trễ thấp hơn:</strong> Kiến trúc tinh gọn loại bỏ các lớp chuyển đổi phức tạp, giúp giảm thời gian phản hồi cho ứng dụng di động/web.</li>
+<li><strong>Xác thực JWT đơn giản:</strong> Hỗ trợ trực tiếp JSON Web Token (JWT) và các nhà cung cấp OIDC (như Cognito, Auth0) mà không cần phải viết thêm một hàm Custom Lambda Authorizer tốn kém.</li>
+<li>Ngược lại, chọn REST API khi cần usage plan/API key cho đối tác, cache, request validation, private endpoint hoặc gắn WAF trực tiếp.</li>
+</ul>
+</li>
+<li>HTTP body là chuỗi byte, nên API Gateway cần <code>body</code> đã được tuần tự hóa (string, hoặc base64 kèm <code>isBase64Encoded</code>). Hậu quả khi vi phạm phụ thuộc loại API: với REST API/format 1.0, response sai cấu trúc bị coi là lỗi và client nhận <code>502 Bad Gateway</code>. Với HTTP API format 2.0, nếu function trả JSON không có <code>statusCode</code>, API Gateway tự suy ra <code>200</code> và dùng cả object làm body, nên lỗi có thể bị che đi; vì vậy luôn trả đủ <code>statusCode</code>, <code>headers</code>, <code>body</code> dạng string.</li>
+</ol>
+</details>
+
+
+<footer>Sinh tự động từ <code>notes/09-serverless.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

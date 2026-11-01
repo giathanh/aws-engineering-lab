@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab 02 — Danh tính và quyền truy cập: STS AssumeRole và Least Privilege với S3</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="../../notes/01-foundations.html">01. Lý thuyết</a><a href="../01-foundations/README.html">01. Lab</a><a href="../../notes/02-identity-and-access.html">02. Lý thuyết</a><a href="README.html" class="active">02. Lab</a><a href="../../notes/03-cost-management.html">03. Lý thuyết</a><a href="../03-cost-management/README.html">03. Lab</a><a href="../../notes/04-networking.html">04. Lý thuyết</a><a href="../04-networking/README.html">04. Lab</a><a href="../../notes/05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../05-compute-and-load-balancing/README.html">05. Lab</a><a href="../../notes/06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../06-storage-and-content-delivery/README.html">06. Lab</a><a href="../../notes/07-databases-and-cache.html">07. Lý thuyết</a><a href="../07-databases-and-cache/README.html">07. Lab</a><a href="../../notes/08-containers.html">08. Lý thuyết</a><a href="../08-containers/README.html">08. Lab</a><a href="../../notes/09-serverless.html">09. Lý thuyết</a><a href="../09-serverless/README.html">09. Lab</a><a href="../../notes/10-observability-and-application-security.html">10. Lý thuyết</a><a href="../10-observability-and-application-security/README.html">10. Lab</a><a href="../../notes/11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../11-messaging-and-workflows/README.html">11. Lab</a><a href="../../notes/12-iac-and-cicd.html">12. Lý thuyết</a><a href="../12-iac-and-cicd/README.html">12. Lab</a><a href="../../notes/13-reliability-and-performance.html">13. Lý thuyết</a><a href="../13-reliability-and-performance/README.html">13. Lab</a><a href="../../notes/14-architecture-and-governance.html">14. Lý thuyết</a><a href="../14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></li><li><a href="#quy-ước-placeholder">Quy ước placeholder</a></li><li><a href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></li><li><a href="#sơ-đồ-kiến-trúc-thực-hành">Sơ đồ kiến trúc thực hành</a></li><li><a href="#bước-1--lấy-thông-tin-principal-hiện-tại">Bước 1 — Lấy thông tin Principal hiện tại</a></li><li><a href="#bước-2--chuẩn-bị-s3-fixture">Bước 2 — Chuẩn bị S3 Fixture</a></li><li><a href="#bước-3--tạo-iam-role-và-trust-policy">Bước 3 — Tạo IAM Role và Trust Policy</a></li><li><a href="#bước-4--đính-kèm-permission-policy-giới-hạn-least-privilege">Bước 4 — Đính kèm Permission Policy giới hạn Least Privilege</a></li><li><a href="#bước-5--assume-role-và-nạp-temporary-credentials">Bước 5 — Assume Role và nạp Temporary Credentials</a></li><li><a href="#bước-6--kiểm-chứng-happy-path">Bước 6 — Kiểm chứng Happy Path</a></li><li><a href="#bước-7--kiểm-chứng-negative-tests-có-kiểm-soát">Bước 7 — Kiểm chứng Negative Tests có kiểm soát</a></li><li><a href="#bước-8--hủy-phiên-và-quay-về-identity-gốc">Bước 8 — Hủy phiên và quay về identity gốc</a></li><li><a href="#bước-9--dọn-dẹp-tài-nguyên-cleanup">Bước 9 — Dọn dẹp tài nguyên (Cleanup)</a></li><li><a href="#checklist-hoàn-thành">Checklist hoàn thành</a></li><li><a href="#troubleshooting-nhanh">Troubleshooting nhanh</a></li><li><a href="#tiếp-theo">Tiếp theo</a></li></ol></aside>
+<main>
+<h1 id="lab-02--danh-tính-và-quyền-truy-cập-sts-assumerole-và-least-privilege-với-s3"><a class="anchor" href="#lab-02--danh-tính-và-quyền-truy-cập-sts-assumerole-và-least-privilege-với-s3">Lab 02 — Danh tính và quyền truy cập: STS AssumeRole và Least Privilege với S3</a></h1>
+<blockquote>
+<p><strong>Lý thuyết:</strong> <a href="../../notes/02-identity-and-access.html">notes/02-identity-and-access.md</a>. Đọc phần 1–5 trước khi bắt đầu.
+<strong>Thời lượng:</strong> khoảng 60–75 phút (cộng 15 phút nếu chờ session hết hạn ở bước tùy chọn).
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Mọi output là <strong>minh họa</strong>, thông tin định danh dùng placeholder. Lab chưa được chạy thử trên account thật.</p>
+</blockquote>
+<hr>
+<h2 id="lab-này-làm-gì-và-không-làm-gì"><a class="anchor" href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>✅ Có</th>
+<th>❌ Không</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tạo IAM Role với Trust Policy cho phép caller assume</td>
+<td>Tạo IAM User với long-lived Access Key</td>
+</tr>
+<tr>
+<td>Tạo IAM Policy cấp quyền chỉ đọc một prefix S3 xác định</td>
+<td>Dùng <code>AdministratorAccess</code> hoặc policy wildcard <code>*</code> trên <code>*</code></td>
+</tr>
+<tr>
+<td>Sử dụng <code>aws sts assume-role</code> để lấy temporary credentials</td>
+<td>Sử dụng root user</td>
+</tr>
+<tr>
+<td>Kiểm chứng happy path (đọc thành công prefix hợp lệ)</td>
+<td>Đặt dữ liệu nhạy cảm hoặc bí mật thật lên S3</td>
+</tr>
+<tr>
+<td>Negative test có kiểm soát: đọc sai prefix, ghi file, token sai</td>
+<td>Để lại tài nguyên rác sau khi kết thúc lab</td>
+</tr>
+<tr>
+<td>Dọn dẹp sạch toàn bộ role, policy và S3 fixture</td>
+<td>Thay đổi tài nguyên production hoặc tài nguyên chung của tổ chức</td>
+</tr>
+</tbody></table>
+</div>
+<hr>
+<h2 id="quy-ước-placeholder"><a class="anchor" href="#quy-ước-placeholder">Quy ước placeholder</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Placeholder / biến</th>
+<th>Ý nghĩa</th>
+<th>Ví dụ minh họa</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>aws-lab</code></td>
+<td>Tên named profile CLI đã cấu hình ở Lab 01</td>
+<td><code>aws-lab</code></td>
+</tr>
+<tr>
+<td><code>REGION</code></td>
+<td>Region bạn đã chọn học tập</td>
+<td><code>ap-southeast-1</code></td>
+</tr>
+<tr>
+<td><code>ACCOUNT_ID</code></td>
+<td>12 số account ID (lấy tự động ở Bước 1)</td>
+<td><code>111122223333</code></td>
+</tr>
+<tr>
+<td><code>CALLER_ARN</code></td>
+<td>ARN của identity đang đăng nhập (lấy tự động ở Bước 1)</td>
+<td><code>arn:aws:sts::111122223333:assumed-role/AWSReservedSSO_LabAdmin_abc123/dev</code></td>
+</tr>
+<tr>
+<td><code>BUCKET_NAME</code></td>
+<td>Tên bucket fixture, duy nhất toàn cầu (tạo ở Bước 2)</td>
+<td><code>lab02-orders-111122223333-1761900000</code></td>
+</tr>
+<tr>
+<td><code>OrderReaderRole</code></td>
+<td>Tên IAM Role được tạo trong lab</td>
+<td><code>OrderReaderRole</code></td>
+</tr>
+<tr>
+<td><code>OrderReadOnlyPolicy</code></td>
+<td>Tên inline policy được tạo trong lab</td>
+<td><code>OrderReadOnlyPolicy</code></td>
+</tr>
+</tbody></table>
+</div>
+<p>Mọi tài nguyên đều gắn tag <code>Project=aws-lab-02</code> để tìm lại và dọn dẹp.</p>
+<hr>
+<h2 id="điều-kiện-đầu-vào"><a class="anchor" href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></h2>
+<ul>
+<li><input type="checkbox"> Đã hoàn thành <a href="../01-foundations/README.html">Lab 01</a>, AWS CLI v2 hoạt động ổn định.</li>
+<li><input type="checkbox"> Profile <code>aws-lab</code> gọi thành công <code>aws sts get-caller-identity</code>, và ARN <strong>không</strong> phải root (<code>arn:aws:iam::&lt;ACCOUNT_ID&gt;:root</code>).</li>
+<li><input type="checkbox"> Identity hiện tại có quyền:<ul>
+<li>IAM trên role của lab: <code>iam:CreateRole</code>, <code>iam:TagRole</code>, <code>iam:GetRole</code>, <code>iam:PutRolePolicy</code>, <code>iam:DeleteRolePolicy</code>, <code>iam:DeleteRole</code>.</li>
+<li>S3 trên bucket của lab: <code>s3:CreateBucket</code>, <code>s3:PutBucketTagging</code>, <code>s3:ListBucket</code>, <code>s3:PutObject</code>, <code>s3:GetObject</code>, <code>s3:DeleteObject</code>, <code>s3:DeleteBucket</code>.</li>
+</ul>
+</li>
+<li><input type="checkbox"> Không sử dụng production account.</li>
+</ul>
+<h3 id="chi-phí-ước-tính"><a class="anchor" href="#chi-phí-ước-tính">Chi phí ước tính</a></h3>
+<p>IAM và STS không tính phí. S3 fixture chỉ có 2 object vài chục byte và vài chục request trong lab, chi phí gần như bằng 0. Nếu quên cleanup, bucket vẫn tốn không đáng kể, nhưng vẫn phải xóa vì đây là tài nguyên mồ côi.</p>
+<hr>
+<h2 id="sơ-đồ-kiến-trúc-thực-hành"><a class="anchor" href="#sơ-đồ-kiến-trúc-thực-hành">Sơ đồ kiến trúc thực hành</a></h2>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>1. Identity hiện tại (Caller)
+   │
+   ├─► Tạo S3 Bucket: &lt;BUCKET_NAME&gt;
+   │   ├── orders/read-only/order-101.json  (Dữ liệu đọc được)
+   │   └── orders/confidential/secret.json  (Dữ liệu giả, cấm đọc)
+   │
+   ├─► Tạo IAM Role: OrderReaderRole
+   │   ├── Trust Policy: Cho phép &lt;CALLER_ARN&gt; gọi sts:AssumeRole
+   │   └── Permission Policy: s3:ListBucket trên bucket + s3:GetObject trên orders/read-only/*
+   │
+   └─► Chạy `aws sts assume-role`
+         │
+         ▼
+2. Nhận Temporary Credentials (ASIA...)
+   │
+   ├── [Happy Path] Đọc orders/read-only/order-101.json ──► thành công
+   ├── [Negative 1] Đọc orders/confidential/secret.json  ──► 403 Forbidden / AccessDenied
+   ├── [Negative 2] Ghi file mới (s3:PutObject)          ──► AccessDenied
+   └── [Negative 3] Gửi request với session token bị sửa ──► InvalidClientTokenId</code></pre></div>
+<hr>
+<h2 id="bước-1--lấy-thông-tin-principal-hiện-tại"><a class="anchor" href="#bước-1--lấy-thông-tin-principal-hiện-tại">Bước 1 — Lấy thông tin Principal hiện tại</a></h2>
+<p>Trước khi tạo Trust Policy, cần biết chính xác danh tính của mình. Lưu vào biến để các bước sau tự dùng:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export REGION=&quot;ap-southeast-1&quot;   # đổi thành Region của bạn
+export ACCOUNT_ID=$(aws sts get-caller-identity --profile aws-lab --query Account --output text)
+export CALLER_ARN=$(aws sts get-caller-identity --profile aws-lab --query Arn --output text)
+echo &quot;ACCOUNT_ID=${ACCOUNT_ID}&quot;
+echo &quot;CALLER_ARN=${CALLER_ARN}&quot;</code></pre></div>
+<p>Output minh họa:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>ACCOUNT_ID=111122223333
+CALLER_ARN=arn:aws:sts::111122223333:assumed-role/AWSReservedSSO_LabAdmin_abc123/dev</code></pre></div>
+<blockquote>
+<p>[!NOTE]
+Nếu đăng nhập bằng IAM Identity Center, <code>CALLER_ARN</code> là một <strong>role session ARN</strong> (<code>arn:aws:sts::...:assumed-role/&lt;role&gt;/&lt;session&gt;</code>). Trust policy chấp nhận loại principal này. Session name của Identity Center là username của bạn nên vẫn khớp sau khi <code>aws sso login</code> lại.</p>
+<p>Nếu ARN kết thúc bằng <code>:root</code>, <strong>dừng lại</strong>: lab không dùng root user. Quay lại Lab 01 để đăng nhập bằng identity khác.</p>
+</blockquote>
+<hr>
+<h2 id="bước-2--chuẩn-bị-s3-fixture"><a class="anchor" href="#bước-2--chuẩn-bị-s3-fixture">Bước 2 — Chuẩn bị S3 Fixture</a></h2>
+<p>Tạo một bucket riêng để thử nghiệm. Tên bucket S3 là duy nhất toàn cầu, nên ghép account ID và timestamp:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export BUCKET_NAME=&quot;lab02-orders-${ACCOUNT_ID}-$(date +%s)&quot;
+echo &quot;BUCKET_NAME=${BUCKET_NAME}&quot;   # ghi lại giá trị này, cần cho cleanup nếu mất shell
+
+aws s3 mb &quot;s3://${BUCKET_NAME}&quot; --region &quot;${REGION}&quot; --profile aws-lab
+aws s3api put-bucket-tagging --bucket &quot;${BUCKET_NAME}&quot; \
+  --tagging 'TagSet=[{Key=Project,Value=aws-lab-02}]' --profile aws-lab</code></pre></div>
+<p>Tạo thư mục làm việc riêng và hai file dữ liệu mẫu (dữ liệu giả, không phải bí mật thật):</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export LAB_DIR=$(mktemp -d)
+echo '{&quot;order_id&quot;: 101, &quot;item&quot;: &quot;Keyboard&quot;, &quot;status&quot;: &quot;shipped&quot;}' &gt; &quot;${LAB_DIR}/order-101.json&quot;
+echo '{&quot;order_id&quot;: 999, &quot;note&quot;: &quot;FAKE confidential fixture&quot;}' &gt; &quot;${LAB_DIR}/secret.json&quot;
+
+aws s3 cp &quot;${LAB_DIR}/order-101.json&quot; &quot;s3://${BUCKET_NAME}/orders/read-only/order-101.json&quot; --profile aws-lab
+aws s3 cp &quot;${LAB_DIR}/secret.json&quot; &quot;s3://${BUCKET_NAME}/orders/confidential/secret.json&quot; --profile aws-lab</code></pre></div>
+<p>Kiểm tra danh sách objects:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws s3 ls &quot;s3://${BUCKET_NAME}/orders/&quot; --recursive --profile aws-lab</code></pre></div>
+<p>Kết quả mong đợi: hai dòng <code>orders/confidential/secret.json</code> và <code>orders/read-only/order-101.json</code>.</p>
+<hr>
+<h2 id="bước-3--tạo-iam-role-và-trust-policy"><a class="anchor" href="#bước-3--tạo-iam-role-và-trust-policy">Bước 3 — Tạo IAM Role và Trust Policy</a></h2>
+<p>Viết Trust Policy cho phép <code>CALLER_ARN</code> assume role này. Heredoc không đặt trong nháy nên shell tự thay <code>${CALLER_ARN}</code>:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat &lt;&lt;EOF &gt; &quot;${LAB_DIR}/trust-policy.json&quot;
+{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Sid&quot;: &quot;AllowLabCallerToAssume&quot;,
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Principal&quot;: {
+        &quot;AWS&quot;: &quot;${CALLER_ARN}&quot;
+      },
+      &quot;Action&quot;: &quot;sts:AssumeRole&quot;
+    }
+  ]
+}
+EOF
+cat &quot;${LAB_DIR}/trust-policy.json&quot;   # xác nhận ARN đã được điền đúng</code></pre></div>
+<p>Tạo IAM Role:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws iam create-role \
+  --role-name OrderReaderRole \
+  --assume-role-policy-document &quot;file://${LAB_DIR}/trust-policy.json&quot; \
+  --description &quot;Role thuc hanh Least Privilege cho Order Service&quot; \
+  --tags Key=Project,Value=aws-lab-02 \
+  --profile aws-lab</code></pre></div>
+<blockquote>
+<p>[!NOTE]
+Vì trust policy nêu <strong>đích danh</strong> principal trong cùng account, caller không cần thêm quyền <code>sts:AssumeRole</code> trong identity policy của mình. Nếu trust policy chỉ ghi <code>arn:aws:iam::&lt;ACCOUNT_ID&gt;:root</code> (tin tưởng cả account), caller <strong>bắt buộc</strong> phải có thêm <code>sts:AssumeRole</code> trong identity policy.</p>
+</blockquote>
+<hr>
+<h2 id="bước-4--đính-kèm-permission-policy-giới-hạn-least-privilege"><a class="anchor" href="#bước-4--đính-kèm-permission-policy-giới-hạn-least-privilege">Bước 4 — Đính kèm Permission Policy giới hạn Least Privilege</a></h2>
+<p>Tạo chính sách chỉ cho phép list bucket và đọc object trong prefix <code>orders/read-only/</code>:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat &lt;&lt;EOF &gt; &quot;${LAB_DIR}/order-read-policy.json&quot;
+{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Sid&quot;: &quot;AllowListSpecificBucket&quot;,
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Action&quot;: &quot;s3:ListBucket&quot;,
+      &quot;Resource&quot;: &quot;arn:aws:s3:::${BUCKET_NAME}&quot;
+    },
+    {
+      &quot;Sid&quot;: &quot;AllowReadReadOnlyPrefixOnly&quot;,
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Action&quot;: &quot;s3:GetObject&quot;,
+      &quot;Resource&quot;: &quot;arn:aws:s3:::${BUCKET_NAME}/orders/read-only/*&quot;
+    }
+  ]
+}
+EOF</code></pre></div>
+<p>Lưu ý <code>s3:ListBucket</code> dùng <strong>bucket ARN</strong>, còn <code>s3:GetObject</code> dùng <strong>object ARN</strong> (xem lý thuyết Phần 2).</p>
+<p>Đính kèm policy dưới dạng inline policy vào role:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws iam put-role-policy \
+  --role-name OrderReaderRole \
+  --policy-name OrderReadOnlyPolicy \
+  --policy-document &quot;file://${LAB_DIR}/order-read-policy.json&quot; \
+  --profile aws-lab</code></pre></div>
+<hr>
+<h2 id="bước-5--assume-role-và-nạp-temporary-credentials"><a class="anchor" href="#bước-5--assume-role-và-nạp-temporary-credentials">Bước 5 — Assume Role và nạp Temporary Credentials</a></h2>
+<p>IAM là eventually consistent: role vừa tạo có thể cần vài giây mới assume được. Chờ một chút rồi gọi <code>sts:AssumeRole</code> với thời lượng phiên 900 giây (15 phút, mức tối thiểu):</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>sleep 15
+
+read -r AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN &lt; &lt;(
+  aws sts assume-role \
+    --role-arn &quot;arn:aws:iam::${ACCOUNT_ID}:role/OrderReaderRole&quot; \
+    --role-session-name &quot;LabTestSession&quot; \
+    --duration-seconds 900 \
+    --profile aws-lab \
+    --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
+    --output text
+)
+export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+export AWS_REGION=&quot;${REGION}&quot;
+echo &quot;${AWS_ACCESS_KEY_ID}&quot; | cut -c1-4   # mong đợi: ASIA</code></pre></div>
+<p>Nếu lệnh báo <code>AccessDenied</code> ngay sau khi tạo role, chờ thêm 15–30 giây rồi chạy lại.</p>
+<p>Xác minh identity của phiên hiện tại (không dùng <code>--profile</code> để biến môi trường có hiệu lực):</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws sts get-caller-identity</code></pre></div>
+<p>Kết quả mong đợi:</p>
+<div class="code"><span class="lang">json</span><button type="button">Copy</button><pre><code>{
+    &quot;UserId&quot;: &quot;AROA...:LabTestSession&quot;,
+    &quot;Account&quot;: &quot;111122223333&quot;,
+    &quot;Arn&quot;: &quot;arn:aws:sts::111122223333:assumed-role/OrderReaderRole/LabTestSession&quot;
+}</code></pre></div>
+<blockquote>
+<p><strong>Phân tích:</strong> ARN đã chuyển sang <code>assumed-role/OrderReaderRole/LabTestSession</code>. Mọi lệnh <strong>không</strong> có <code>--profile</code> trong shell này giờ chạy với quyền của role mới. Lệnh có <code>--profile aws-lab</code> vẫn dùng identity gốc, vì cờ <code>--profile</code> được ưu tiên hơn biến môi trường.</p>
+</blockquote>
+<hr>
+<h2 id="bước-6--kiểm-chứng-happy-path"><a class="anchor" href="#bước-6--kiểm-chứng-happy-path">Bước 6 — Kiểm chứng Happy Path</a></h2>
+<p>Tải file <code>order-101.json</code> trong prefix <code>orders/read-only/</code>:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws s3 cp &quot;s3://${BUCKET_NAME}/orders/read-only/order-101.json&quot; &quot;${LAB_DIR}/downloaded-order.json&quot;
+cat &quot;${LAB_DIR}/downloaded-order.json&quot;</code></pre></div>
+<p>Kết quả mong đợi:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>download: s3://lab02-orders-.../orders/read-only/order-101.json to .../downloaded-order.json
+{&quot;order_id&quot;: 101, &quot;item&quot;: &quot;Keyboard&quot;, &quot;status&quot;: &quot;shipped&quot;}</code></pre></div>
+<p>✅ <strong>Thành công:</strong> <code>s3:GetObject</code> trên prefix hợp lệ hoạt động.</p>
+<hr>
+<h2 id="bước-7--kiểm-chứng-negative-tests-có-kiểm-soát"><a class="anchor" href="#bước-7--kiểm-chứng-negative-tests-có-kiểm-soát">Bước 7 — Kiểm chứng Negative Tests có kiểm soát</a></h2>
+<h3 id="test-1-đọc-object-ở-prefix-bí-mật-ordersconfidential"><a class="anchor" href="#test-1-đọc-object-ở-prefix-bí-mật-ordersconfidential">Test 1: Đọc object ở prefix bí mật (<code>orders/confidential/</code>)</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws s3 cp &quot;s3://${BUCKET_NAME}/orders/confidential/secret.json&quot; &quot;${LAB_DIR}/downloaded-secret.json&quot;</code></pre></div>
+<p>Kết quả mong đợi:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>fatal error: An error occurred (403) when calling the HeadObject operation: Forbidden</code></pre></div>
+<p><code>aws s3 cp</code> gọi <code>HeadObject</code> trước khi tải, nên lỗi thường hiện ở bước này. Vì role có <code>s3:ListBucket</code>, S3 trả về 403 (thay vì 404) khi bị từ chối.</p>
+<p>✅ <strong>Xác nhận:</strong> Default Deny chặn hành vi đọc ngoài phạm vi cấp phép.</p>
+<h3 id="test-2-thử-ghi-dữ-liệu-mới-s3putobject"><a class="anchor" href="#test-2-thử-ghi-dữ-liệu-mới-s3putobject">Test 2: Thử ghi dữ liệu mới (<code>s3:PutObject</code>)</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>echo &quot;unauthorized write&quot; &gt; &quot;${LAB_DIR}/hack.txt&quot;
+aws s3 cp &quot;${LAB_DIR}/hack.txt&quot; &quot;s3://${BUCKET_NAME}/orders/read-only/hack.txt&quot;</code></pre></div>
+<p>Kết quả mong đợi:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>upload failed: .../hack.txt to s3://.../orders/read-only/hack.txt An error occurred (AccessDenied) when calling the PutObject operation: ...</code></pre></div>
+<p>✅ <strong>Xác nhận:</strong> Dù đúng prefix <code>orders/read-only/</code>, role không có <code>s3:PutObject</code> nên bị từ chối.</p>
+<h3 id="test-3-session-token-bị-sửa"><a class="anchor" href="#test-3-session-token-bị-sửa">Test 3: Session token bị sửa</a></h3>
+<p>Chạy trong subshell để không làm hỏng credentials đang dùng:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>( export AWS_SESSION_TOKEN=&quot;${AWS_SESSION_TOKEN}tampered&quot;; aws sts get-caller-identity )</code></pre></div>
+<p>Kết quả mong đợi:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>An error occurred (InvalidClientTokenId) when calling the GetCallerIdentity operation: The security token included in the request is invalid.</code></pre></div>
+<p>✅ <strong>Xác nhận:</strong> Thiếu hoặc sai <code>SessionToken</code> thì AWS không xác thực được request (lỗi AuthN, khác với <code>AccessDenied</code> là lỗi AuthZ).</p>
+<h3 id="test-4-tùy-chọn-session-hết-hạn"><a class="anchor" href="#test-4-tùy-chọn-session-hết-hạn">Test 4 (tùy chọn): Session hết hạn</a></h3>
+<p>Nếu có thời gian, đợi hơn 15 phút kể từ Bước 5 rồi chạy:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws sts get-caller-identity</code></pre></div>
+<p>Kết quả mong đợi: <code>An error occurred (ExpiredToken) ... The security token included in the request is expired</code>. Cách khắc phục là chạy lại Bước 5 để lấy credentials mới.</p>
+<hr>
+<h2 id="bước-8--hủy-phiên-và-quay-về-identity-gốc"><a class="anchor" href="#bước-8--hủy-phiên-và-quay-về-identity-gốc">Bước 8 — Hủy phiên và quay về identity gốc</a></h2>
+<p>Xóa các biến môi trường của role:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_REGION
+aws sts get-caller-identity --profile aws-lab --query Arn --output text</code></pre></div>
+<p>Kết quả mong đợi: ARN trùng với <code>CALLER_ARN</code> ở Bước 1.</p>
+<hr>
+<h2 id="bước-9--dọn-dẹp-tài-nguyên-cleanup"><a class="anchor" href="#bước-9--dọn-dẹp-tài-nguyên-cleanup">Bước 9 — Dọn dẹp tài nguyên (Cleanup)</a></h2>
+<p>Đảm bảo đã chạy Bước 8 (không còn credentials của <code>OrderReaderRole</code>, vì role đó không có quyền xóa). Dọn theo thứ tự phụ thuộc:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code># 1. Xóa toàn bộ object và bucket S3 fixture
+aws s3 rm &quot;s3://${BUCKET_NAME}&quot; --recursive --profile aws-lab
+aws s3 rb &quot;s3://${BUCKET_NAME}&quot; --profile aws-lab
+
+# 2. Xóa inline policy của role (phải xóa trước khi xóa role)
+aws iam delete-role-policy \
+  --role-name OrderReaderRole \
+  --policy-name OrderReadOnlyPolicy \
+  --profile aws-lab
+
+# 3. Xóa IAM role
+aws iam delete-role --role-name OrderReaderRole --profile aws-lab
+
+# 4. Xóa thư mục tạm cục bộ
+rm -rf &quot;${LAB_DIR}&quot;</code></pre></div>
+<p>Xác minh inventory đã sạch:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws iam get-role --role-name OrderReaderRole --profile aws-lab
+# Mong đợi: An error occurred (NoSuchEntity) ...
+
+aws s3api head-bucket --bucket &quot;${BUCKET_NAME}&quot; --profile aws-lab
+# Mong đợi: An error occurred (404) ... Not Found</code></pre></div>
+<h3 id="nếu-lab-dừng-giữa-chừng-hoặc-mất-shell"><a class="anchor" href="#nếu-lab-dừng-giữa-chừng-hoặc-mất-shell">Nếu lab dừng giữa chừng hoặc mất shell</a></h3>
+<p>Biến môi trường sẽ mất khi đóng terminal. Tìm lại tài nguyên của lab:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code># Tìm bucket fixture theo tiền tố tên
+aws s3 ls --profile aws-lab | grep lab02-orders-
+export BUCKET_NAME=&lt;tên bucket tìm được&gt;
+
+# Kiểm tra role còn không
+aws iam get-role --role-name OrderReaderRole --profile aws-lab --query 'Role.Tags'</code></pre></div>
+<p>Chỉ xóa bucket có tiền tố <code>lab02-orders-</code> và tag <code>Project=aws-lab-02</code> (<code>aws s3api get-bucket-tagging --bucket ...</code>). Sau đó chạy các lệnh cleanup ở trên; lệnh nào báo <code>NoSuchEntity</code>/<code>NoSuchBucket</code> nghĩa là tài nguyên đó chưa từng được tạo hoặc đã xóa, bỏ qua và chạy tiếp.</p>
+<hr>
+<h2 id="checklist-hoàn-thành"><a class="anchor" href="#checklist-hoàn-thành">Checklist hoàn thành</a></h2>
+<ul>
+<li><input type="checkbox"> Lấy được Caller ARN bằng <code>sts:GetCallerIdentity</code>.</li>
+<li><input type="checkbox"> Phân biệt được Trust Policy (<code>AssumeRolePolicyDocument</code>) và Permission Policy (<code>OrderReadOnlyPolicy</code>).</li>
+<li><input type="checkbox"> Assume role thành công và có temporary credentials bắt đầu bằng <code>ASIA...</code>.</li>
+<li><input type="checkbox"> Đọc thành công file trong prefix <code>orders/read-only/</code>.</li>
+<li><input type="checkbox"> Ghi nhận <code>403</code>/<code>AccessDenied</code> khi đọc ngoài prefix hoặc ghi file mới.</li>
+<li><input type="checkbox"> Ghi nhận <code>InvalidClientTokenId</code> khi token bị sửa, và phân biệt được lỗi AuthN với lỗi AuthZ.</li>
+<li><input type="checkbox"> Hiểu cơ chế <code>unset</code> biến môi trường để quay về caller ban đầu.</li>
+<li><input type="checkbox"> Xóa sạch role, policy và S3 bucket fixture, xác minh bằng <code>get-role</code> và <code>head-bucket</code>.</li>
+</ul>
+<hr>
+<h2 id="troubleshooting-nhanh"><a class="anchor" href="#troubleshooting-nhanh">Troubleshooting nhanh</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Triệu chứng</th>
+<th>Nguyên nhân khả dĩ</th>
+<th>Khắc phục</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>AccessDenied</code> khi chạy <code>assume-role</code> ngay sau khi tạo role</td>
+<td>IAM chưa propagate</td>
+<td>Chờ 15–30 giây rồi chạy lại</td>
+</tr>
+<tr>
+<td><code>AccessDenied</code> khi chạy <code>assume-role</code> sau nhiều lần thử</td>
+<td>ARN trong trust policy không khớp caller</td>
+<td><code>cat &quot;${LAB_DIR}/trust-policy.json&quot;</code> và so với <code>aws sts get-caller-identity --profile aws-lab</code>; cập nhật bằng <code>aws iam update-assume-role-policy</code></td>
+</tr>
+<tr>
+<td><code>MalformedPolicyDocument</code> khi tạo role</td>
+<td><code>CALLER_ARN</code> rỗng (biến chưa set)</td>
+<td><code>echo &quot;${CALLER_ARN}&quot;</code>, chạy lại Bước 1</td>
+</tr>
+<tr>
+<td>Vẫn đọc được file bí mật ở Bước 7</td>
+<td>Resource bị viết rộng thành <code>arn:aws:s3:::${BUCKET_NAME}/*</code></td>
+<td>Sửa resource về <code>.../orders/read-only/*</code> và chạy lại <code>put-role-policy</code></td>
+</tr>
+<tr>
+<td><code>BucketAlreadyExists</code></td>
+<td>Tên bucket trùng toàn cầu</td>
+<td>Tạo lại <code>BUCKET_NAME</code> (timestamp mới)</td>
+</tr>
+<tr>
+<td>Lệnh cleanup báo <code>AccessDenied</code></td>
+<td>Shell vẫn đang dùng credentials của <code>OrderReaderRole</code></td>
+<td>Chạy <code>env | grep AWS_</code>, rồi <code>unset</code> như Bước 8</td>
+</tr>
+</tbody></table>
+</div>
+<h2 id="tiếp-theo"><a class="anchor" href="#tiếp-theo">Tiếp theo</a></h2>
+<p>Bạn đã nắm cơ chế cấp quyền qua IAM role và nguyên tắc Least Privilege. Bài tiếp theo học cách <strong>kiểm soát và dự báo chi phí (AWS Budgets, Cost Explorer)</strong> để không bị bất ngờ bởi hóa đơn cloud.</p>
+
+<footer>Sinh tự động từ <code>labs/02-identity-and-access/README.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

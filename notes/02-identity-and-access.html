@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bài 02 — Danh tính và quyền truy cập: IAM, IAM Identity Center và STS</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="01-foundations.html">01. Lý thuyết</a><a href="../labs/01-foundations/README.html">01. Lab</a><a href="02-identity-and-access.html" class="active">02. Lý thuyết</a><a href="../labs/02-identity-and-access/README.html">02. Lab</a><a href="03-cost-management.html">03. Lý thuyết</a><a href="../labs/03-cost-management/README.html">03. Lab</a><a href="04-networking.html">04. Lý thuyết</a><a href="../labs/04-networking/README.html">04. Lab</a><a href="05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../labs/05-compute-and-load-balancing/README.html">05. Lab</a><a href="06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../labs/06-storage-and-content-delivery/README.html">06. Lab</a><a href="07-databases-and-cache.html">07. Lý thuyết</a><a href="../labs/07-databases-and-cache/README.html">07. Lab</a><a href="08-containers.html">08. Lý thuyết</a><a href="../labs/08-containers/README.html">08. Lab</a><a href="09-serverless.html">09. Lý thuyết</a><a href="../labs/09-serverless/README.html">09. Lab</a><a href="10-observability-and-application-security.html">10. Lý thuyết</a><a href="../labs/10-observability-and-application-security/README.html">10. Lab</a><a href="11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../labs/11-messaging-and-workflows/README.html">11. Lab</a><a href="12-iac-and-cicd.html">12. Lý thuyết</a><a href="../labs/12-iac-and-cicd/README.html">12. Lab</a><a href="13-reliability-and-performance.html">13. Lý thuyết</a><a href="../labs/13-reliability-and-performance/README.html">13. Lab</a><a href="14-architecture-and-governance.html">14. Lý thuyết</a><a href="../labs/14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#mục-tiêu">Mục tiêu</a></li><li><a href="#phần-1--authentication-và-authorization-user-group-role-session-35-phút">Phần 1 — Authentication và Authorization: User, Group, Role, Session (35 phút)</a></li><li><a href="#phần-2--policy-effect-action-resource-condition-và-arn-45-phút">Phần 2 — Policy: Effect, Action, Resource, Condition và ARN (45 phút)</a></li><li><a href="#phần-3--phân-loại-policy-và-quy-trình-đánh-giá-quyền-40-phút">Phần 3 — Phân loại Policy và Quy trình đánh giá quyền (40 phút)</a></li><li><a href="#phần-4--sts-assumerole-temporary-credentials-và-identity-center-35-phút">Phần 4 — STS AssumeRole, Temporary Credentials và Identity Center (35 phút)</a></li><li><a href="#phần-5--least-privilege-permission-boundary-và-service-control-policies-scp-30-phút">Phần 5 — Least Privilege, Permission Boundary và Service Control Policies (SCP) (30 phút)</a></li><li><a href="#phần-6--giới-thiệu-bài-thực-hành-lab-02">Phần 6 — Giới thiệu bài thực hành (Lab 02)</a></li><li><a href="#phần-7--troubleshooting-và-các-lỗi-thường-gặp-25-phút">Phần 7 — Troubleshooting và các lỗi thường gặp (25 phút)</a></li><li><a href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></li><li><a href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></li><li><a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></li><li><a href="#đáp-án-gợi-ý">Đáp án gợi ý</a></li></ol></aside>
+<main>
+<h1 id="bài-02--danh-tính-và-quyền-truy-cập-iam-iam-identity-center-và-sts"><a class="anchor" href="#bài-02--danh-tính-và-quyền-truy-cập-iam-iam-identity-center-và-sts">Bài 02 — Danh tính và quyền truy cập: IAM, IAM Identity Center và STS</a></h1>
+<blockquote>
+<p><strong>Đối tượng:</strong> developer có kinh nghiệm nhưng mới học AWS.
+<strong>Thời lượng:</strong> khoảng 4–5 giờ, chia hai buổi. Buổi 1 gồm phần 1–5 (lý thuyết &amp; kiến trúc). Buổi 2 gồm phần 6–7 và <a href="../labs/02-identity-and-access/README.html">lab thực hành</a>.
+<strong>Kế hoạch gốc:</strong> <a href="../plans/02-identity-and-access.md">plans/02-identity-and-access.md</a>
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Xem <a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a> ở cuối bài.</p>
+</blockquote>
+<h2 id="mục-tiêu"><a class="anchor" href="#mục-tiêu">Mục tiêu</a></h2>
+<p>Sau bài này, bạn có thể:</p>
+<ol>
+<li>Phân biệt rõ <strong>Authentication</strong> (xác thực danh tính) và <strong>Authorization</strong> (phân quyền hành vi) trong AWS.</li>
+<li>Giải thích sự khác nhau và mối liên kết giữa IAM User, Group, Role và Session.</li>
+<li>Đọc, viết và phân tích tài liệu IAM Policy JSON: các phần tử <code>Effect</code>, <code>Action</code>, <code>Resource</code>, <code>Condition</code> và định dạng chuẩn của Amazon Resource Name (ARN).</li>
+<li>Phân biệt <strong>Identity-based policy</strong>, <strong>Resource-based policy</strong> và <strong>Trust policy</strong>; hiểu sâu thứ tự đánh giá quyền với nguyên tắc <strong>Explicit Deny</strong> luôn thắng.</li>
+<li>Giải thích cơ chế hoạt động của <code>sts:AssumeRole</code>, cấu trúc temporary credentials (<code>AccessKeyId</code>, <code>SecretAccessKey</code>, <code>SessionToken</code>, <code>Expiration</code>) và vai trò của IAM Identity Center (SSO) cùng MFA.</li>
+<li>Hiểu các lớp kiểm soát nâng cao: Least privilege, Permission Boundary và Service Control Policy (SCP) ở cấp AWS Organizations.</li>
+<li>Thiết kế và kiểm thử thành công chính sách phân quyền cho hệ thống đơn hàng mẫu (Order Service), bao gồm cả happy path và negative test có kiểm soát.</li>
+</ol>
+<hr>
+<h2 id="phần-1--authentication-và-authorization-user-group-role-session-35-phút"><a class="anchor" href="#phần-1--authentication-và-authorization-user-group-role-session-35-phút">Phần 1 — Authentication và Authorization: User, Group, Role, Session (35 phút)</a></h2>
+<h3 id="authentication-authn-và-authorization-authz"><a class="anchor" href="#authentication-authn-và-authorization-authz">Authentication (AuthN) và Authorization (AuthZ)</a></h3>
+<p>Khi một request gửi tới API của AWS, hệ thống luôn thực hiện hai bước tuần tự:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Request tới AWS API
+       │
+       ▼
+ ┌──────────────┐      Không hợp lệ      ┌─────────────────────┐
+ │ Authentication├──────────────────────►│ 403 Invalid Token / │
+ │  &quot;Bạn là ai?&quot; │                       │ Missing Credentials │
+ └──────┬───────┘                       └─────────────────────┘
+        │ Hợp lệ (Principal đã xác thực)
+        ▼
+ ┌──────────────┐      Không có quyền    ┌─────────────────────┐
+ │ Authorization ├──────────────────────►│ 403 AccessDenied    │
+ │ &quot;Làm được gì?&quot;│                       │ (Unauthorized)      │
+ └──────┬───────┘                       └─────────────────────┘
+        │ Được phép (Explicit Allow &amp; Không bị Deny)
+        ▼
+   Thực thi API (200 OK)</code></pre></div>
+<ul>
+<li><strong>Authentication (AuthN):</strong> Chứng minh danh tính của người gửi. Bạn cung cấp thông tin bí mật (mật khẩu, MFA code, hoặc chữ ký số HMAC tính từ Access Key / Secret Key). Nếu hợp lệ, AWS biết <strong>Principal</strong> (chủ thể) gửi yêu cầu là ai.</li>
+<li><strong>Authorization (AuthZ):</strong> Quyết định chủ thể đó có được phép thực hiện hành động cụ thể trên tài nguyên cụ thể hay không. Việc đăng nhập thành công <strong>chưa mang lại bất kỳ quyền hạn nào</strong> nếu không có chính sách (Policy) cấp phép.</li>
+</ul>
+<h3 id="iam-user-user-group-và-iam-role"><a class="anchor" href="#iam-user-user-group-và-iam-role">IAM User, User Group và IAM Role</a></h3>
+<p>Trong AWS Identity and Access Management (IAM), có ba khái niệm danh tính cốt lõi cần phân biệt:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Khái niệm</th>
+<th>Định nghĩa</th>
+<th>Credentials</th>
+<th>Trường hợp sử dụng phù hợp</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>IAM User</strong></td>
+<td>Một danh tính cố định đại diện cho một người hoặc ứng dụng cụ thể trong account.</td>
+<td>Cố định (long-lived): Mật khẩu console hoặc cặp Access Key ID + Secret Access Key.</td>
+<td>Tài khoản break-glass khẩn cấp hoặc hệ thống cũ (legacy). AWS khuyến nghị hạn chế tối đa IAM User cá nhân.</td>
+</tr>
+<tr>
+<td><strong>IAM User Group</strong></td>
+<td>Tập hợp các IAM User để gán quyền chung, <strong>không phải một principal</strong> (không thể đăng nhập hay assume role).</td>
+<td>Không có credentials.</td>
+<td>Tiện ích quản lý quyền hàng loạt cho các IAM User.</td>
+</tr>
+<tr>
+<td><strong>IAM Role</strong></td>
+<td>Một danh tính có quyền hạn xác định nhưng <strong>không gắn cố định</strong> với một người. Role được &quot;đảm nhận&quot; (assumed) tạm thời bởi một principal hợp lệ.</td>
+<td>Ngắn hạn (short-lived): Token tạm thời do AWS Security Token Service (STS) phát hành, tự hết hạn sau một khoảng thời gian (15 phút đến 12 giờ).</td>
+<td><strong>Mô hình chuẩn của AWS:</strong> Cấp quyền cho developer qua IAM Identity Center, gán quyền cho máy ảo EC2, container ECS, hoặc hàm Lambda.</td>
+</tr>
+</tbody></table>
+</div>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>       ┌──────────────┐
+       │   Developer  │ (Con người: Đăng nhập qua Identity Center/SSO)
+       └──────┬───────┘
+              │ sts:AssumeRole
+              ▼
+       ┌──────────────┐
+       │   IAM Role   │◄─── Gán Permission Policy (ví dụ: Read-Only Order Bucket)
+       └──────┬───────┘
+              │ Cấp Temporary Credentials (Key, Secret, Token)
+              ▼
+   ┌──────────────────────┐
+   │ AWS S3 / DynamoDB    │ (Thao tác được bảo vệ)
+   └──────────────────────┘</code></pre></div>
+<h3 id="role-session"><a class="anchor" href="#role-session">Role Session</a></h3>
+<p>Khi một chủ thể thực hiện hành động assume role, AWS STS tạo ra một <strong>Role Session</strong>. Session này đi kèm:</p>
+<ul>
+<li><code>AccessKeyId</code> (thường bắt đầu bằng <code>ASIA...</code> để chỉ định temporary credentials).</li>
+<li><code>SecretAccessKey</code>.</li>
+<li><code>SessionToken</code> (chuỗi mã hóa chứa thông tin ngữ cảnh và chữ ký của phiên).</li>
+<li><code>Expiration</code> (mốc thời gian ISO8601 mà credentials sẽ bị vô hiệu hóa).</li>
+</ul>
+<p>Mọi request ký bằng temporary credentials bắt buộc phải gửi kèm <code>SessionToken</code>. Nếu token hết hạn, request kế tiếp sẽ lập tức bị từ chối với mã lỗi <code>ExpiredToken</code>.</p>
+<hr>
+<h2 id="phần-2--policy-effect-action-resource-condition-và-arn-45-phút"><a class="anchor" href="#phần-2--policy-effect-action-resource-condition-và-arn-45-phút">Phần 2 — Policy: Effect, Action, Resource, Condition và ARN (45 phút)</a></h2>
+<p>Mọi quyền hạn trong AWS được biểu diễn dưới dạng tài liệu JSON gọi là <strong>IAM Policy</strong>.</p>
+<h3 id="cấu-trúc-json-chuẩn-của-policy"><a class="anchor" href="#cấu-trúc-json-chuẩn-của-policy">Cấu trúc JSON chuẩn của Policy</a></h3>
+<p>Một policy chứa một hoặc nhiều câu lệnh (<code>Statement</code>):</p>
+<div class="code"><span class="lang">json</span><button type="button">Copy</button><pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Sid&quot;: &quot;AllowReadOrdersBucket&quot;,
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Action&quot;: [
+        &quot;s3:GetObject&quot;,
+        &quot;s3:ListBucket&quot;
+      ],
+      &quot;Resource&quot;: [
+        &quot;arn:aws:s3:::company-orders-lab&quot;,
+        &quot;arn:aws:s3:::company-orders-lab/read-only/*&quot;
+      ],
+      &quot;Condition&quot;: {
+        &quot;Bool&quot;: {
+          &quot;aws:SecureTransport&quot;: &quot;true&quot;
+        }
+      }
+    }
+  ]
+}</code></pre></div>
+<p>Ý nghĩa từng trường:</p>
+<ul>
+<li><strong><code>Version</code></strong>: Luôn khai báo <code>&quot;2012-10-17&quot;</code>. Đây là phiên bản cú pháp policy hiện hành của AWS. Tuyệt đối không điền ngày tháng hiện tại.</li>
+<li><strong><code>Sid</code></strong> <em>(Statement ID - tùy chọn)</em>: Chuỗi định danh mô tả mục đích của lệnh, hữu ích khi debug.</li>
+<li><strong><code>Effect</code></strong>: Chỉ nhận một trong hai giá trị: <code>&quot;Allow&quot;</code> hoặc <code>&quot;Deny&quot;</code>.</li>
+<li><strong><code>Action</code></strong>: Danh sách một hoặc nhiều API action theo dạng <code>&lt;service&gt;:&lt;APIAction&gt;</code>. Ví dụ: <code>s3:GetObject</code>, <code>ec2:DescribeInstances</code>, <code>dynamodb:Query</code>. Hỗ trợ wildcard <code>*</code> (ví dụ <code>s3:Get*</code>).</li>
+<li><strong><code>Resource</code></strong>: Danh sách ARN của tài nguyên mà action tác động lên.</li>
+<li><strong><code>Condition</code></strong> <em>(Tùy chọn)</em>: Điều kiện bổ sung để lệnh có hiệu lực (ví dụ: bắt buộc HTTPS qua <code>aws:SecureTransport</code>, giới hạn IP nguồn, hoặc kiểm tra tag).</li>
+</ul>
+<h3 id="cú-pháp-amazon-resource-name-arn"><a class="anchor" href="#cú-pháp-amazon-resource-name-arn">Cú pháp Amazon Resource Name (ARN)</a></h3>
+<p>ARN là chuỗi định danh duy nhất toàn cầu cho mọi tài nguyên trên AWS:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>arn:partition:service:region:account-id:resource-type/resource-id
+arn:partition:service:region:account-id:resource-type:resource-id</code></pre></div>
+<p>Ví dụ cụ thể:</p>
+<ul>
+<li>S3 Bucket (global namespace, không có region và account-id):
+<code>arn:aws:s3:::my-order-bucket</code></li>
+<li>S3 Object bên trong prefix:
+<code>arn:aws:s3:::my-order-bucket/orders/*</code></li>
+<li>EC2 Instance ở Singapore (<code>ap-southeast-1</code>):
+<code>arn:aws:ec2:ap-southeast-1:123456789012:instance/i-0a1b2c3d4e5f67890</code></li>
+<li>IAM Role (global service, không có region):
+<code>arn:aws:iam::123456789012:role/OrderServiceAppRole</code></li>
+</ul>
+<blockquote>
+<p>[!WARNING]
+Lưu ý sự khác nhau giữa <strong>Bucket ARN</strong> và <strong>Object ARN</strong> trong S3:</p>
+<ul>
+<li>Action <code>s3:ListBucket</code> tác động lên <strong>Bucket</strong>: <code>arn:aws:s3:::my-bucket</code>.</li>
+<li>Action <code>s3:GetObject</code>, <code>s3:PutObject</code> tác động lên <strong>Object</strong>: <code>arn:aws:s3:::my-bucket/*</code>.
+Viết nhầm <code>s3:GetObject</code> trên Bucket ARN là lỗi phổ biến nhất khiến developer bị <code>AccessDenied</code>.</li>
+</ul>
+</blockquote>
+<hr>
+<h2 id="phần-3--phân-loại-policy-và-quy-trình-đánh-giá-quyền-40-phút"><a class="anchor" href="#phần-3--phân-loại-policy-và-quy-trình-đánh-giá-quyền-40-phút">Phần 3 — Phân loại Policy và Quy trình đánh giá quyền (40 phút)</a></h2>
+<h3 id="identity-based-policy-resource-based-policy-và-trust-policy"><a class="anchor" href="#identity-based-policy-resource-based-policy-và-trust-policy">Identity-based Policy, Resource-based Policy và Trust Policy</a></h3>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>┌───────────────────────────────────────────────┐
+│                   IAM Role                    │
+│  ┌─────────────────────────────────────────┐  │
+│  │ Trust Policy (AssumeRolePolicyDocument) │  │ &quot;Ai được phép assume tôi?&quot;
+│  └─────────────────────────────────────────┘  │
+│  ┌─────────────────────────────────────────┐  │
+│  │ Identity-based Policy (Permissions)     │  │ &quot;Session của tôi được làm gì?&quot;
+│  └─────────────────────────────────────────┘  │
+└──────────────────────┬────────────────────────┘
+                       │ Gọi API
+                       ▼
+         ┌───────────────────────────┐
+         │     Amazon S3 Bucket      │
+         │  ┌─────────────────────┐  │
+         │  │ Resource-based      │  │ &quot;Ai từ bên ngoài được chạm vào tôi?&quot;
+         │  │ Policy              │  │
+         │  └─────────────────────┘  │
+         └───────────────────────────┘</code></pre></div>
+<p>IAM User và Group chỉ có identity-based policy; <strong>chỉ IAM Role mới có trust policy</strong>.</p>
+<ol>
+<li><strong>Identity-based Policy:</strong> Gán trực tiếp cho IAM User, Group hoặc Role. Xác định danh tính đó có quyền làm gì với những tài nguyên nào.</li>
+<li><strong>Resource-based Policy:</strong> Gán trực tiếp lên tài nguyên (ví dụ: S3 Bucket Policy, SQS Queue Policy, KMS Key Policy). Xác định <strong>Principal</strong> nào được phép truy cập vào tài nguyên này. Khác với identity-based policy, resource-based policy có trường <code>Principal</code>.</li>
+<li><strong>Trust Policy (AssumeRolePolicyDocument):</strong> Một loại resource-based policy đặc biệt gắn trên <strong>IAM Role</strong>, quy định rõ <strong>Principal nào (User, AWS Service như ec2.amazonaws.com, hoặc Account khác) được phép gọi <code>sts:AssumeRole</code> để nhận credentials của role này</strong>.</li>
+</ol>
+<h3 id="quy-trình-đánh-giá-quyền-evaluation-logic"><a class="anchor" href="#quy-trình-đánh-giá-quyền-evaluation-logic">Quy trình đánh giá quyền (Evaluation Logic)</a></h3>
+<p>Khi có một request gửi đến, AWS đánh giá tất cả các chính sách áp dụng theo nguyên tắc:</p>
+<ol>
+<li><strong>Mặc định là Deny (Default Deny):</strong> Ban đầu, mọi request đều bị từ chối.</li>
+<li><strong>Kiểm tra Explicit Deny:</strong> Nếu <strong>bất kỳ</strong> policy nào có <code>Effect: &quot;Deny&quot;</code> khớp với context của request, request lập tức bị <strong>TỪ CHỐI</strong>. Không có điều gì có thể override một explicit Deny.</li>
+<li><strong>Kiểm tra Explicit Allow:</strong> Nếu không có Deny, AWS tìm xem có ít nhất một <code>Effect: &quot;Allow&quot;</code> hợp lệ hay không.</li>
+<li><strong>Quyết định cuối cùng:</strong> Nếu có ít nhất một Allow và không có Deny nào, request được chấp thuận. Nếu không tìm thấy Allow nào, request bị từ chối (Default Deny).</li>
+</ol>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>                 [ Bắt đầu đánh giá ]
+                          │
+                          ▼
+             Có Explicit Deny nào không?
+                    /           \
+                 (Có)           (Không)
+                  ▼                ▼
+             [ TỪ CHỐI ]    Có Explicit Allow nào không?
+            (AccessDenied)         /          \
+                                (Có)          (Không)
+                                 ▼               ▼
+                            [ CHẤP THUẬN ]   [ TỪ CHỐI ]
+                              (200 OK)      (Default Deny)</code></pre></div>
+<p>Sơ đồ trên là mô hình rút gọn cho một account. Logic đầy đủ còn có các lớp <strong>giới hạn</strong> (SCP, RCP, permissions boundary, session policy): request phải được <strong>mọi lớp áp dụng</strong> cho phép, và các lớp này không tự cấp quyền (xem Phần 5). Với request <strong>cross-account</strong>, cần Allow ở cả hai phía: identity policy bên gọi <strong>và</strong> resource policy (hoặc trust policy) bên nhận.</p>
+<blockquote>
+<p>[!TIP]
+<a href="https://policysim.aws.amazon.com/" target="_blank" rel="noopener">IAM Policy Simulator</a> và <code>aws iam simulate-principal-policy</code> giúp dự đoán kết quả nhanh, nhưng không mô phỏng đủ mọi loại policy và condition. Bằng chứng cuối cùng vẫn là gửi request thật (happy path + negative test) như trong lab.</p>
+</blockquote>
+<hr>
+<h2 id="phần-4--sts-assumerole-temporary-credentials-và-identity-center-35-phút"><a class="anchor" href="#phần-4--sts-assumerole-temporary-credentials-và-identity-center-35-phút">Phần 4 — STS AssumeRole, Temporary Credentials và Identity Center (35 phút)</a></h2>
+<h3 id="aws-security-token-service-sts"><a class="anchor" href="#aws-security-token-service-sts">AWS Security Token Service (STS)</a></h3>
+<p>STS là dịch vụ web cấp phát thông tin đăng nhập tạm thời, có phạm vi giới hạn cho người dùng IAM hoặc người dùng đã xác thực liên kết (Federated Users).</p>
+<p>Các API thường gặp:</p>
+<ul>
+<li><code>sts:GetCallerIdentity</code>: Trả về Account ID, User ID và ARN của danh tính hiện tại. Không yêu cầu cấp quyền đặc biệt.</li>
+<li><code>sts:AssumeRole</code>: Nhận vào Role ARN và RoleSessionName, trả về temporary credentials của Role đó (nếu caller thỏa mãn Trust Policy của Role).</li>
+</ul>
+<h3 id="cơ-chế-hoạt-động-của-aws-sts-assume-role"><a class="anchor" href="#cơ-chế-hoạt-động-của-aws-sts-assume-role">Cơ chế hoạt động của <code>aws sts assume-role</code></a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws sts assume-role \
+  --role-arn arn:aws:iam::111122223333:role/LabReadOnlyRole \
+  --role-session-name test-session</code></pre></div>
+<p>Kết quả trả về:</p>
+<div class="code"><span class="lang">json</span><button type="button">Copy</button><pre><code>{
+  &quot;Credentials&quot;: {
+    &quot;AccessKeyId&quot;: &quot;ASIAIOSFODNN7EXAMPLE&quot;,
+    &quot;SecretAccessKey&quot;: &quot;wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY&quot;,
+    &quot;SessionToken&quot;: &quot;IQoJb3JpZ2luX2VjEPH//////////wEaCXVzLWVhc3QtMS...&quot;,
+    &quot;Expiration&quot;: &quot;2026-10-31T15:30:00+00:00&quot;
+  },
+  &quot;AssumedRoleUser&quot;: {
+    &quot;AssumedRoleId&quot;: &quot;AROA123456789EXAMPLE:test-session&quot;,
+    &quot;Arn&quot;: &quot;arn:aws:sts::111122223333:assumed-role/LabReadOnlyRole/test-session&quot;
+  }
+}</code></pre></div>
+<p>Sau khi nhận được bộ credentials trên, ứng dụng hoặc terminal gán chúng vào các biến môi trường:</p>
+<ul>
+<li><code>AWS_ACCESS_KEY_ID=ASIA...</code></li>
+<li><code>AWS_SECRET_ACCESS_KEY=...</code></li>
+<li><code>AWS_SESSION_TOKEN=IQoJ...</code></li>
+</ul>
+<p>Mọi lệnh CLI sau đó sẽ hoạt động với tư cách là <code>LabReadOnlyRole</code> cho đến mốc <code>Expiration</code>.</p>
+<h3 id="iam-identity-center-aws-sso-và-mfa"><a class="anchor" href="#iam-identity-center-aws-sso-và-mfa">IAM Identity Center (AWS SSO) và MFA</a></h3>
+<p>Trong môi trường doanh nghiệp hiện đại:</p>
+<ul>
+<li>Không tạo từng IAM User với mật khẩu riêng lẻ trong từng account.</li>
+<li>Sử dụng <strong>IAM Identity Center</strong> kết nối với nhà cung cấp danh tính tập trung (Google Workspace, Okta, Microsoft Entra ID).</li>
+<li>Nhân viên kích hoạt <strong>Multi-Factor Authentication (MFA)</strong> bằng FIDO2/WebAuthn (khóa bảo mật YubiKey) hoặc ứng dụng Authenticator (TOTP).</li>
+<li>Mỗi <strong>Permission Set</strong> được Identity Center provision thành một IAM Role (tên dạng <code>AWSReservedSSO_&lt;PermissionSet&gt;_&lt;hash&gt;</code>) trong account mục tiêu. Khi developer chọn account/role, Identity Center cấp temporary credentials của role đó.</li>
+<li>Trên máy developer chỉ có SSO token có thời hạn (cache trong <code>~/.aws/sso/cache</code>) và temporary credentials; không có access key dài hạn.</li>
+</ul>
+<hr>
+<h2 id="phần-5--least-privilege-permission-boundary-và-service-control-policies-scp-30-phút"><a class="anchor" href="#phần-5--least-privilege-permission-boundary-và-service-control-policies-scp-30-phút">Phần 5 — Least Privilege, Permission Boundary và Service Control Policies (SCP) (30 phút)</a></h2>
+<p>Khi quản trị hệ thống phức tạp, AWS hỗ trợ nhiều lớp bảo vệ (Defense in Depth):</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>   SCP (trần của account)          Permissions Boundary (trần của role/user)
+        ┌───────────────┐            ┌───────────────┐
+        │       ┌───────┼────────────┼───────┐       │
+        │       │   ┌───┴────────────┴───┐   │       │
+        │       │   │  QUYỀN HIỆU LỰC    │   │       │
+        │       │   └───┬────────────┬───┘   │       │
+        │       └───────┼────────────┼───────┘       │
+        └───────────────┘            └───────────────┘
+                    Identity-based Policy (thứ duy nhất CẤP quyền)
+
+Quyền hiệu lực = Identity policy ∩ Boundary ∩ SCP   (và không có explicit Deny nào)</code></pre></div>
+<p>Ba lớp này <strong>độc lập</strong>, không lồng nhau: một action có thể nằm trong boundary nhưng bị SCP chặn, hoặc ngược lại. Action chỉ thực hiện được khi nằm trong <strong>giao</strong> của cả ba.</p>
+<ol>
+<li><strong>Nguyên tắc quyền tối thiểu (Least Privilege):</strong> Chỉ cấp đúng những API actions trên đúng tài nguyên cần thiết trong khoảng thời gian cần thiết. Tránh dùng wildcard <code>*</code> bừa bãi như <code>s3:*</code> trên <code>*</code>.</li>
+<li><strong>Permissions Boundary:</strong> Một cơ chế nâng cao sử dụng managed policy để đặt <strong>mức trần quyền hạn (maximum permissions)</strong> cho một IAM entity. Dù identity-based policy có khai báo <code>AdministratorAccess</code>, nếu Boundary không cho phép <code>s3:DeleteObject</code>, entity đó vẫn không thể xóa object. Rất hữu ích khi cho phép developer tự tạo IAM Role cho Lambda nhưng không cho phép họ leo thang đặc quyền (privilege escalation).</li>
+<li><strong>Service Control Policies (SCP):</strong> Áp dụng ở cấp độ AWS Organizations (tổ chức đa account). SCP thiết lập ranh giới quyền cho toàn bộ account thành viên. SCP được gắn vào Root, OU hoặc từng account trong Organization. SCP <strong>không tự cấp quyền</strong> cho ai, nhưng nếu SCP từ chối một hành động (ví dụ cấm dùng Region ngoài Singapore hoặc cấm xóa CloudTrail trail), thì ngay cả root user của account thành viên cũng không thể thực hiện. Lưu ý: SCP <strong>không áp dụng cho management account</strong>.</li>
+</ol>
+<hr>
+<h2 id="phần-6--giới-thiệu-bài-thực-hành-lab-02"><a class="anchor" href="#phần-6--giới-thiệu-bài-thực-hành-lab-02">Phần 6 — Giới thiệu bài thực hành (Lab 02)</a></h2>
+<p>Trong bài thực hành đi kèm, bạn sẽ trực tiếp triển khai một kịch bản phân quyền thực tế:</p>
+<ul>
+<li><strong>Ngữ cảnh:</strong> Hệ thống đơn hàng (Order Service).</li>
+<li><strong>Mục tiêu:</strong> Cấu hình một IAM Role có Trust Policy cho phép session hiện tại assume, và đính kèm một IAM Policy chỉ cho phép đọc dữ liệu từ một prefix cố định (<code>orders/read-only/*</code>) trong một S3 Bucket fixture.</li>
+<li><strong>Thực nghiệm kiểm chứng:</strong><ul>
+<li>Happy path: Đọc dữ liệu từ đúng prefix được cấp phép.</li>
+<li>Negative test 1: Đọc dữ liệu từ prefix khác (<code>orders/confidential/*</code>) -&gt; Nhận <code>AccessDenied</code>.</li>
+<li>Negative test 2: Cố gắng ghi object mới (<code>s3:PutObject</code>) -&gt; Nhận <code>AccessDenied</code>.</li>
+<li>Negative test 3: Gửi request với session token bị sửa -&gt; Nhận <code>InvalidClientTokenId</code>. Tùy chọn: đợi session 15 phút hết hạn -&gt; Nhận <code>ExpiredToken</code>.</li>
+</ul>
+</li>
+<li><strong>Dọn dẹp:</strong> Quy trình xóa an toàn role, policy và fixture bucket để giữ môi trường sạch sẽ.</li>
+</ul>
+<p>👉 Mở bài hướng dẫn chi tiết tại: <strong><a href="../labs/02-identity-and-access/README.html">labs/02-identity-and-access/README.md</a></strong>.</p>
+<hr>
+<h2 id="phần-7--troubleshooting-và-các-lỗi-thường-gặp-25-phút"><a class="anchor" href="#phần-7--troubleshooting-và-các-lỗi-thường-gặp-25-phút">Phần 7 — Troubleshooting và các lỗi thường gặp (25 phút)</a></h2>
+<h3 id="1-lỗi-accessdenied-khi-gọi-stsassumerole"><a class="anchor" href="#1-lỗi-accessdenied-khi-gọi-stsassumerole">1. Lỗi <code>AccessDenied</code> khi gọi <code>sts:AssumeRole</code></a></h3>
+<ul>
+<li><strong>Triệu chứng:</strong> <code>An error occurred (AccessDenied) when calling the AssumeRole operation</code>.</li>
+<li><strong>Nguyên nhân 1:</strong> Danh tính hiện tại của bạn không có quyền thực hiện action <code>sts:AssumeRole</code> trên tài nguyên Role ARN mục tiêu trong identity policy của bạn.</li>
+<li><strong>Nguyên nhân 2:</strong> Trust Policy của Role mục tiêu không liệt kê ARN hoặc Account của bạn trong trường <code>Principal</code>.</li>
+<li><strong>Cách khắc phục:</strong> Kiểm tra cả hai chiều: (1) Identity hiện tại có quyền gọi <code>sts:AssumeRole</code> không? (2) Role mục tiêu có Trust Policy tin tưởng identity hiện tại không?</li>
+</ul>
+<h3 id="2-lỗi-accessdenied-khi-thao-tác-s3-dù-đã-gắn-quyền"><a class="anchor" href="#2-lỗi-accessdenied-khi-thao-tác-s3-dù-đã-gắn-quyền">2. Lỗi <code>AccessDenied</code> khi thao tác S3 dù đã gắn quyền</a></h3>
+<ul>
+<li><strong>Triệu chứng:</strong> Role đã có <code>s3:GetObject</code> nhưng lệnh <code>aws s3 cp</code> vẫn báo <code>AccessDenied</code>.</li>
+<li><strong>Nguyên nhân 1:</strong> Phân biệt sai giữa Bucket ARN (<code>arn:aws:s3:::my-bucket</code>) và Object ARN (<code>arn:aws:s3:::my-bucket/*</code>). Action <code>s3:GetObject</code> đòi hỏi Object ARN.</li>
+<li><strong>Nguyên nhân 2:</strong> Trên bucket có <strong>S3 Bucket Policy</strong> chứa Explicit Deny (ví dụ từ chối nếu request không qua HTTPS hoặc từ chối IP ngoài văn phòng).</li>
+<li><strong>Nguyên nhân 3:</strong> Object được mã hóa bằng AWS KMS (<code>aws:kms</code>) và identity chưa có quyền <code>kms:Decrypt</code> trên khóa tương ứng.</li>
+</ul>
+<h3 id="3-lỗi-expiredtoken"><a class="anchor" href="#3-lỗi-expiredtoken">3. Lỗi <code>ExpiredToken</code></a></h3>
+<ul>
+<li><strong>Triệu chứng:</strong> <code>The security token included in the request is expired</code>.</li>
+<li><strong>Nguyên nhân:</strong> Phiên làm việc tạo bởi STS AssumeRole đã vượt quá <code>DurationSeconds</code> đã đăng ký (mặc định 1 giờ).</li>
+<li><strong>Cách khắc phục:</strong> Chạy lại lệnh <code>aws sts assume-role</code> để lấy bộ 3 biến môi trường (<code>AWS_ACCESS_KEY_ID</code>, <code>AWS_SECRET_ACCESS_KEY</code>, <code>AWS_SESSION_TOKEN</code>) mới.</li>
+</ul>
+<hr>
+<h2 id="câu-hỏi-tự-kiểm-tra"><a class="anchor" href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></h2>
+<ol>
+<li>Một lập trình viên đăng nhập thành công vào AWS Console bằng tài khoản công ty. Lập trình viên này có tự động xem được danh sách EC2 instance không? Vì sao?</li>
+<li>Tại sao một IAM Role cần phải có cả <strong>Trust Policy</strong> lẫn <strong>Permission Policy</strong>?</li>
+<li>Nếu một IAM Policy cấp <code>Allow</code> cho action <code>s3:GetObject</code> trên mọi bucket, nhưng S3 Bucket Policy của một bucket cụ thể chứa <code>Deny</code> cho tài khoản của bạn, bạn có tải được file từ bucket đó không? Vì sao?</li>
+<li>Temporary credentials gồm những giá trị nào? Giá trị nào bắt buộc phải có mặt khi gửi request mà credentials cố định không cần?</li>
+<li>Một Permissions Boundary được gán cho IAM User có thể cấp thêm quyền cho User đó khi chưa có identity-based policy không?</li>
+<li>Làm sao để chứng minh một IAM policy tuân thủ nguyên tắc Least Privilege (không cấp thừa quyền)?</li>
+</ol>
+<hr>
+<h2 id="tài-liệu-tham-khảo-chính-thức"><a class="anchor" href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></h2>
+<ul>
+<li><a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/id.html" target="_blank" rel="noopener">IAM Identities (users, user groups, and roles)</a></li>
+<li><a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html" target="_blank" rel="noopener">Policies and permissions in IAM</a></li>
+<li><a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html" target="_blank" rel="noopener">How IAM evaluates policies (Evaluation Logic)</a></li>
+<li><a href="https://docs.aws.amazon.com/STS/latest/UsingSTS/Welcome.html" target="_blank" rel="noopener">AWS Security Token Service (STS) Documentation</a></li>
+<li><a href="https://docs.aws.amazon.com/singlesignon/latest/userguide/what-is.html" target="_blank" rel="noopener">AWS IAM Identity Center User Guide</a></li>
+<li><a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html" target="_blank" rel="noopener">Permissions boundaries for IAM entities</a></li>
+<li>CLI reference: <a href="https://docs.aws.amazon.com/cli/latest/reference/sts/assume-role.html" target="_blank" rel="noopener">aws sts assume-role</a> · <a href="https://docs.aws.amazon.com/cli/latest/reference/iam/create-role.html" target="_blank" rel="noopener">aws iam create-role</a> · <a href="https://docs.aws.amazon.com/cli/latest/reference/iam/put-role-policy.html" target="_blank" rel="noopener">aws iam put-role-policy</a></li>
+</ul>
+<h2 id="trạng-thái-kiểm-chứng"><a class="anchor" href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></h2>
+<ul>
+<li><strong>Đối chiếu tài liệu (2026-10-31):</strong> policy evaluation logic, cú pháp <code>2012-10-17</code>, STS <code>assume-role</code> và temporary credentials, ARN format, permissions boundary và SCP. Mô tả evaluation logic trong bài là bản rút gọn; xem link chính thức cho đầy đủ.</li>
+<li><strong>Chưa chạy thử trên AWS:</strong> các lệnh trong lab chưa được thực thi trên account thật; output là minh họa. Hãy coi output thực tế của bạn là bằng chứng.</li>
+<li><strong>An toàn:</strong> lab không dùng root user, không tạo long-lived access key, dùng fixture riêng có tag và có cleanup.</li>
+</ul>
+<hr>
+<h2 id="đáp-án-gợi-ý"><a class="anchor" href="#đáp-án-gợi-ý">Đáp án gợi ý</a></h2>
+<details>
+<summary>Mở để xem đáp án</summary>
+
+<ol>
+<li><strong>Không.</strong> Việc đăng nhập thành công chỉ hoàn tất bước Authentication (chứng minh bạn là ai). Theo cơ chế Default Deny của AWS, nếu không có bất kỳ Identity-based Policy, Group Policy hoặc Permission Set nào cấp <code>Allow</code> cho action <code>ec2:DescribeInstances</code>, người đó sẽ thấy màn hình trống hoặc thông báo lỗi <code>UnauthorizedOperation</code>.</li>
+<li><strong>Vì hai câu hỏi bảo mật độc lập:</strong><ul>
+<li><strong>Trust Policy</strong> trả lời câu hỏi: <em>&quot;Chủ thể nào (who) được phép bước vào vai trò này (assume role)?&quot;</em></li>
+<li><strong>Permission Policy</strong> trả lời câu hỏi: <em>&quot;Khi đã bước vào vai trò này, danh tính này được phép làm gì (what actions) trên những tài nguyên nào (what resources)?&quot;</em>
+Thiếu Trust Policy thì không ai assume được; thiếu Permission Policy thì assume vào nhưng không có quyền làm gì cả.</li>
+</ul>
+</li>
+<li><strong>Không tải được.</strong> Theo quy tắc đánh giá quyền của AWS, một <strong>Explicit Deny</strong> (lệnh cấm rõ ràng) luôn luôn ghi đè và vô hiệu hóa mọi lệnh Allow. Do S3 Bucket Policy có Explicit Deny, request sẽ bị từ chối với mã lỗi <code>403 AccessDenied</code>.</li>
+<li>Temporary credentials gồm 4 thành phần: <code>AccessKeyId</code>, <code>SecretAccessKey</code>, <code>SessionToken</code>, và <code>Expiration</code>. Trong đó, <strong><code>SessionToken</code></strong> bắt buộc phải gửi kèm mỗi request (header <code>X-Amz-Security-Token</code>; với CLI/SDK là biến <code>AWS_SESSION_TOKEN</code>). Thiếu hoặc sai token, AWS không xác thực được chữ ký và trả về <code>InvalidClientTokenId</code>; token hết hạn thì trả về <code>ExpiredToken</code>. <code>Expiration</code> chỉ là thông tin để client biết khi nào cần lấy credentials mới, không gửi kèm request.</li>
+<li><strong>Không bao giờ.</strong> Permissions Boundary chỉ đóng vai trò là &quot;mức trần&quot; (maximum permissions boundary) để giới hạn phạm vi quyền hạn lớn nhất có thể có. Boundary <strong>không bao giờ tự cấp quyền (grant permissions)</strong>. Muốn thực hiện được hành động, principal bắt buộc phải có identity-based policy cấp phép và hành động đó phải nằm trong phạm vi cho phép của Boundary.</li>
+<li><strong>Bằng hai phương pháp:</strong><ul>
+<li><strong>Thiết kế phân rã (Granular Scope):</strong> Giới hạn <code>Action</code> cụ thể thay vì wildcard <code>*</code> (ví dụ <code>s3:GetObject</code> thay vì <code>s3:*</code>), giới hạn <code>Resource</code> theo ARN chính xác (kèm prefix/path cụ thể thay vì <code>*</code>), và thêm <code>Condition</code> nếu cần (ví dụ bắt buộc <code>aws:SecureTransport: true</code>).</li>
+<li><strong>Thực nghiệm kiểm chứng (Positive &amp; Negative Testing):</strong> Chạy happy path kiểm tra đúng quyền thì thành công; đồng thời chạy negative path kiểm tra sai prefix, sai action (ví dụ ghi thay vì đọc), hoặc dùng identity khác thì phải nhận ngay <code>AccessDenied</code>.</li>
+</ul>
+</li>
+</ol>
+</details>
+
+
+<footer>Sinh tự động từ <code>notes/02-identity-and-access.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

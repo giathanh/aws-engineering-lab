@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab 10 — Quan sát và bảo mật ứng dụng: structured log, metric, alarm, CloudTrail, Secrets Manager và KMS</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="../../notes/01-foundations.html">01. Lý thuyết</a><a href="../01-foundations/README.html">01. Lab</a><a href="../../notes/02-identity-and-access.html">02. Lý thuyết</a><a href="../02-identity-and-access/README.html">02. Lab</a><a href="../../notes/03-cost-management.html">03. Lý thuyết</a><a href="../03-cost-management/README.html">03. Lab</a><a href="../../notes/04-networking.html">04. Lý thuyết</a><a href="../04-networking/README.html">04. Lab</a><a href="../../notes/05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../05-compute-and-load-balancing/README.html">05. Lab</a><a href="../../notes/06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../06-storage-and-content-delivery/README.html">06. Lab</a><a href="../../notes/07-databases-and-cache.html">07. Lý thuyết</a><a href="../07-databases-and-cache/README.html">07. Lab</a><a href="../../notes/08-containers.html">08. Lý thuyết</a><a href="../08-containers/README.html">08. Lab</a><a href="../../notes/09-serverless.html">09. Lý thuyết</a><a href="../09-serverless/README.html">09. Lab</a><a href="../../notes/10-observability-and-application-security.html">10. Lý thuyết</a><a href="README.html" class="active">10. Lab</a><a href="../../notes/11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../11-messaging-and-workflows/README.html">11. Lab</a><a href="../../notes/12-iac-and-cicd.html">12. Lý thuyết</a><a href="../12-iac-and-cicd/README.html">12. Lab</a><a href="../../notes/13-reliability-and-performance.html">13. Lý thuyết</a><a href="../13-reliability-and-performance/README.html">13. Lab</a><a href="../../notes/14-architecture-and-governance.html">14. Lý thuyết</a><a href="../14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></li><li><a href="#quy-ước-placeholder">Quy ước placeholder</a></li><li><a href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></li><li><a href="#sơ-đồ-kiến-trúc-lab-10">Sơ đồ kiến trúc Lab 10</a></li><li><a href="#bước-0--biến-và-thư-mục-làm-việc">Bước 0 — Biến và thư mục làm việc</a></li><li><a href="#bước-1--kms-customer-managed-key">Bước 1 — KMS customer managed key</a></li><li><a href="#bước-2--secret-giả-và-parameter">Bước 2 — Secret giả và parameter</a></li><li><a href="#bước-3--role-của-app-least-privilege-và-role-principal-khác">Bước 3 — Role của app (least privilege) và role &quot;principal khác&quot;</a></li><li><a href="#bước-4--lambda-có-structured-log-emf-metric-và-cache-secret">Bước 4 — Lambda có structured log, EMF metric và cache secret</a></li><li><a href="#bước-5--happy-path-inject-lỗi-và-đọc-log">Bước 5 — Happy path, inject lỗi và đọc log</a></li><li><a href="#bước-6--alarm-dashboard-và-tùy-chọn-thông-báo">Bước 6 — Alarm, dashboard và (tùy chọn) thông báo</a></li><li><a href="#bước-7--negative-case-kms-principal-khác-và-encryption-context">Bước 7 — Negative case KMS: principal khác và encryption context</a></li><li><a href="#bước-8--đổi-secret-khi-app-đang-cache">Bước 8 — Đổi secret khi app đang cache</a></li><li><a href="#bước-9--cloudtrail-ai-đọc-secret-ai-đổi-cấu-hình">Bước 9 — CloudTrail: ai đọc secret, ai đổi cấu hình</a></li><li><a href="#bước-10--dọn-dẹp">Bước 10 — Dọn dẹp</a></li><li><a href="#checklist-hoàn-thành">Checklist hoàn thành</a></li><li><a href="#troubleshooting-nhanh">Troubleshooting nhanh</a></li><li><a href="#tiếp-theo">Tiếp theo</a></li></ol></aside>
+<main>
+<h1 id="lab-10--quan-sát-và-bảo-mật-ứng-dụng-structured-log-metric-alarm-cloudtrail-secrets-manager-và-kms"><a class="anchor" href="#lab-10--quan-sát-và-bảo-mật-ứng-dụng-structured-log-metric-alarm-cloudtrail-secrets-manager-và-kms">Lab 10 — Quan sát và bảo mật ứng dụng: structured log, metric, alarm, CloudTrail, Secrets Manager và KMS</a></h1>
+<blockquote>
+<p><strong>Lý thuyết:</strong> <a href="../../notes/10-observability-and-application-security.html">notes/10-observability-and-application-security.md</a>. Đọc phần 1–5 trước khi thực hiện lab.
+<strong>Thời lượng:</strong> khoảng 90–120 phút (CloudTrail Event History có thể trễ 5–15 phút).
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Mọi output là <strong>minh họa</strong>, thông tin định danh dùng placeholder. Lab chưa được chạy thử trên account thật.</p>
+</blockquote>
+<hr>
+<h2 id="lab-này-làm-gì-và-không-làm-gì"><a class="anchor" href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></h2>
+<p>Lab dùng một Lambda &quot;order API&quot; nhỏ làm fixture riêng (theo mô hình Lab 09), không phụ thuộc tài nguyên của bài trước.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>✅ Có</th>
+<th>❌ Không</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>KMS customer managed key (CMK) riêng cho lab, alias, key policy</td>
+<td>Đụng vào key dùng chung hoặc AWS managed key</td>
+</tr>
+<tr>
+<td>Secret giả sinh ngẫu nhiên, mã hóa bằng CMK; parameter cấu hình thường</td>
+<td>In giá trị secret ra terminal hoặc log</td>
+</tr>
+<tr>
+<td>Role của app đọc <strong>đúng</strong> secret/parameter; principal khác bị từ chối</td>
+<td>Cấp <code>secretsmanager:*</code> hoặc <code>kms:*</code> cho app</td>
+</tr>
+<tr>
+<td>Structured JSON log, metric latency/error qua Embedded Metric Format (EMF), inject lỗi</td>
+<td></td>
+</tr>
+<tr>
+<td>Logs Insights, alarm, dashboard; tùy chọn email SNS tới chính bạn</td>
+<td>Gửi thông báo tới người khác</td>
+</tr>
+<tr>
+<td>Encryption context: negative case decrypt sai context</td>
+<td></td>
+</tr>
+<tr>
+<td>Cache secret và quan sát app dùng version cũ sau khi đổi secret</td>
+<td></td>
+</tr>
+<tr>
+<td>CloudTrail management event: ai đọc secret, ai đổi parameter</td>
+<td>Bật data event trên toàn account</td>
+</tr>
+<tr>
+<td>Cleanup, giải thích recovery window của secret và scheduled deletion của key</td>
+<td></td>
+</tr>
+</tbody></table>
+</div>
+<hr>
+<h2 id="quy-ước-placeholder"><a class="anchor" href="#quy-ước-placeholder">Quy ước placeholder</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Biến</th>
+<th>Ý nghĩa</th>
+<th>Ví dụ minh họa</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>aws-lab</code></td>
+<td>Named profile CLI đã cấu hình ở Lab 01</td>
+<td><code>aws-lab</code></td>
+</tr>
+<tr>
+<td><code>AWS_REGION</code></td>
+<td>Region học tập</td>
+<td><code>ap-southeast-1</code></td>
+</tr>
+<tr>
+<td><code>ACCOUNT_ID</code></td>
+<td>Account ID (lấy tự động)</td>
+<td><code>111122223333</code></td>
+</tr>
+<tr>
+<td><code>KEY_ID</code>, <code>KEY_ARN</code></td>
+<td>CMK của lab</td>
+<td><code>1234abcd-12ab-34cd-56ef-1234567890ab</code></td>
+</tr>
+<tr>
+<td><code>SECRET_ARN</code></td>
+<td>Secret giả</td>
+<td><code>arn:aws:secretsmanager:...:secret:lab10/order-api/db-AbCdEf</code></td>
+</tr>
+<tr>
+<td><code>FN</code></td>
+<td>Tên function</td>
+<td><code>lab10-order-api</code></td>
+</tr>
+<tr>
+<td><code>&lt;YOUR_EMAIL&gt;</code></td>
+<td>Email <strong>của bạn</strong> cho nhánh SNS tùy chọn</td>
+<td><code>ban@example.com</code></td>
+</tr>
+</tbody></table>
+</div>
+<p>Tên cố định: <code>lab10-*</code> cho tài nguyên, <code>alias/lab10-order-key</code> cho key, <code>Lab10AppRole</code>/<code>Lab10OtherPrincipalRole</code> cho IAM. Tài nguyên hỗ trợ tag mang <code>Project=aws-lab-10</code>.</p>
+<hr>
+<h2 id="điều-kiện-đầu-vào"><a class="anchor" href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></h2>
+<ul>
+<li><input type="checkbox"> Đã hoàn thành <a href="../09-serverless/README.html">Lab 09</a> (Lambda, execution role).</li>
+<li><input type="checkbox"> Công cụ: AWS CLI v2, <code>zip</code>, <code>jq</code>.</li>
+<li><input type="checkbox"> Quyền cần thiết (không cần <code>AdministratorAccess</code>):<ul>
+<li><strong>KMS:</strong> <code>kms:CreateKey</code>, <code>CreateAlias</code>, <code>DeleteAlias</code>, <code>TagResource</code>, <code>Encrypt</code>, <code>Decrypt</code>, <code>DescribeKey</code>, <code>ScheduleKeyDeletion</code>, <code>ListAliases</code>.</li>
+<li><strong>Secrets Manager:</strong> <code>secretsmanager:CreateSecret</code>, <code>GetRandomPassword</code>, <code>DescribeSecret</code>, <code>PutSecretValue</code>, <code>DeleteSecret</code>, <code>TagResource</code>.</li>
+<li><strong>SSM:</strong> <code>ssm:PutParameter</code>, <code>GetParameter</code>, <code>DeleteParameter</code>, <code>AddTagsToResource</code>.</li>
+<li><strong>IAM:</strong> <code>iam:CreateRole</code>, <code>PutRolePolicy</code>, <code>DeleteRolePolicy</code>, <code>AttachRolePolicy</code>, <code>DetachRolePolicy</code>, <code>DeleteRole</code>, <code>GetRole</code>, <code>TagRole</code>, <strong><code>iam:PassRole</code> trên <code>Lab10AppRole</code></strong>, và <strong><code>sts:AssumeRole</code> trên <code>Lab10OtherPrincipalRole</code></strong> (cho negative case).</li>
+<li><strong>Lambda, CloudWatch Logs:</strong> như <a href="../09-serverless/README.html">Lab 09</a>, thêm <code>logs:StartQuery</code>, <code>GetQueryResults</code>.</li>
+<li><strong>CloudWatch:</strong> <code>cloudwatch:PutMetricAlarm</code>, <code>DescribeAlarms</code>, <code>DeleteAlarms</code>, <code>PutDashboard</code>, <code>DeleteDashboards</code>, <code>GetMetricStatistics</code>.</li>
+<li><strong>CloudTrail:</strong> <code>cloudtrail:LookupEvents</code>. <strong>X-Ray (tùy chọn):</strong> <code>xray:GetTraceSummaries</code>. <strong>SNS (tùy chọn):</strong> <code>sns:CreateTopic</code>, <code>Subscribe</code>, <code>DeleteTopic</code>.</li>
+</ul>
+</li>
+<li><input type="checkbox"> Không sử dụng tài khoản production.</li>
+</ul>
+<h3 id="chi-phí-ước-tính-giá-minh-họa-tra-lại-kmshttpsawsamazoncomkmspricing-secrets-managerhttpsawsamazoncomsecrets-managerpricing-cloudwatchhttpsawsamazoncomcloudwatchpricing-pricing"><a class="anchor" href="#chi-phí-ước-tính-giá-minh-họa-tra-lại-kmshttpsawsamazoncomkmspricing-secrets-managerhttpsawsamazoncomsecrets-managerpricing-cloudwatchhttpsawsamazoncomcloudwatchpricing-pricing">Chi phí ước tính (giá minh họa, tra lại <a href="https://aws.amazon.com/kms/pricing/" target="_blank" rel="noopener">KMS</a>, <a href="https://aws.amazon.com/secrets-manager/pricing/" target="_blank" rel="noopener">Secrets Manager</a>, <a href="https://aws.amazon.com/cloudwatch/pricing/" target="_blank" rel="noopener">CloudWatch</a> pricing)</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tài nguyên</th>
+<th>Quy mô</th>
+<th>Đơn giá minh họa</th>
+<th>Chi phí buổi lab</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>KMS CMK</td>
+<td>1 key</td>
+<td>~$1/key-tháng, tính theo giờ tồn tại</td>
+<td>~$0.01</td>
+</tr>
+<tr>
+<td>KMS request</td>
+<td>&lt; 100</td>
+<td>~$0.03/10.000 request</td>
+<td>&lt; $0.001</td>
+</tr>
+<tr>
+<td>Secrets Manager</td>
+<td>1 secret</td>
+<td>~$0.40/secret-tháng, tính theo thời gian tồn tại</td>
+<td>&lt; $0.01</td>
+</tr>
+<tr>
+<td>Custom metric (EMF)</td>
+<td>2 metric</td>
+<td>~$0.30/metric-tháng, tính theo giờ</td>
+<td>&lt; $0.01</td>
+</tr>
+<tr>
+<td>Alarm</td>
+<td>1</td>
+<td>~$0.10/alarm-tháng</td>
+<td>&lt; $0.01</td>
+</tr>
+<tr>
+<td>Dashboard</td>
+<td>1</td>
+<td>3 dashboard đầu không tính phí; sau đó ~$3/dashboard-tháng</td>
+<td>$0 hoặc ~$0.10</td>
+</tr>
+<tr>
+<td>Lambda, Logs, X-Ray, SNS email</td>
+<td>vài chục request</td>
+<td>rất nhỏ</td>
+<td>&lt; $0.01</td>
+</tr>
+<tr>
+<td><strong>Tổng</strong></td>
+<td></td>
+<td></td>
+<td><strong>&lt; $0.10</strong></td>
+</tr>
+</tbody></table>
+</div>
+<ul>
+<li>Sau cleanup, <strong>key vẫn tồn tại 7 ngày</strong> ở trạng thái <code>PendingDeletion</code> (khoảng chờ tối thiểu). Tra trang giá KMS để biết key đang chờ xóa có bị tính phí không; trường hợp xấu nhất là ~$0.25 cho 7 ngày.</li>
+<li><strong>Điều kiện dừng:</strong> nếu sau 2,5 giờ chưa xong, chạy cleanup (Bước 10).</li>
+</ul>
+<hr>
+<h2 id="sơ-đồ-kiến-trúc-lab-10"><a class="anchor" href="#sơ-đồ-kiến-trúc-lab-10">Sơ đồ kiến trúc Lab 10</a></h2>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>                    aws lambda invoke (happy path / fault)
+                                   │
+                                   ▼
+┌────────────────────────── Lambda lab10-order-api ───────────────────────────┐
+│ role Lab10AppRole:                                                          │
+│   secretsmanager:GetSecretValue  → đúng 1 secret                            │
+│   kms:Decrypt (qua Secrets Manager) → đúng 1 key                            │
+│   ssm:GetParameter               → đúng 1 parameter                         │
+│ cache secret 60 s │ log JSON + correlation_id │ EMF: Latency, Errors        │
+└───────┬─────────────────────┬────────────────────────────┬──────────────────┘
+        ▼                     ▼                            ▼
+ Secrets Manager        SSM Parameter Store        CloudWatch Logs (retention 7 ngày)
+ lab10/order-api/db     /lab10/order-api/           │  Logs Insights
+ (mã hóa bằng CMK)      payment-url (String)        ▼
+        │                                     CloudWatch Metrics Lab10/OrderApi
+        ▼                                       ├─ Alarm Errors ≥ 3/phút → (SNS email, tùy chọn)
+ KMS alias/lab10-order-key                      └─ Dashboard lab10-order-api
+        ▲
+        │ AssumeRole → GetSecretValue → &quot;Access to KMS is not allowed&quot;
+ Lab10OtherPrincipalRole (negative case)
+
+ CloudTrail Event History: GetSecretValue, Decrypt, PutParameter, AssumeRole (ai, khi nào, kết quả)</code></pre></div>
+<hr>
+<h2 id="bước-0--biến-và-thư-mục-làm-việc"><a class="anchor" href="#bước-0--biến-và-thư-mục-làm-việc">Bước 0 — Biến và thư mục làm việc</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export AWS_PROFILE=&quot;aws-lab&quot;
+export AWS_REGION=&quot;ap-southeast-1&quot;
+export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+export FN=&quot;lab10-order-api&quot;
+export LAB_DIR=$(mktemp -d) &amp;&amp; cd &quot;${LAB_DIR}&quot;
+LAB_START=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+aws sts get-caller-identity --query Arn --output text</code></pre></div>
+<hr>
+<h2 id="bước-1--kms-customer-managed-key"><a class="anchor" href="#bước-1--kms-customer-managed-key">Bước 1 — KMS customer managed key</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat &gt; key-policy.json &lt;&lt; EOF
+{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Sid&quot;: &quot;EnableIAMPoliciesInThisAccount&quot;,
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Principal&quot;: { &quot;AWS&quot;: &quot;arn:aws:iam::${ACCOUNT_ID}:root&quot; },
+    &quot;Action&quot;: &quot;kms:*&quot;,
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}
+EOF
+read -r KEY_ID KEY_ARN &lt; &lt;(aws kms create-key --description &quot;Lab 10 order service&quot; \
+  --policy file://key-policy.json --tags TagKey=Project,TagValue=aws-lab-10 \
+  --query 'KeyMetadata.[KeyId,Arn]' --output text)
+aws kms create-alias --alias-name alias/lab10-order-key --target-key-id &quot;${KEY_ID}&quot;
+echo &quot;KEY_ID=${KEY_ID}&quot;</code></pre></div>
+<p>Statement <code>EnableIAMPoliciesInThisAccount</code> <strong>không</strong> cho mọi người trong account dùng key. Nó nói: &quot;key này tin IAM của account&quot;. Từ đó, ai được IAM policy cấp <code>kms:Decrypt</code> trên key mới dùng được. Thiếu statement này (và không có statement nào khác cho bạn), key có thể bị khóa không ai quản lý được; AWS khi đó chỉ khôi phục qua AWS Support.</p>
+<hr>
+<h2 id="bước-2--secret-giả-và-parameter"><a class="anchor" href="#bước-2--secret-giả-và-parameter">Bước 2 — Secret giả và parameter</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code># Sinh mật khẩu ngẫu nhiên phía AWS, không bao giờ in ra màn hình
+PW=$(aws secretsmanager get-random-password --password-length 24 --exclude-punctuation \
+  --query RandomPassword --output text)
+SECRET_ARN=$(aws secretsmanager create-secret --name lab10/order-api/db \
+  --kms-key-id alias/lab10-order-key \
+  --secret-string &quot;$(jq -cn --arg p &quot;${PW}&quot; '{username:&quot;order_app&quot;, password:$p}')&quot; \
+  --tags Key=Project,Value=aws-lab-10 --query ARN --output text)
+unset PW
+
+aws ssm put-parameter --name /lab10/order-api/payment-url --type String \
+  --value &quot;https://payment.internal.example/v1&quot; --tags Key=Project,Value=aws-lab-10 &gt;/dev/null
+
+aws secretsmanager describe-secret --secret-id &quot;${SECRET_ARN}&quot; --query '[Name,KmsKeyId]' --output text</code></pre></div>
+<p><em>Kỳ vọng:</em> <code>lab10/order-api/db  arn:aws:kms:...:key/&lt;KEY_ID&gt;</code> (hoặc alias). Không có lệnh nào in giá trị mật khẩu.</p>
+<p>URL thanh toán không bí mật nên dùng <code>String</code>. Nếu là secret nhưng không cần rotation, <code>SecureString</code> của Parameter Store là lựa chọn rẻ hơn; nó <strong>không</strong> có rotation tự động, versioning theo stage hay replication đa Region như Secrets Manager.</p>
+<hr>
+<h2 id="bước-3--role-của-app-least-privilege-và-role-principal-khác"><a class="anchor" href="#bước-3--role-của-app-least-privilege-và-role-principal-khác">Bước 3 — Role của app (least privilege) và role &quot;principal khác&quot;</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat &gt; trust-lambda.json &lt;&lt; EOF
+{&quot;Version&quot;:&quot;2012-10-17&quot;,&quot;Statement&quot;:[{&quot;Effect&quot;:&quot;Allow&quot;,&quot;Principal&quot;:{&quot;Service&quot;:&quot;lambda.amazonaws.com&quot;},
+ &quot;Action&quot;:&quot;sts:AssumeRole&quot;,&quot;Condition&quot;:{&quot;StringEquals&quot;:{&quot;aws:SourceAccount&quot;:&quot;${ACCOUNT_ID}&quot;}}}]}
+EOF
+aws iam create-role --role-name Lab10AppRole --assume-role-policy-document file://trust-lambda.json \
+  --tags Key=Project,Value=aws-lab-10 &gt;/dev/null
+aws iam attach-role-policy --role-name Lab10AppRole \
+  --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+aws iam attach-role-policy --role-name Lab10AppRole \
+  --policy-arn arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
+
+cat &gt; app-policy.json &lt;&lt; EOF
+{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    { &quot;Sid&quot;: &quot;ReadOneSecret&quot;, &quot;Effect&quot;: &quot;Allow&quot;, &quot;Action&quot;: &quot;secretsmanager:GetSecretValue&quot;,
+      &quot;Resource&quot;: &quot;${SECRET_ARN}&quot; },
+    { &quot;Sid&quot;: &quot;DecryptViaSecretsManagerOnly&quot;, &quot;Effect&quot;: &quot;Allow&quot;, &quot;Action&quot;: &quot;kms:Decrypt&quot;,
+      &quot;Resource&quot;: &quot;${KEY_ARN}&quot;,
+      &quot;Condition&quot;: { &quot;StringEquals&quot;: { &quot;kms:ViaService&quot;: &quot;secretsmanager.${AWS_REGION}.amazonaws.com&quot; } } },
+    { &quot;Sid&quot;: &quot;ReadOneParameter&quot;, &quot;Effect&quot;: &quot;Allow&quot;, &quot;Action&quot;: &quot;ssm:GetParameter&quot;,
+      &quot;Resource&quot;: &quot;arn:aws:ssm:${AWS_REGION}:${ACCOUNT_ID}:parameter/lab10/order-api/payment-url&quot; }
+  ]
+}
+EOF
+aws iam put-role-policy --role-name Lab10AppRole --policy-name Lab10AppAccess --policy-document file://app-policy.json</code></pre></div>
+<p><code>kms:ViaService</code> buộc quyền giải mã chỉ dùng được <strong>thông qua</strong> Secrets Manager: code trong app không thể tự gọi <code>kms:Decrypt</code> trên ciphertext khác bằng key này.</p>
+<p>Role cho negative case: có quyền đọc secret nhưng <strong>không</strong> có <code>kms:Decrypt</code>. Trust policy tin account của bạn, nên chỉ principal nào được IAM cho phép <code>sts:AssumeRole</code> trên role này mới assume được.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat &gt; trust-account.json &lt;&lt; EOF
+{&quot;Version&quot;:&quot;2012-10-17&quot;,&quot;Statement&quot;:[{&quot;Effect&quot;:&quot;Allow&quot;,&quot;Principal&quot;:{&quot;AWS&quot;:&quot;arn:aws:iam::${ACCOUNT_ID}:root&quot;},&quot;Action&quot;:&quot;sts:AssumeRole&quot;}]}
+EOF
+aws iam create-role --role-name Lab10OtherPrincipalRole --assume-role-policy-document file://trust-account.json \
+  --max-session-duration 3600 --tags Key=Project,Value=aws-lab-10 &gt;/dev/null
+cat &gt; other-policy.json &lt;&lt; EOF
+{&quot;Version&quot;:&quot;2012-10-17&quot;,&quot;Statement&quot;:[{&quot;Effect&quot;:&quot;Allow&quot;,&quot;Action&quot;:&quot;secretsmanager:GetSecretValue&quot;,&quot;Resource&quot;:&quot;${SECRET_ARN}&quot;}]}
+EOF
+aws iam put-role-policy --role-name Lab10OtherPrincipalRole --policy-name ReadSecretNoKms --policy-document file://other-policy.json</code></pre></div>
+<hr>
+<h2 id="bước-4--lambda-có-structured-log-emf-metric-và-cache-secret"><a class="anchor" href="#bước-4--lambda-có-structured-log-emf-metric-và-cache-secret">Bước 4 — Lambda có structured log, EMF metric và cache secret</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat &gt; app.py &lt;&lt; 'EOF'
+import json, os, random, time, uuid
+import boto3
+
+sm = boto3.client(&quot;secretsmanager&quot;)
+ssm = boto3.client(&quot;ssm&quot;)
+SECRET_ID = os.environ[&quot;SECRET_ID&quot;]
+TTL = int(os.environ.get(&quot;SECRET_TTL_SECONDS&quot;, &quot;60&quot;))
+PAYMENT_URL = ssm.get_parameter(Name=os.environ[&quot;PAYMENT_URL_PARAM&quot;])[&quot;Parameter&quot;][&quot;Value&quot;]
+_cache = {&quot;at&quot;: 0.0, &quot;value&quot;: None, &quot;version&quot;: None}
+
+
+def get_secret():
+    &quot;&quot;&quot;Đọc secret khi khởi động và làm mới sau TTL; không bao giờ log giá trị.&quot;&quot;&quot;
+    if _cache[&quot;value&quot;] is None or time.time() - _cache[&quot;at&quot;] &gt; TTL:
+        r = sm.get_secret_value(SecretId=SECRET_ID)
+        _cache.update(at=time.time(), value=json.loads(r[&quot;SecretString&quot;]), version=r[&quot;VersionId&quot;])
+    return _cache[&quot;value&quot;], _cache[&quot;version&quot;]
+
+
+def log(level, **fields):
+    print(json.dumps({&quot;level&quot;: level, &quot;service&quot;: &quot;order-api&quot;, **fields}, ensure_ascii=False))
+
+
+def emit_metrics(latency_ms, error):
+    # Embedded Metric Format: CloudWatch tự tách thành metric, không cần gọi PutMetricData
+    print(json.dumps({
+        &quot;_aws&quot;: {&quot;Timestamp&quot;: int(time.time() * 1000), &quot;CloudWatchMetrics&quot;: [{
+            &quot;Namespace&quot;: &quot;Lab10/OrderApi&quot;, &quot;Dimensions&quot;: [[&quot;Service&quot;]],
+            &quot;Metrics&quot;: [{&quot;Name&quot;: &quot;Latency&quot;, &quot;Unit&quot;: &quot;Milliseconds&quot;}, {&quot;Name&quot;: &quot;Errors&quot;, &quot;Unit&quot;: &quot;Count&quot;}]}]},
+        &quot;Service&quot;: &quot;order-api&quot;, &quot;Latency&quot;: latency_ms, &quot;Errors&quot;: 1 if error else 0}))
+
+
+def lambda_handler(event, context):
+    start, error = time.time(), False
+    cid = event.get(&quot;correlation_id&quot;) or str(uuid.uuid4())
+    try:
+        creds, version = get_secret()
+        if event.get(&quot;fault&quot;) == &quot;error&quot;:
+            raise RuntimeError(&quot;PaymentGatewayTimeout (giả lập)&quot;)
+        time.sleep(random.uniform(0.02, 0.15))       # giả lập gọi DB/payment
+        log(&quot;INFO&quot;, event=&quot;ORDER_CONFIRMED&quot;, correlation_id=cid, order_id=event.get(&quot;order_id&quot;),
+            db_user=creds[&quot;username&quot;], secret_version=version[:8], payment_host=PAYMENT_URL.split(&quot;/&quot;)[2])
+        return {&quot;order_id&quot;: event.get(&quot;order_id&quot;), &quot;status&quot;: &quot;CONFIRMED&quot;, &quot;correlation_id&quot;: cid}
+    except Exception as e:
+        error = True
+        log(&quot;ERROR&quot;, event=&quot;ORDER_FAILED&quot;, correlation_id=cid, order_id=event.get(&quot;order_id&quot;), error=str(e))
+        raise
+    finally:
+        emit_metrics(round((time.time() - start) * 1000, 1), error)
+EOF
+zip -q app.zip app.py
+
+aws logs create-log-group --log-group-name &quot;/aws/lambda/${FN}&quot; --tags Project=aws-lab-10
+aws logs put-retention-policy --log-group-name &quot;/aws/lambda/${FN}&quot; --retention-in-days 7
+sleep 10   # chờ IAM propagate
+
+aws lambda create-function --function-name &quot;${FN}&quot; --runtime python3.12 --architectures arm64 \
+  --role &quot;arn:aws:iam::${ACCOUNT_ID}:role/Lab10AppRole&quot; --handler app.lambda_handler \
+  --zip-file fileb://app.zip --memory-size 256 --timeout 10 --tracing-config Mode=Active \
+  --environment &quot;Variables={SECRET_ID=${SECRET_ARN},PAYMENT_URL_PARAM=/lab10/order-api/payment-url,SECRET_TTL_SECONDS=60}&quot; \
+  --tags Project=aws-lab-10 &gt;/dev/null
+aws lambda wait function-active-v2 --function-name &quot;${FN}&quot;</code></pre></div>
+<p><code>--tracing-config Mode=Active</code> bật X-Ray tracing ở mức function (không cần SDK trong code). Muốn trace chi tiết từng lệnh gọi AWS SDK, dùng OpenTelemetry (AWS Distro for OpenTelemetry), xem lý thuyết Phần 1.</p>
+<hr>
+<h2 id="bước-5--happy-path-inject-lỗi-và-đọc-log"><a class="anchor" href="#bước-5--happy-path-inject-lỗi-và-đọc-log">Bước 5 — Happy path, inject lỗi và đọc log</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>invoke() {  # $1 = payload JSON
+  aws lambda invoke --function-name &quot;${FN}&quot; --cli-binary-format raw-in-base64-out \
+    --payload &quot;$1&quot; out.json --query FunctionError --output text &gt;/dev/null; cat out.json; echo
+}
+for i in $(seq 1 10); do invoke &quot;{\&quot;order_id\&quot;:\&quot;ORD-$i\&quot;}&quot; &gt;/dev/null; done
+invoke '{&quot;order_id&quot;:&quot;ORD-100&quot;,&quot;correlation_id&quot;:&quot;demo-cid-001&quot;}'
+for i in $(seq 1 4); do invoke &quot;{\&quot;order_id\&quot;:\&quot;ORD-F$i\&quot;,\&quot;fault\&quot;:\&quot;error\&quot;}&quot; &gt;/dev/null; done</code></pre></div>
+<p><em>Kỳ vọng:</em> request <code>ORD-100</code> trả <code>{&quot;order_id&quot;: &quot;ORD-100&quot;, &quot;status&quot;: &quot;CONFIRMED&quot;, &quot;correlation_id&quot;: &quot;demo-cid-001&quot;}</code>; 4 request lỗi trả <code>errorMessage: PaymentGatewayTimeout (giả lập)</code>.</p>
+<p>Logs Insights: p95 latency, số lỗi, và hành trình của một correlation ID:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>q() {
+  local QID=$(aws logs start-query --log-group-name &quot;/aws/lambda/${FN}&quot; \
+    --start-time $(( $(date +%s) - 1800 )) --end-time $(date +%s) --query-string &quot;$1&quot; --query queryId --output text)
+  sleep 5; aws logs get-query-results --query-id &quot;${QID}&quot; --query 'results[][].[field,value]' --output text
+}
+q 'filter ispresent(Latency) | stats count(*) as calls, sum(Errors) as errors, pct(Latency, 95) as p95_ms'
+q 'filter correlation_id = &quot;demo-cid-001&quot; | fields @timestamp, level, event, order_id'
+q 'filter level = &quot;ERROR&quot; | stats count(*) by error'</code></pre></div>
+<p><em>Kỳ vọng (minh họa):</em> <code>calls 15  errors 4  p95_ms 148.2</code>; một dòng <code>INFO ORDER_CONFIRMED ORD-100</code>; <code>PaymentGatewayTimeout (giả lập)  4</code>.</p>
+<p>Kiểm tra secret <strong>không</strong> lọt vào log:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>q 'filter @message like /password/ | count(*) as leaks'</code></pre></div>
+<p><em>Kỳ vọng:</em> <code>leaks 0</code>. Log chỉ có <code>db_user</code> và 8 ký tự đầu của <code>secret_version</code>.</p>
+<hr>
+<h2 id="bước-6--alarm-dashboard-và-tùy-chọn-thông-báo"><a class="anchor" href="#bước-6--alarm-dashboard-và-tùy-chọn-thông-báo">Bước 6 — Alarm, dashboard và (tùy chọn) thông báo</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code># (Tùy chọn) SNS email tới chính bạn; bấm link xác nhận trong email
+# TOPIC_ARN=$(aws sns create-topic --name lab10-alerts --tags Key=Project,Value=aws-lab-10 --query TopicArn --output text)
+# aws sns subscribe --topic-arn &quot;${TOPIC_ARN}&quot; --protocol email --notification-endpoint &quot;&lt;YOUR_EMAIL&gt;&quot;
+aws cloudwatch put-metric-alarm --alarm-name lab10-order-api-errors \
+  --alarm-description &quot;Lab 10: &gt;= 3 lỗi trong 1 phút&quot; \
+  --namespace Lab10/OrderApi --metric-name Errors --dimensions Name=Service,Value=order-api \
+  --statistic Sum --period 60 --evaluation-periods 1 --datapoints-to-alarm 1 \
+  --threshold 3 --comparison-operator GreaterThanOrEqualToThreshold \
+  --treat-missing-data notBreaching --tags Key=Project,Value=aws-lab-10
+if [ -n &quot;${TOPIC_ARN}&quot; ]; then   # gắn action SNS nếu đã làm nhánh tùy chọn
+  aws cloudwatch put-metric-alarm --alarm-name lab10-order-api-errors \
+    --namespace Lab10/OrderApi --metric-name Errors --dimensions Name=Service,Value=order-api \
+    --statistic Sum --period 60 --evaluation-periods 1 --datapoints-to-alarm 1 \
+    --threshold 3 --comparison-operator GreaterThanOrEqualToThreshold --treat-missing-data notBreaching \
+    --alarm-actions &quot;${TOPIC_ARN}&quot; --ok-actions &quot;${TOPIC_ARN}&quot;
+fi
+
+cat &gt; dashboard.json &lt;&lt; EOF
+{&quot;widgets&quot;:[
+ {&quot;type&quot;:&quot;metric&quot;,&quot;x&quot;:0,&quot;y&quot;:0,&quot;width&quot;:12,&quot;height&quot;:6,&quot;properties&quot;:{&quot;title&quot;:&quot;Latency p95 (ms)&quot;,&quot;region&quot;:&quot;${AWS_REGION}&quot;,
+  &quot;metrics&quot;:[[&quot;Lab10/OrderApi&quot;,&quot;Latency&quot;,&quot;Service&quot;,&quot;order-api&quot;,{&quot;stat&quot;:&quot;p95&quot;}]],&quot;period&quot;:60}},
+ {&quot;type&quot;:&quot;metric&quot;,&quot;x&quot;:12,&quot;y&quot;:0,&quot;width&quot;:12,&quot;height&quot;:6,&quot;properties&quot;:{&quot;title&quot;:&quot;Errors / phút&quot;,&quot;region&quot;:&quot;${AWS_REGION}&quot;,
+  &quot;metrics&quot;:[[&quot;Lab10/OrderApi&quot;,&quot;Errors&quot;,&quot;Service&quot;,&quot;order-api&quot;,{&quot;stat&quot;:&quot;Sum&quot;}]],&quot;period&quot;:60}}]}
+EOF
+aws cloudwatch put-dashboard --dashboard-name lab10-order-api --dashboard-body file://dashboard.json
+
+# Bơm lỗi lần nữa để alarm có dữ liệu mới trong phút hiện tại
+for i in $(seq 1 4); do invoke &quot;{\&quot;order_id\&quot;:\&quot;ORD-G$i\&quot;,\&quot;fault\&quot;:\&quot;error\&quot;}&quot; &gt;/dev/null; done
+for i in $(seq 1 12); do
+  S=$(aws cloudwatch describe-alarms --alarm-names lab10-order-api-errors --query 'MetricAlarms[0].StateValue' --output text)
+  echo &quot;$(date +%T) ${S}&quot;; [ &quot;${S}&quot; = ALARM ] &amp;&amp; break; sleep 20
+done</code></pre></div>
+<p><em>Kỳ vọng:</em> trạng thái đi từ <code>INSUFFICIENT_DATA</code> (alarm mới) sang <code>ALARM</code> trong 1–3 phút. Sau vài phút không có lỗi, alarm về <code>OK</code> nhờ <code>notBreaching</code>. Mở console CloudWatch → Dashboards → <code>lab10-order-api</code> để thấy hai biểu đồ.</p>
+<p>Nếu alarm không đổi: kiểm tra metric đã tồn tại chưa (<code>aws cloudwatch list-metrics --namespace Lab10/OrderApi</code>), statistic là <code>Sum</code> (không phải <code>Average</code>, vì <code>Average</code> của 0/1 luôn ≤ 1), và dimension khớp chính xác.</p>
+<hr>
+<h2 id="bước-7--negative-case-kms-principal-khác-và-encryption-context"><a class="anchor" href="#bước-7--negative-case-kms-principal-khác-và-encryption-context">Bước 7 — Negative case KMS: principal khác và encryption context</a></h2>
+<h3 id="1-principal-khác-có-quyền-đọc-secret-nhưng-không-có-kmsdecrypt"><a class="anchor" href="#1-principal-khác-có-quyền-đọc-secret-nhưng-không-có-kmsdecrypt">1. Principal khác có quyền đọc secret nhưng không có <code>kms:Decrypt</code></a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>read -r AK SK ST &lt; &lt;(aws sts assume-role \
+  --role-arn &quot;arn:aws:iam::${ACCOUNT_ID}:role/Lab10OtherPrincipalRole&quot; \
+  --role-session-name lab10-negative --duration-seconds 900 \
+  --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' --output text)
+# env -u AWS_PROFILE: khi profile được đặt tường minh, CLI có thể bỏ qua credentials trong biến môi trường
+env -u AWS_PROFILE AWS_ACCESS_KEY_ID=&quot;${AK}&quot; AWS_SECRET_ACCESS_KEY=&quot;${SK}&quot; AWS_SESSION_TOKEN=&quot;${ST}&quot; \
+  aws secretsmanager get-secret-value --secret-id &quot;${SECRET_ARN}&quot; --query Name 2&gt;&amp;1 | tail -1
+unset AK SK ST</code></pre></div>
+<p><em>Kỳ vọng:</em> <code>An error occurred (AccessDeniedException) when calling the GetSecretValue operation: Access to KMS is not allowed</code>. Quyền Secrets Manager có, nhưng KMS từ chối giải mã: <strong>mã hóa là một lớp kiểm soát truy cập thứ hai</strong>, không phải thay thế cho IAM.</p>
+<p>Nếu <code>assume-role</code> báo <code>AccessDenied</code>, profile của bạn không có <code>sts:AssumeRole</code> trên role này: đó là một lớp kiểm soát khác (người gọi), không phải lỗi KMS.</p>
+<h3 id="2-encryption-context-sai"><a class="anchor" href="#2-encryption-context-sai">2. Encryption context sai</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>CT=$(aws kms encrypt --key-id alias/lab10-order-key --plaintext fileb://&lt;(printf 'du-lieu-gia') \
+  --encryption-context order_id=ORD-1001 --query CiphertextBlob --output text)
+printf '%s' &quot;${CT}&quot; | base64 --decode &gt; ct.bin
+
+aws kms decrypt --ciphertext-blob fileb://ct.bin --encryption-context order_id=ORD-1001 \
+  --query Plaintext --output text | base64 --decode; echo
+aws kms decrypt --ciphertext-blob fileb://ct.bin --encryption-context order_id=ORD-9999 2&gt;&amp;1 | tail -1</code></pre></div>
+<p><em>Kỳ vọng:</em> lệnh đầu in <code>du-lieu-gia</code>; lệnh sau thất bại với <code>InvalidCiphertextException</code>. Ciphertext của đơn <code>ORD-1001</code> không thể bị &quot;gắn&quot; sang đơn khác. Encryption context xuất hiện <strong>dạng rõ</strong> trong CloudTrail, nên không đặt dữ liệu nhạy cảm vào đó.</p>
+<hr>
+<h2 id="bước-8--đổi-secret-khi-app-đang-cache"><a class="anchor" href="#bước-8--đổi-secret-khi-app-đang-cache">Bước 8 — Đổi secret khi app đang cache</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>NEW_PW=$(aws secretsmanager get-random-password --password-length 24 --exclude-punctuation --query RandomPassword --output text)
+NEW_VER=$(aws secretsmanager put-secret-value --secret-id &quot;${SECRET_ARN}&quot; \
+  --secret-string &quot;$(jq -cn --arg p &quot;${NEW_PW}&quot; '{username:&quot;order_app&quot;, password:$p}')&quot; --query VersionId --output text)
+unset NEW_PW
+echo &quot;Version mới: ${NEW_VER:0:8}&quot;
+
+invoke '{&quot;order_id&quot;:&quot;ORD-C1&quot;}' &gt;/dev/null
+sleep 65
+invoke '{&quot;order_id&quot;:&quot;ORD-C2&quot;}' &gt;/dev/null
+sleep 5
+q 'filter order_id in [&quot;ORD-C1&quot;,&quot;ORD-C2&quot;] | fields order_id, secret_version'</code></pre></div>
+<p><em>Kỳ vọng:</em> <code>ORD-C1</code> vẫn log version <strong>cũ</strong> (cache chưa hết 60 giây, nếu cùng execution environment còn warm), <code>ORD-C2</code> log version mới. Đây chính là triệu chứng &quot;đổi secret mà app dùng giá trị cũ&quot;: thời gian lệch tối đa bằng TTL cache. Rotation thật của Secrets Manager giữ version cũ ở nhãn <code>AWSPREVIOUS</code> để app chưa làm mới vẫn kết nối được trong khoảng chuyển tiếp.</p>
+<hr>
+<h2 id="bước-9--cloudtrail-ai-đọc-secret-ai-đổi-cấu-hình"><a class="anchor" href="#bước-9--cloudtrail-ai-đọc-secret-ai-đổi-cấu-hình">Bước 9 — CloudTrail: ai đọc secret, ai đổi cấu hình</a></h2>
+<p>Event History có độ trễ (thường vài phút, có thể tới 15 phút). Nếu chưa thấy, chờ rồi chạy lại.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>trail() {  # $1 = EventName
+  aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=&quot;$1&quot; \
+    --start-time &quot;${LAB_START}&quot; --max-results 20 --output json |
+  jq -r '.Events[].CloudTrailEvent | fromjson
+         | [.eventTime, .eventName, (.userIdentity.arn // .userIdentity.invokedBy), (.errorCode // &quot;OK&quot;)] | @tsv'
+}
+trail GetSecretValue
+trail PutSecretValue
+trail PutParameter</code></pre></div>
+<p><em>Kỳ vọng (minh họa):</em></p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>2026-10-31T14:05:12Z  GetSecretValue  arn:aws:sts::111122223333:assumed-role/Lab10AppRole/lab10-order-api           OK
+2026-10-31T14:21:40Z  GetSecretValue  arn:aws:sts::111122223333:assumed-role/Lab10OtherPrincipalRole/lab10-negative  AccessDenied
+2026-10-31T14:30:02Z  PutSecretValue  arn:aws:sts::111122223333:assumed-role/&lt;role-của-bạn&gt;/&lt;session&gt;               OK
+2026-10-31T14:02:55Z  PutParameter    arn:aws:sts::111122223333:assumed-role/&lt;role-của-bạn&gt;/&lt;session&gt;               OK</code></pre></div>
+<ul>
+<li>Event History chỉ có <strong>management event</strong> 90 ngày gần nhất, theo <strong>Region</strong>. Đọc object S3, gọi Lambda từng lần... là <strong>data event</strong>: không có ở đây, phải tạo trail/event data store và bật riêng (tính phí theo số event).</li>
+<li>Đây là cách trả lời &quot;ai đã đổi cấu hình&quot;: lọc theo <code>EventName</code> hoặc <code>ResourceName</code>, đọc <code>userIdentity</code> và <code>sourceIPAddress</code>.</li>
+</ul>
+<p>(Tùy chọn) Trace của function:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws xray get-trace-summaries --start-time $(( $(date +%s) - 1800 )) --end-time $(date +%s) \
+  --query 'TraceSummaries[0:3].[Id,Duration,HasError]' --output text</code></pre></div>
+<hr>
+<h2 id="bước-10--dọn-dẹp"><a class="anchor" href="#bước-10--dọn-dẹp">Bước 10 — Dọn dẹp</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code># 1. Quan sát
+aws cloudwatch delete-alarms --alarm-names lab10-order-api-errors
+aws cloudwatch delete-dashboards --dashboard-names lab10-order-api
+[ -n &quot;${TOPIC_ARN}&quot; ] &amp;&amp; aws sns delete-topic --topic-arn &quot;${TOPIC_ARN}&quot;
+
+# 2. Function rồi log group (custom metric tự biến mất sau 15 tháng không có dữ liệu mới, không tính phí khi không gửi)
+aws lambda delete-function --function-name &quot;${FN}&quot;
+aws logs delete-log-group --log-group-name &quot;/aws/lambda/${FN}&quot;
+
+# 3. IAM
+aws iam delete-role-policy --role-name Lab10AppRole --policy-name Lab10AppAccess
+for P in service-role/AWSLambdaBasicExecutionRole AWSXRayDaemonWriteAccess; do
+  aws iam detach-role-policy --role-name Lab10AppRole --policy-arn &quot;arn:aws:iam::aws:policy/${P}&quot;
+done
+aws iam delete-role --role-name Lab10AppRole
+aws iam delete-role-policy --role-name Lab10OtherPrincipalRole --policy-name ReadSecretNoKms
+aws iam delete-role --role-name Lab10OtherPrincipalRole
+
+# 4. Parameter và secret (lab: xóa ngay, không recovery window)
+aws ssm delete-parameter --name /lab10/order-api/payment-url
+aws secretsmanager delete-secret --secret-id &quot;${SECRET_ARN}&quot; --force-delete-without-recovery &gt;/dev/null
+
+# 5. Key: chỉ lên lịch xóa, sau khi không còn gì phụ thuộc
+aws kms delete-alias --alias-name alias/lab10-order-key
+aws kms schedule-key-deletion --key-id &quot;${KEY_ID}&quot; --pending-window-in-days 7 \
+  --query '[KeyState,DeletionDate]' --output text
+
+# 6. File tạm
+cd ~ &amp;&amp; rm -rf &quot;${LAB_DIR}&quot;</code></pre></div>
+<ul>
+<li><strong>Secret:</strong> production nên dùng recovery window (7–30 ngày) để khôi phục nếu xóa nhầm. Trong thời gian đó <strong>không thể</strong> tạo secret mới cùng tên.</li>
+<li><strong>Key:</strong> KMS không xóa key ngay; tối thiểu 7 ngày, tối đa 30 ngày. Trong thời gian chờ có thể <code>cancel-key-deletion</code>. Sau khi xóa, <strong>mọi</strong> dữ liệu mã hóa bằng key đó (kể cả backup, snapshot) không giải mã được nữa. Vì vậy chỉ xóa key bạn chắc chắn sở hữu và không còn dữ liệu nào phụ thuộc. Thay cho xóa, có thể <code>disable-key</code> để thử xem có gì hỏng.</li>
+<li><strong>Retained resource:</strong> key ở trạng thái <code>PendingDeletion</code> trong 7 ngày.</li>
+</ul>
+<h3 id="kiểm-tra-inventory-sau-cleanup"><a class="anchor" href="#kiểm-tra-inventory-sau-cleanup">Kiểm tra inventory sau cleanup</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>echo &quot;== Key&quot;;       aws kms describe-key --key-id &quot;${KEY_ID}&quot; --query KeyMetadata.KeyState --output text
+echo &quot;== Alias&quot;;     aws kms list-aliases --query &quot;Aliases[?AliasName=='alias/lab10-order-key'].AliasName&quot; --output text
+echo &quot;== Secret&quot;;    aws secretsmanager list-secrets --filters Key=name,Values=lab10/ --query 'SecretList[].Name' --output text
+echo &quot;== Parameter&quot;; aws ssm get-parameter --name /lab10/order-api/payment-url 2&gt;&amp;1 | grep -o ParameterNotFound
+echo &quot;== Lambda&quot;;    aws lambda get-function --function-name lab10-order-api 2&gt;&amp;1 | grep -o ResourceNotFoundException
+echo &quot;== Alarm&quot;;     aws cloudwatch describe-alarms --alarm-name-prefix lab10 --query 'MetricAlarms[].AlarmName' --output text
+echo &quot;== Dashboard&quot;; aws cloudwatch list-dashboards --dashboard-name-prefix lab10 --query 'DashboardEntries[].DashboardName' --output text
+echo &quot;== IAM&quot;;       aws iam list-roles --query &quot;Roles[?starts_with(RoleName,'Lab10')].RoleName&quot; --output text</code></pre></div>
+<p><em>Kỳ vọng:</em> Key in <code>PendingDeletion</code>; parameter in <code>ParameterNotFound</code>; Lambda in <code>ResourceNotFoundException</code>; các mục còn lại rỗng.</p>
+<h3 id="nếu-lab-dừng-giữa-chừng-hoặc-mất-shell"><a class="anchor" href="#nếu-lab-dừng-giữa-chừng-hoặc-mất-shell">Nếu lab dừng giữa chừng hoặc mất shell</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export AWS_PROFILE=&quot;aws-lab&quot; AWS_REGION=&quot;ap-southeast-1&quot; FN=&quot;lab10-order-api&quot;
+export LAB_DIR=$(mktemp -d) &amp;&amp; cd &quot;${LAB_DIR}&quot;
+KEY_ID=$(aws kms list-aliases --query &quot;Aliases[?AliasName=='alias/lab10-order-key'].TargetKeyId | [0]&quot; --output text)
+SECRET_ARN=$(aws secretsmanager describe-secret --secret-id lab10/order-api/db --query ARN --output text 2&gt;/dev/null)
+TOPIC_ARN=$(aws sns list-topics --query &quot;Topics[?ends_with(TopicArn,':lab10-alerts')].TopicArn | [0]&quot; --output text)
+[ &quot;${TOPIC_ARN}&quot; = &quot;None&quot; ] &amp;&amp; TOPIC_ARN=&quot;&quot;
+echo &quot;KEY_ID=${KEY_ID} SECRET_ARN=${SECRET_ARN}&quot;</code></pre></div>
+<p>Sau đó chạy lại Bước 10. Nếu alias đã bị xóa mà key chưa schedule, tìm key theo tag: <code>aws kms list-keys</code> rồi <code>aws kms list-resource-tags --key-id &lt;id&gt;</code> để tìm <code>Project=aws-lab-10</code>. Lệnh báo <code>NotFound</code>/<code>NoSuchEntity</code>/<code>ResourceNotFoundException</code> nghĩa là đã xóa.</p>
+<hr>
+<h2 id="checklist-hoàn-thành"><a class="anchor" href="#checklist-hoàn-thành">Checklist hoàn thành</a></h2>
+<ul>
+<li><input type="checkbox"> Giải thích được statement <code>EnableIAMPoliciesInThisAccount</code> trong key policy làm gì và không làm gì.</li>
+<li><input type="checkbox"> Secret được tạo từ mật khẩu ngẫu nhiên, không xuất hiện trong terminal, log hay file.</li>
+<li><input type="checkbox"> Role app chỉ đọc đúng một secret, một parameter, decrypt qua Secrets Manager.</li>
+<li><input type="checkbox"> Logs Insights trả về p95 latency, số lỗi và hành trình của <code>demo-cid-001</code>; query <code>password</code> trả 0.</li>
+<li><input type="checkbox"> Alarm chuyển <code>ALARM</code> khi có ≥ 3 lỗi/phút; dashboard có hai biểu đồ.</li>
+<li><input type="checkbox"> Principal khác nhận <code>Access to KMS is not allowed</code>; decrypt sai encryption context nhận <code>InvalidCiphertextException</code>.</li>
+<li><input type="checkbox"> Quan sát app dùng version secret cũ trong thời gian TTL cache.</li>
+<li><input type="checkbox"> CloudTrail chỉ ra ai đọc secret (kể cả lần bị từ chối) và ai đổi parameter.</li>
+<li><input type="checkbox"> Cleanup xong; key ở <code>PendingDeletion</code>, inventory còn lại rỗng.</li>
+</ul>
+<hr>
+<h2 id="troubleshooting-nhanh"><a class="anchor" href="#troubleshooting-nhanh">Troubleshooting nhanh</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Triệu chứng</th>
+<th>Nguyên nhân khả dĩ</th>
+<th>Bằng chứng / Khắc phục</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Không thấy log của function</td>
+<td>Role thiếu <code>AWSLambdaBasicExecutionRole</code>, sai Region, hoặc log group bị xóa trong lúc function chạy</td>
+<td><code>aws iam list-attached-role-policies --role-name Lab10AppRole</code>; kiểm tra <code>AWS_REGION</code></td>
+</tr>
+<tr>
+<td>Không thấy metric <code>Lab10/OrderApi</code></td>
+<td>Dòng EMF sai cấu trúc (phải là JSON một dòng có <code>_aws</code>)</td>
+<td><code>q &#39;filter ispresent(_aws) | limit 3&#39;</code>; metric mới có thể mất 1–2 phút</td>
+</tr>
+<tr>
+<td>Alarm không đổi trạng thái</td>
+<td>Sai statistic/period/dimension, hoặc lỗi rơi vào phút trước</td>
+<td><code>aws cloudwatch get-metric-statistics --namespace Lab10/OrderApi --metric-name Errors --dimensions Name=Service,Value=order-api --statistics Sum --period 60 --start-time ... --end-time ...</code></td>
+</tr>
+<tr>
+<td><code>AccessDeniedException ... Access to KMS is not allowed</code> với role app</td>
+<td>Thiếu <code>kms:Decrypt</code> hoặc sai <code>kms:ViaService</code></td>
+<td>So <code>Resource</code> với <code>KEY_ARN</code>; Region trong <code>ViaService</code> phải khớp</td>
+</tr>
+<tr>
+<td><code>AccessDeniedException</code> với <code>kms:Decrypt</code> dù IAM cho phép</td>
+<td>Key policy không tin IAM của account (thiếu root statement) và không cấp trực tiếp</td>
+<td><code>aws kms get-key-policy --key-id ${KEY_ID} --policy-name default</code></td>
+</tr>
+<tr>
+<td><code>InvalidCiphertextException</code></td>
+<td>Encryption context khi decrypt khác lúc encrypt, hoặc ciphertext bị hỏng (base64 sai)</td>
+<td>So từng cặp key-value; kiểm tra bước <code>base64 --decode</code></td>
+</tr>
+<tr>
+<td>App vẫn dùng secret cũ</td>
+<td>Cache trong app chưa hết TTL</td>
+<td>Xem <code>secret_version</code> trong log; giảm TTL hoặc làm mới khi nhận lỗi xác thực</td>
+</tr>
+<tr>
+<td><code>create-secret</code> báo secret cùng tên đang chờ xóa</td>
+<td>Lần chạy trước xóa có recovery window</td>
+<td><code>aws secretsmanager restore-secret</code> hoặc xóa lại với <code>--force-delete-without-recovery</code></td>
+</tr>
+<tr>
+<td>CloudTrail không có event</td>
+<td>Event History trễ, sai Region, hoặc là data event</td>
+<td>Chờ 5–15 phút; Event History theo Region; data event cần trail riêng</td>
+</tr>
+</tbody></table>
+</div>
+<hr>
+<h2 id="tiếp-theo"><a class="anchor" href="#tiếp-theo">Tiếp theo</a></h2>
+<p>Bạn đã quan sát được hành vi của app bằng log, metric và alarm, và chứng minh secret được bảo vệ bởi cả IAM lẫn KMS. Bài tiếp theo: <strong><a href="../../notes/11-messaging-and-workflows.html">Bài 11 — Messaging và workflow: SQS, SNS, EventBridge, Step Functions</a></strong>.</p>
+
+<footer>Sinh tự động từ <code>labs/10-observability-and-application-security/README.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

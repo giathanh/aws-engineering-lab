@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bài 06 — Lưu trữ và phân phối nội dung: S3, CloudFront, Route 53 và ACM</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="01-foundations.html">01. Lý thuyết</a><a href="../labs/01-foundations/README.html">01. Lab</a><a href="02-identity-and-access.html">02. Lý thuyết</a><a href="../labs/02-identity-and-access/README.html">02. Lab</a><a href="03-cost-management.html">03. Lý thuyết</a><a href="../labs/03-cost-management/README.html">03. Lab</a><a href="04-networking.html">04. Lý thuyết</a><a href="../labs/04-networking/README.html">04. Lab</a><a href="05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../labs/05-compute-and-load-balancing/README.html">05. Lab</a><a href="06-storage-and-content-delivery.html" class="active">06. Lý thuyết</a><a href="../labs/06-storage-and-content-delivery/README.html">06. Lab</a><a href="07-databases-and-cache.html">07. Lý thuyết</a><a href="../labs/07-databases-and-cache/README.html">07. Lab</a><a href="08-containers.html">08. Lý thuyết</a><a href="../labs/08-containers/README.html">08. Lab</a><a href="09-serverless.html">09. Lý thuyết</a><a href="../labs/09-serverless/README.html">09. Lab</a><a href="10-observability-and-application-security.html">10. Lý thuyết</a><a href="../labs/10-observability-and-application-security/README.html">10. Lab</a><a href="11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../labs/11-messaging-and-workflows/README.html">11. Lab</a><a href="12-iac-and-cicd.html">12. Lý thuyết</a><a href="../labs/12-iac-and-cicd/README.html">12. Lab</a><a href="13-reliability-and-performance.html">13. Lý thuyết</a><a href="../labs/13-reliability-and-performance/README.html">13. Lab</a><a href="14-architecture-and-governance.html">14. Lý thuyết</a><a href="../labs/14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#mục-tiêu">Mục tiêu</a></li><li><a href="#phần-1--amazon-s3-đối-tượng-khóa-bucket-policy-và-bảo-mật-mặc-định-50-phút">Phần 1 — Amazon S3: Đối tượng, Khóa, Bucket Policy và Bảo mật mặc định (50 phút)</a></li><li><a href="#phần-2--presigned-urls-content-type-cors-và-kiểm-tra-toàn-vẹn-checksum-45-phút">Phần 2 — Presigned URLs, Content-Type, CORS và Kiểm tra Toàn vẹn Checksum (45 phút)</a></li><li><a href="#phần-3--vòng-đời-lưu-trữ-lifecycle-tầng-lưu-trữ-storage-classes-và-multipart-upload-45-phút">Phần 3 — Vòng đời lưu trữ (Lifecycle), Tầng lưu trữ (Storage Classes) và Multipart Upload (45 phút)</a></li><li><a href="#phần-4--amazon-cloudfront-cdn-oac-cache-key-và-invalidation-50-phút">Phần 4 — Amazon CloudFront: CDN, OAC, Cache Key và Invalidation (50 phút)</a></li><li><a href="#phần-5--amazon-route-53-và-aws-certificate-manager-acm-45-phút">Phần 5 — Amazon Route 53 và AWS Certificate Manager (ACM) (45 phút)</a></li><li><a href="#phần-6--giới-thiệu-bài-thực-hành-lab-06">Phần 6 — Giới thiệu bài thực hành (Lab 06)</a></li><li><a href="#phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi phổ biến (25 phút)</a></li><li><a href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></li><li><a href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></li><li><a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></li><li><a href="#đáp-án-gợi-ý">Đáp án gợi ý</a></li></ol></aside>
+<main>
+<h1 id="bài-06--lưu-trữ-và-phân-phối-nội-dung-s3-cloudfront-route-53-và-acm"><a class="anchor" href="#bài-06--lưu-trữ-và-phân-phối-nội-dung-s3-cloudfront-route-53-và-acm">Bài 06 — Lưu trữ và phân phối nội dung: S3, CloudFront, Route 53 và ACM</a></h1>
+<blockquote>
+<p><strong>Đối tượng:</strong> developer có kinh nghiệm nhưng mới học AWS.
+<strong>Thời lượng:</strong> khoảng 5–7 giờ, chia hai buổi. Buổi 1 gồm phần 1–3 (Lưu trữ hướng đối tượng Amazon S3, tối ưu chi phí &amp; presigned URLs). Buổi 2 gồm phần 4–7 và <a href="../labs/06-storage-and-content-delivery/README.html">lab thực hành</a>.
+<strong>Kế hoạch gốc:</strong> <a href="../plans/06-storage-and-content-delivery.md">plans/06-storage-and-content-delivery.md</a>
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Xem <a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a> ở cuối bài.</p>
+</blockquote>
+<h2 id="mục-tiêu"><a class="anchor" href="#mục-tiêu">Mục tiêu</a></h2>
+<p>Sau bài này, bạn có thể:</p>
+<ol>
+<li>Phân biệt lưu trữ hướng đối tượng (<strong>Amazon S3 Object Storage</strong>) với lưu trữ khối (Block Storage - EBS) và hệ thống tệp chia sẻ (File Storage - EFS).</li>
+<li>Kiểm soát an toàn truy cập S3 thông qua <strong>Block Public Access (BPA)</strong>, <strong>Bucket Policy</strong>, <strong>IAM Policy</strong> và cơ chế cấp quyền tạm thời an toàn bằng <strong>Presigned URLs</strong>.</li>
+<li>Tối ưu chi phí lưu trữ thông qua <strong>S3 Lifecycle Configuration</strong>, các tầng lưu trữ (<strong>Storage Classes</strong>: Standard, Infrequent Access, Glacier, Intelligent-Tiering) và quản lý phiên bản (<strong>Versioning &amp; Delete Markers</strong>).</li>
+<li>Phân phối nội dung toàn cầu với độ trễ thấp thông qua <strong>Amazon CloudFront CDN</strong>, bảo vệ nguồn gốc dữ liệu riêng tư bằng <strong>Origin Access Control (OAC)</strong>.</li>
+<li>Hiểu chiến lược quản lý bộ nhớ đệm (<strong>Cache Key, TTL, Cache Policies</strong>), phân biệt kỹ thuật <strong>Cache Invalidation</strong> tốn kém với <strong>Cache Busting / Versioned Filenames</strong>.</li>
+<li>Nắm vững cơ chế phân giải tên miền <strong>Amazon Route 53 (Alias Records)</strong> và cấp phát chứng chỉ SSL/TLS miễn phí với <strong>AWS Certificate Manager (ACM)</strong>.</li>
+</ol>
+<hr>
+<h2 id="phần-1--amazon-s3-đối-tượng-khóa-bucket-policy-và-bảo-mật-mặc-định-50-phút"><a class="anchor" href="#phần-1--amazon-s3-đối-tượng-khóa-bucket-policy-và-bảo-mật-mặc-định-50-phút">Phần 1 — Amazon S3: Đối tượng, Khóa, Bucket Policy và Bảo mật mặc định (50 phút)</a></h2>
+<h3 id="kiến-trúc-lưu-trữ-hướng-đối-tượng-object-storage"><a class="anchor" href="#kiến-trúc-lưu-trữ-hướng-đối-tượng-object-storage">Kiến trúc Lưu trữ Hướng đối tượng (Object Storage)</a></h3>
+<p>Khác với hệ điều hành truyền thống tổ chức file theo cây thư mục trên ổ đĩa, Amazon S3 lưu trữ dữ liệu dưới dạng <strong>Object</strong> trong một không gian phẳng (<strong>Flat namespace</strong>) gọi là <strong>Bucket</strong>.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Mô hình lưu trữ trong S3:
+┌────────────────────────────────────────────────────────┐
+│ Amazon S3 Bucket: `order-service-artifacts`            │
+│ (Tên Bucket duy nhất trên toàn cầu - Globally unique)  │
+│                                                        │
+│  Key: &quot;invoices/2026/INV-1001.pdf&quot;                     │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │ Object Data (Payload file binary / text)         │  │
+│  ├──────────────────────────────────────────────────┤  │
+│  │ Metadata: Content-Type: application/pdf          │  │
+│  │           x-amz-meta-order-id: ORD-9921          │  │
+│  ├──────────────────────────────────────────────────┤  │
+│  │ System Attributes: Size, ETag, VersionId, SHA256 │  │
+│  └──────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────┘</code></pre></div>
+<ul>
+<li><strong>Bucket</strong>: Thùng chứa đối tượng ở cấp cao nhất. Tên bucket phải duy nhất trên toàn cầu (Globally unique trên toàn bộ tài khoản AWS khắp thế giới). Bucket thuộc về một Region cụ thể được chọn khi tạo.</li>
+<li><strong>Key (Khóa)</strong>: Chuỗi định danh đầy đủ của object (ví dụ: <code>invoices/2026/INV-1001.pdf</code>). Dấu gạch chéo <code>/</code> chỉ là tiền tố ký tự (Prefix) giúp các công cụ UI/CLI hiển thị trực quan dưới dạng thư mục ảo, chứ bản chất bên dưới S3 không hề có thư mục.</li>
+<li><strong>Metadata</strong>: Cặp key-value lưu thông tin thuộc tính của file (<code>Content-Type</code>, <code>Cache-Control</code>) và metadata do người dùng tự định nghĩa (<code>x-amz-meta-*</code>).</li>
+<li><strong>Độ bền dữ liệu (Durability):</strong> S3 Standard cung cấp cam kết độ bền 99.999999999% (11 số 9) bằng cách tự động sao chép dữ liệu ngầm qua tối thiểu 3 Availability Zones trong một Region.</li>
+</ul>
+<h3 id="cơ-chế-bảo-vệ-block-public-access-bpa"><a class="anchor" href="#cơ-chế-bảo-vệ-block-public-access-bpa">Cơ chế bảo vệ Block Public Access (BPA)</a></h3>
+<p>Trước đây, nhiều sự cố rò rỉ dữ liệu doanh nghiệp xảy ra do kỹ sư cấu hình nhầm quyền công khai (Public Bucket). AWS đã bổ sung tính năng <strong>Block Public Access</strong> ở cả cấp tài khoản (Account-level) và cấp bucket (Bucket-level) với 4 chốt an toàn:</p>
+<ol>
+<li><code>BlockPublicAcls</code>: Chặn việc gắn ACL công khai vào bucket hoặc object mới.</li>
+<li><code>IgnorePublicAcls</code>: Bỏ qua toàn bộ quyền công khai nếu có sẵn trong ACL.</li>
+<li><code>BlockPublicPolicy</code>: Chặn cấp phép Bucket Policy nếu nó chứa quyền cho phép mọi người (<code>Principal: &quot;*&quot;</code>).</li>
+<li><code>RestrictPublicBuckets</code>: Hạn chế quyền truy cập vào bucket chỉ cho các AWS service principals và người dùng được xác thực trong account nếu bucket có public policy.</li>
+</ol>
+<blockquote>
+<p>[!IMPORTANT]
+<strong>Quy tắc vàng:</strong> Luôn giữ bật toàn bộ 4 cờ Block Public Access cho mọi bucket. Nếu bạn cần phân phối file ra Internet cho người dùng cuối, hãy đưa dữ liệu qua <strong>CloudFront CDN</strong> kết hợp <strong>Origin Access Control (OAC)</strong> hoặc tạo <strong>Presigned URL</strong>.</p>
+</blockquote>
+<h3 id="bucket-policy-vs-iam-policy"><a class="anchor" href="#bucket-policy-vs-iam-policy">Bucket Policy vs IAM Policy</a></h3>
+<p>Để kiểm soát ai được đọc/ghi vào S3, AWS kết hợp hai cơ chế:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tiêu chí</th>
+<th>IAM Policy (Identity-based)</th>
+<th>S3 Bucket Policy (Resource-based)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Vị trí gắn</strong></td>
+<td>Gắn vào User, Group, hoặc IAM Role.</td>
+<td>Gắn trực tiếp vào bản thân S3 Bucket.</td>
+</tr>
+<tr>
+<td><strong>Phạm vi</strong></td>
+<td>Kiểm soát một identity có thể làm gì trên các tài nguyên nào.</td>
+<td>Kiểm soát tất cả các identity/service nào được phép thao tác trên bucket này.</td>
+</tr>
+<tr>
+<td><strong>Truy cập chéo tài khoản (Cross-account)</strong></td>
+<td>Không đủ nếu không có Bucket Policy ở tài khoản đích cấp phép.</td>
+<td>Có thể cấp quyền trực tiếp cho IAM Role/Account khác mà không cần tạo user mới.</td>
+</tr>
+<tr>
+<td><strong>Quy mô</strong></td>
+<td>Quản trị viên quản lý danh tính nhân sự/máy chủ.</td>
+<td>Chủ sở hữu dữ liệu quản lý quy tắc truy cập dữ liệu tập trung.</td>
+</tr>
+</tbody></table>
+</div>
+<p>Ví dụ S3 Bucket Policy chỉ cho phép ứng dụng đọc dữ liệu:</p>
+<div class="code"><span class="lang">json</span><button type="button">Copy</button><pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Sid&quot;: &quot;AllowAppRoleRead&quot;,
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Principal&quot;: {
+        &quot;AWS&quot;: &quot;arn:aws:iam::123456789012:role/OrderServiceRole&quot;
+      },
+      &quot;Action&quot;: [
+        &quot;s3:GetObject&quot;
+      ],
+      &quot;Resource&quot;: &quot;arn:aws:s3:::my-order-bucket/invoices/*&quot;
+    }
+  ]
+}</code></pre></div>
+<h3 id="s3-versioning-quản-lý-phiên-bản"><a class="anchor" href="#s3-versioning-quản-lý-phiên-bản">S3 Versioning (Quản lý phiên bản)</a></h3>
+<p>Khi kích hoạt <strong>Versioning</strong> trên bucket:</p>
+<ul>
+<li>Mọi thao tác ghi đè (<code>PUT</code>) lên một key sẽ không xóa dữ liệu cũ mà tạo ra một phiên bản mới với <code>VersionId</code> riêng biệt.</li>
+<li>Thao tác xóa thông thường (<code>DELETE</code>) không làm mất dữ liệu vĩnh viễn, mà S3 chỉ đặt một <strong>Delete Marker</strong> (dấu xóa) lên đỉnh ngăn xếp phiên bản. Khi người dùng cố gắng đọc object, S3 thấy Delete Marker và trả về HTTP 404 Not Found.</li>
+<li>Để khôi phục: Bạn chỉ cần xóa Delete Marker đi, phiên bản liền kề trước đó sẽ lập tức xuất hiện trở lại.</li>
+<li>Để xóa vĩnh viễn: Phải chỉ định rõ <code>VersionId</code> cần xóa.</li>
+</ul>
+<hr>
+<h2 id="phần-2--presigned-urls-content-type-cors-và-kiểm-tra-toàn-vẹn-checksum-45-phút"><a class="anchor" href="#phần-2--presigned-urls-content-type-cors-và-kiểm-tra-toàn-vẹn-checksum-45-phút">Phần 2 — Presigned URLs, Content-Type, CORS và Kiểm tra Toàn vẹn Checksum (45 phút)</a></h2>
+<h3 id="kiến-trúc-tải-file-an-toàn-bằng-presigned-urls"><a class="anchor" href="#kiến-trúc-tải-file-an-toàn-bằng-presigned-urls">Kiến trúc Tải file An toàn bằng Presigned URLs</a></h3>
+<p>Trong ứng dụng web truyền thống, người dùng thường upload file trực tiếp lên Application Server (EC2/Container), sau đó server mới upload tiếp lên S3. Kiến trúc này tạo ra nút thắt cổ chai nghiêm trọng (Server nghẽn băng thông, cạn RAM và chịu tải vô ích).</p>
+<p>Giải pháp chuẩn kiến trúc Cloud là <strong>Presigned URL</strong>:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Quy trình Tải file trực tiếp lên S3 bằng Presigned URL:
+┌────────┐               ┌────────────────────┐               ┌───────────┐
+│ Client │               │ Application Server │               │ Amazon S3 │
+└───┬────┘               └─────────┬──────────┘               └─────┬─────┘
+    │ 1. Xin link upload           │                                │
+    │    (POST /api/upload-request)│                                │
+    │─────────────────────────────&gt;│                                │
+    │                              │ 2. Dùng IAM Role sinh URL ký   │
+    │                              │    (Thời hạn sống ví dụ: 5p)   │
+    │                              │    getSignedUrl(PutObjectCmd)  │
+    │ 3. Nhận Presigned PUT URL    │                                │
+    │&lt;─────────────────────────────│                                │
+    │                                                               │
+    │ 4. PUT file binary trực tiếp lên S3 với URL đã ký             │
+    │──────────────────────────────────────────────────────────────&gt;│
+    │ 5. S3 xác thực chữ ký HMAC-SHA256 &amp; lưu file thành công (200) │
+    │&lt;──────────────────────────────────────────────────────────────│</code></pre></div>
+<ul>
+<li><strong>Presigned URL là một Bearer Capability:</strong> Bất kỳ ai nắm trong tay URL này đều có quyền thực hiện thao tác (Upload hoặc Download) đối với object cụ thể trong thời gian quy định (<code>ExpiresIn</code>), mà không cần phải có tài khoản hay credentials của AWS.</li>
+<li><strong>Quyền hạn phụ thuộc vào người ký:</strong> S3 kiểm tra quyền của người ký (ví dụ IAM Role của EC2) <strong>tại thời điểm URL được sử dụng</strong>, không phải lúc ký. Nếu role bị gỡ quyền, URL sẽ mất hiệu lực dù chưa tới <code>ExpiresIn</code>.</li>
+<li><strong>Không sống lâu hơn credentials:</strong> URL ký bằng temporary credentials (role, IAM Identity Center) hết hiệu lực khi session hết hạn, dù <code>ExpiresIn</code> dài hơn. Giới hạn tối đa của SigV4 là 7 ngày.</li>
+<li><strong>CLI chỉ ký GET:</strong> <code>aws s3 presign</code> chỉ sinh URL tải xuống. URL upload (<code>PutObject</code>) phải ký bằng SDK (boto3 <code>generate_presigned_url</code>, JavaScript v3 <code>getSignedUrl</code>). Nếu ký kèm <code>ContentType</code>, client bắt buộc gửi đúng header đó.</li>
+</ul>
+<h3 id="content-type-và-content-disposition"><a class="anchor" href="#content-type-và-content-disposition">Content-Type và Content-Disposition</a></h3>
+<p>Khi upload file lên S3, nếu không chỉ định header <code>Content-Type: application/pdf</code> hoặc <code>image/png</code>, S3 sẽ mặc định gán là <code>binary/octet-stream</code>. Hệ quả: Khi người dùng bấm vào link trên trình duyệt, file sẽ bị ép tải về máy tính thay vì hiển thị trực tiếp.</p>
+<h3 id="cross-origin-resource-sharing-cors"><a class="anchor" href="#cross-origin-resource-sharing-cors">Cross-Origin Resource Sharing (CORS)</a></h3>
+<p>Khi frontend (chạy trên domain <code>https://shop.example.com</code>) dùng Javascript <code>fetch()</code> để gửi HTTP PUT request tải file trực tiếp lên endpoint S3 <code>https://my-bucket.s3.amazonaws.com</code>, trình duyệt sẽ chặn request vì vi phạm chính sách Same-Origin Policy.
+Bạn cần cấu hình <strong>S3 CORS Configuration</strong>:</p>
+<div class="code"><span class="lang">json</span><button type="button">Copy</button><pre><code>[
+  {
+    &quot;AllowedHeaders&quot;: [&quot;*&quot;],
+    &quot;AllowedMethods&quot;: [&quot;PUT&quot;, &quot;POST&quot;, &quot;GET&quot;],
+    &quot;AllowedOrigins&quot;: [&quot;https://shop.example.com&quot;],
+    &quot;ExposeHeaders&quot;: [&quot;ETag&quot;],
+    &quot;MaxAgeSeconds&quot;: 3000
+  }
+]</code></pre></div>
+<blockquote>
+<p>[!WARNING]
+CORS <strong>không phải</strong> là cơ chế bảo mật phía máy chủ và <strong>không thay thế</strong> cho cơ chế xác thực Authorization. CORS là quy định của trình duyệt web nhằm bảo vệ người dùng tránh việc script xấu từ website độc hại tự ý gọi API đến website khác.</p>
+</blockquote>
+<h3 id="tính-toàn-vẹn-dữ-liệu-checksum-sha-256-vs-md5-etag"><a class="anchor" href="#tính-toàn-vẹn-dữ-liệu-checksum-sha-256-vs-md5-etag">Tính toàn vẹn dữ liệu: Checksum SHA-256 vs MD5 (ETag)</a></h3>
+<p>Khi truyền tải file quan trọng (hóa đơn số, bản backup), dữ liệu có thể bị lỗi bit do đường truyền mạng. S3 hỗ trợ tính toán và xác minh tính toàn vẹn thông qua các thuật toán checksum <strong>CRC64NVME</strong>, <strong>CRC32</strong>, <strong>CRC32C</strong>, <strong>SHA-1</strong>, <strong>SHA-256</strong>. Client gửi kèm checksum trong header (ví dụ <code>x-amz-checksum-sha256</code>, giá trị base64), S3 tính lại khi nhận xong; nếu sai lệch, S3 từ chối request (<code>BadDigest</code>) và không lưu object. Các SDK/CLI đời mới tự gửi checksum CRC mặc định; bạn chỉ cần chỉ định thuật toán khi có yêu cầu riêng (ví dụ đối chiếu SHA-256 với hệ thống khác). ETag <strong>không</strong> phải checksum đáng tin: với multipart upload hoặc SSE-KMS, ETag không phải MD5 của nội dung.</p>
+<hr>
+<h2 id="phần-3--vòng-đời-lưu-trữ-lifecycle-tầng-lưu-trữ-storage-classes-và-multipart-upload-45-phút"><a class="anchor" href="#phần-3--vòng-đời-lưu-trữ-lifecycle-tầng-lưu-trữ-storage-classes-và-multipart-upload-45-phút">Phần 3 — Vòng đời lưu trữ (Lifecycle), Tầng lưu trữ (Storage Classes) và Multipart Upload (45 phút)</a></h2>
+<h3 id="các-tầng-lưu-trữ-s3-s3-storage-classes"><a class="anchor" href="#các-tầng-lưu-trữ-s3-s3-storage-classes">Các Tầng Lưu trữ S3 (S3 Storage Classes)</a></h3>
+<p>Lưu trữ mọi dữ liệu ở S3 Standard trong nhiều năm sẽ khiến hóa đơn phình to lãng phí. AWS cung cấp nhiều tầng lưu trữ cho các nhu cầu khác nhau:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Phổ lưu trữ S3 từ Thường xuyên đến Lưu trữ sâu:
+┌─────────────────┬──────────────────┬─────────────────┬─────────────────┐
+│ S3 Standard     │ S3 Standard-IA   │ Glacier Flex    │ Glacier Deep    │
+├─────────────────┼──────────────────┼─────────────────┼─────────────────┤
+│ Truy cập        │ Ít truy cập      │ Lưu trữ lạnh    │ Lưu trữ đóng băng│
+│ thường xuyên    │ (&gt;= 30 ngày)     │ (&gt;= 90 ngày)    │ (&gt;= 180 ngày)   │
+│                 │ Phí dung lượng rẻ│ Phí lưu trữ     │ Rẻ nhất AWS     │
+│                 │ nhưng có phí get │ cực rẻ          │                 │
+│ ms retrieval    │ ms retrieval     │ Lấy lại: phút-h │ Lấy lại: 12-48h │
+└─────────────────┴──────────────────┴─────────────────┴─────────────────┘</code></pre></div>
+<ul>
+<li><strong>S3 Standard:</strong> Dành cho dữ liệu active, truy cập thường xuyên hàng ngày. Phí lưu trữ cao nhất (~$0.023/GB/tháng tại us-east-1), không tốn phí truy xuất (retrieval fee).</li>
+<li><strong>S3 Standard-IA (Infrequent Access):</strong> Dành cho dữ liệu ít khi đọc (ví dụ hóa đơn tháng trước), nhưng khi cần đọc thì phải trả về tức thì (mili-giây). Phí lưu trữ rẻ hơn ~45% so với Standard, nhưng tính thêm phí trên mỗi GB dữ liệu truy xuất ra. Tính tiền tối thiểu 30 ngày và tối thiểu 128 KB mỗi object, nên không hợp với nhiều file nhỏ.</li>
+<li><strong>S3 Glacier Flexible Retrieval:</strong> Dành cho dữ liệu lưu trữ (archive). Thời gian lấy dữ liệu mất từ vài phút đến 3–5 giờ.</li>
+<li><strong>S3 Glacier Deep Archive:</strong> Tầng lưu trữ rẻ nhất thế giới đám mây (~$0.00099/GB/tháng, tức ~$1 cho 1 TB dữ liệu mỗi tháng). Dành cho dữ liệu sao lưu tuân thủ quy định pháp luật (giữ 7–10 năm và hiếm khi chạm tới). Thời gian lấy dữ liệu mất từ 12 đến 48 giờ.</li>
+<li><strong>S3 Intelligent-Tiering:</strong> Tự động giám sát mẫu truy cập và di chuyển dữ liệu giữa các tầng Frequent, Infrequent và Archive Instant Access mà không làm gián đoạn ứng dụng và không thu phí truy xuất. Đổi lại có phí giám sát theo số object (object &lt; 128 KB không được giám sát và luôn ở tầng Frequent). Phù hợp cho dữ liệu lớn có mô hình truy cập khó dự đoán.</li>
+<li>Giá trong bài là giá minh họa tại <code>us-east-1</code>; tra lại <a href="https://aws.amazon.com/s3/pricing/" target="_blank" rel="noopener">S3 pricing</a> cho Region của bạn.</li>
+</ul>
+<h3 id="s3-lifecycle-rules-quy-tắc-vòng-đời"><a class="anchor" href="#s3-lifecycle-rules-quy-tắc-vòng-đời">S3 Lifecycle Rules (Quy tắc vòng đời)</a></h3>
+<p>Tự động hóa việc chuyển đổi tầng lưu trữ và dọn dẹp file cũ:</p>
+<ul>
+<li><strong>Transition actions:</strong> Chuyển object sang Standard-IA sau 30 ngày, sang Glacier sau 90 ngày.</li>
+<li><strong>Expiration actions:</strong> Xóa vĩnh viễn các object phiên bản cũ (Noncurrent Version Expiration) sau 180 ngày.</li>
+<li><strong>AbortIncompleteMultipartUpload:</strong> Tự động hủy và xóa các mẩu chunk tải lên dở dang của Multipart Upload sau 7 ngày (giúp tiết kiệm lượng chi phí khổng lồ bị rò rỉ mà kỹ sư thường bỏ quên).</li>
+</ul>
+<h3 id="s3-multipart-upload"><a class="anchor" href="#s3-multipart-upload">S3 Multipart Upload</a></h3>
+<ul>
+<li>Bắt buộc đối với object có kích thước lớn hơn 5 GB và được khuyến nghị mạnh mẽ cho bất kỳ file nào từ <strong>100 MB trở lên</strong>.</li>
+<li>File được chia thành nhiều phần nhỏ (tối thiểu 5 MB mỗi part), tải lên song song để tối đa hóa băng thông mạng.</li>
+<li>Nếu một part bị rớt mạng giữa chừng, chỉ cần upload lại đúng part đó thay vì phải truyền lại toàn bộ file từ đầu.</li>
+</ul>
+<hr>
+<h2 id="phần-4--amazon-cloudfront-cdn-oac-cache-key-và-invalidation-50-phút"><a class="anchor" href="#phần-4--amazon-cloudfront-cdn-oac-cache-key-và-invalidation-50-phút">Phần 4 — Amazon CloudFront: CDN, OAC, Cache Key và Invalidation (50 phút)</a></h2>
+<h3 id="kiến-trúc-mạng-phân-phối-nội-dung-content-delivery-network---cdn"><a class="anchor" href="#kiến-trúc-mạng-phân-phối-nội-dung-content-delivery-network---cdn">Kiến trúc Mạng Phân phối Nội dung (Content Delivery Network - CDN)</a></h3>
+<p>Amazon CloudFront là mạng lưới gồm hàng trăm <strong>Edge Locations</strong> (Điểm hiện diện biên) phủ khắp các thành phố lớn trên thế giới.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>So sánh Truy cập Trực tiếp vs Qua CloudFront CDN:
+Trực tiếp:
+Client (Việt Nam) ────────────────── (Trễ 250ms) ──────────────────&gt; S3 (us-east-1)
+
+Qua CloudFront:
+Client (Việt Nam) ── (Trễ 5ms) ──&gt; CloudFront Edge (Hà Nội/TPHCM)
+                                      │
+                         Cache HIT?   ├── Có ──&gt; Trả về ngay (5ms)
+                                      └── Không ─&gt; Đi qua cáp quang riêng của AWS
+                                                  lấy từ S3 us-east-1 &amp; lưu đệm lại</code></pre></div>
+<h3 id="bảo-vệ-s3-origin-bằng-origin-access-control-oac"><a class="anchor" href="#bảo-vệ-s3-origin-bằng-origin-access-control-oac">Bảo vệ S3 Origin bằng Origin Access Control (OAC)</a></h3>
+<p>Trước đây AWS dùng OAI (Origin Access Identity), hiện nay chuẩn khuyến nghị mới nhất và an toàn nhất là <strong>Origin Access Control (OAC)</strong>:</p>
+<ul>
+<li>OAC hỗ trợ ký request theo chuẩn AWS Signature Version 4 (SigV4).</li>
+<li>Hỗ trợ các phương thức HTTP PUT/POST, hỗ trợ mã hóa SSE-KMS, áp dụng cho tất cả các Region mới.</li>
+<li><strong>Quy tắc bảo mật:</strong> S3 Bucket đóng chặt hoàn toàn (Block Public Access bật 100%). S3 Bucket Policy chỉ cho phép <strong>CloudFront Service Principal</strong> đọc dữ liệu với điều kiện <code>aws:SourceArn</code> phải là ARN chính xác của CloudFront Distribution tương ứng.</li>
+</ul>
+<div class="code"><span class="lang">json</span><button type="button">Copy</button><pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Sid&quot;: &quot;AllowCloudFrontServicePrincipalReadOnly&quot;,
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Principal&quot;: {
+        &quot;Service&quot;: &quot;cloudfront.amazonaws.com&quot;
+      },
+      &quot;Action&quot;: &quot;s3:GetObject&quot;,
+      &quot;Resource&quot;: &quot;arn:aws:s3:::my-order-bucket/*&quot;,
+      &quot;Condition&quot;: {
+        &quot;StringEquals&quot;: {
+          &quot;AWS:SourceArn&quot;: &quot;arn:aws:cloudfront::123456789012:distribution/EDFDVBD6EXAMPLE&quot;
+        }
+      }
+    }
+  ]
+}</code></pre></div>
+<h3 id="cache-key-ttl-và-cache-policy"><a class="anchor" href="#cache-key-ttl-và-cache-policy">Cache Key, TTL và Cache Policy</a></h3>
+<p>CloudFront quyết định một request có phải là <strong>Cache HIT</strong> hay không dựa trên <strong>Cache Key</strong>:</p>
+<ul>
+<li>Mặc định, Cache Key chỉ bao gồm tên miền và đường dẫn URI (<code>example.com/images/logo.png</code>).</li>
+<li>Nếu bạn cấu hình đưa Query String, Header hoặc Cookie vào Cache Key, tính chất gom cụm cache sẽ giảm đi (Cache hit ratio giảm), làm tăng số lượng request phải chạy về origin.</li>
+<li><strong>TTL (Time-To-Live):</strong> Quy định thời gian object được phép lưu trong cache của Edge Location trước khi CloudFront phải quay lại origin kiểm tra phiên bản mới. Có 3 giá trị: <code>Min TTL</code>, <code>Default TTL</code>, và <code>Max TTL</code> (được điều khiển qua header <code>Cache-Control: max-age=...</code> trả về từ origin).</li>
+</ul>
+<h3 id="chiến-lược-cập-nhật-nội-dung-cache-invalidation-vs-cache-busting"><a class="anchor" href="#chiến-lược-cập-nhật-nội-dung-cache-invalidation-vs-cache-busting">Chiến lược Cập nhật Nội dung: Cache Invalidation vs Cache Busting</a></h3>
+<p>Khi bạn cập nhật code frontend hoặc đổi ảnh banner trên S3, làm thế nào để người dùng nhìn thấy dữ liệu mới ngay lập tức mà không phải chờ hết hạn TTL?</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tiêu chí</th>
+<th>Tạo Cache Invalidation</th>
+<th>Versioned Filename (Cache Busting)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Cơ chế</strong></td>
+<td>Gửi yêu cầu CloudFront xóa object khỏi hàng trăm Edge Location (<code>aws cloudfront create-invalidation --paths &quot;/*&quot;</code>).</td>
+<td>Đổi tên file khi build: <code>app.a8f9b2.js</code> hoặc <code>banner-v2.png</code>.</td>
+</tr>
+<tr>
+<td><strong>Tốc độ</strong></td>
+<td>Mất từ 1 đến vài phút để lệnh truyền tới toàn bộ Edge Location trên toàn cầu.</td>
+<td>Có hiệu lực tức thời 100% ngay khi người dùng tải trang HTML mới.</td>
+</tr>
+<tr>
+<td><strong>Chi phí</strong></td>
+<td>1,000 path đầu tiên mỗi tháng không tính phí, sau đó khoảng <strong>$0.005 trên mỗi path</strong> (giá minh họa). Wildcard <code>/*</code> tính là <strong>một</strong> path nhưng xóa toàn bộ cache, làm origin chịu tải dồn.</td>
+<td>Không tốn phí invalidation; chỉ tốn thêm chút dung lượng S3 cho file cũ (dọn bằng lifecycle).</td>
+</tr>
+<tr>
+<td><strong>Phạm vi</strong></td>
+<td>Chỉ xóa cache ở CloudFront, <strong>không</strong> xóa cache trình duyệt hay proxy trung gian.</td>
+<td>Trình duyệt cũng thấy URL mới nên không bị cache cũ.</td>
+</tr>
+<tr>
+<td><strong>Khuyến nghị kiến trúc</strong></td>
+<td>Dùng cho file có tên cố định (<code>index.html</code>) hoặc sự cố khẩn cấp (xóa nội dung vi phạm).</td>
+<td><strong>Thực hành phổ biến trong CI/CD.</strong> Đặt TTL dài (1 năm, <code>immutable</code>) cho asset có hash; <code>index.html</code> để TTL ngắn hoặc invalidate khi deploy.</td>
+</tr>
+</tbody></table>
+</div>
+<hr>
+<h2 id="phần-5--amazon-route-53-và-aws-certificate-manager-acm-45-phút"><a class="anchor" href="#phần-5--amazon-route-53-và-aws-certificate-manager-acm-45-phút">Phần 5 — Amazon Route 53 và AWS Certificate Manager (ACM) (45 phút)</a></h2>
+<h3 id="amazon-route-53-dịch-vụ-dns-đám-mây"><a class="anchor" href="#amazon-route-53-dịch-vụ-dns-đám-mây">Amazon Route 53: Dịch vụ DNS Đám mây</a></h3>
+<p>Route 53 là dịch vụ Domain Name System (DNS) có độ khả dụng cực cao (SLA cam kết 100% uptime của AWS).</p>
+<ul>
+<li><strong>Public Hosted Zone:</strong> Chứa các bản ghi DNS định tuyến lưu lượng từ Internet vào các tài nguyên của bạn.</li>
+<li><strong>Bản ghi thông thường (Standard DNS Records):</strong><ul>
+<li><code>A</code>: Trỏ tên miền sang địa chỉ IPv4 (ví dụ <code>198.51.100.1</code>).</li>
+<li><code>AAAA</code>: Trỏ tên miền sang địa chỉ IPv6.</li>
+<li><code>CNAME</code>: Trỏ tên miền này sang một tên miền khác (ví dụ <code>www.example.com</code> trỏ tới <code>d111111abcdef8.cloudfront.net</code>).</li>
+</ul>
+</li>
+</ul>
+<h3 id="điểm-đặc-biệt-alias-record-vs-cname"><a class="anchor" href="#điểm-đặc-biệt-alias-record-vs-cname">Điểm đặc biệt: Alias Record vs CNAME</a></h3>
+<p>Giao thức DNS tiêu chuẩn (RFC 1034) nghiêm cấm đặt bản ghi CNAME tại gốc tên miền (<strong>Zone Apex</strong>, hay Naked Domain, ví dụ <code>example.com</code> không có tiền tố <code>www</code>).
+Nếu bạn muốn trỏ trực tiếp <code>example.com</code> về CloudFront Distribution hoặc Application Load Balancer (vốn không có địa chỉ IP cố định mà chỉ có DNS Name), CNAME sẽ vi phạm chuẩn DNS.</p>
+<p>AWS giải quyết vấn đề này bằng <strong>Route 53 Alias Record</strong>:</p>
+<ul>
+<li><strong>Alias Record</strong> là tính năng mở rộng độc quyền của Route 53.</li>
+<li>Cho phép trỏ trực tiếp Zone Apex (<code>example.com</code>) tới các tài nguyên AWS (CloudFront, ALB, S3 Website Bucket).</li>
+<li>Khi client truy vấn, Route 53 tự động phân giải tên miền AWS ngầm bên trong và trả về trực tiếp địa chỉ IP cho client, hoàn toàn tuân thủ RFC DNS.</li>
+<li>Route 53 <strong>không tính phí truy vấn DNS</strong> đối với các bản ghi Alias trỏ tới tài nguyên AWS!</li>
+</ul>
+<h3 id="aws-certificate-manager-acm"><a class="anchor" href="#aws-certificate-manager-acm">AWS Certificate Manager (ACM)</a></h3>
+<p>ACM cung cấp và tự động gia hạn chứng chỉ SSL/TLS miễn phí để kích hoạt giao thức HTTPS bảo mật.</p>
+<ul>
+<li><strong>Ràng buộc vùng quan trọng đối với CloudFront:</strong><ul>
+<li>Vì CloudFront là dịch vụ CDN toàn cầu, nếu muốn gắn Custom SSL Certificate vào CloudFront Distribution, chứng chỉ ACM bắt buộc phải được tạo/yêu cầu tại Region <strong><code>us-east-1</code> (US East - N. Virginia)</strong>!</li>
+<li>Nếu chứng chỉ được tạo tại <code>ap-southeast-1</code> (Singapore), CloudFront sẽ hoàn toàn không nhìn thấy để bạn lựa chọn.</li>
+</ul>
+</li>
+<li><strong>Xác thực quyền sở hữu tên miền (DNS Validation):</strong> ACM sẽ cung cấp một bản ghi CNAME đặc thù. Bạn chỉ cần thêm bản ghi này vào Hosted Zone của tên miền, ACM sẽ tự động xác minh và kích hoạt chứng chỉ, thường trong vài phút đến khoảng 30 phút. Giữ bản ghi này lại để ACM tự gia hạn.</li>
+</ul>
+<h3 id="dns-ttl-và-cdn-ttl-là-hai-cơ-chế-khác-nhau"><a class="anchor" href="#dns-ttl-và-cdn-ttl-là-hai-cơ-chế-khác-nhau">DNS TTL và CDN TTL là hai cơ chế khác nhau</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>DNS TTL (Route 53 record)</th>
+<th>CDN TTL (CloudFront cache)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Quy định</td>
+<td>Resolver nhớ bản ghi tên miền → IP/tên đích bao lâu</td>
+<td>Edge giữ một object bao lâu trước khi hỏi lại origin</td>
+</tr>
+<tr>
+<td>Khi đổi</td>
+<td>Đổi bản ghi DNS (ví dụ chuyển sang distribution mới)</td>
+<td>Đổi nội dung file trên origin</td>
+</tr>
+<tr>
+<td>Cách &quot;xóa&quot; sớm</td>
+<td>Không xóa được cache của resolver; hạ TTL <strong>trước</strong> khi đổi</td>
+<td>Invalidation hoặc đổi tên file</td>
+</tr>
+<tr>
+<td>Ghi chú</td>
+<td>Alias record dùng TTL của tài nguyên đích, bạn không đặt TTL</td>
+<td>Điều khiển bằng cache policy và <code>Cache-Control</code> của origin</td>
+</tr>
+</tbody></table>
+</div>
+<p>Invalidation không làm resolver quên bản ghi cũ, và đổi DNS không xóa cache của CloudFront.</p>
+<hr>
+<h2 id="phần-6--giới-thiệu-bài-thực-hành-lab-06"><a class="anchor" href="#phần-6--giới-thiệu-bài-thực-hành-lab-06">Phần 6 — Giới thiệu bài thực hành (Lab 06)</a></h2>
+<p>Trong bài thực hành đính kèm, bạn sẽ trực tiếp triển khai một hệ sinh thái phân phối nội dung hoàn chỉnh theo tiêu chuẩn doanh nghiệp:</p>
+<ol>
+<li>Tạo một S3 Bucket hoàn toàn riêng tư (bật đủ 4 cờ Block Public Access và Versioning).</li>
+<li>Ký <strong>Presigned URL</strong> PUT bằng boto3 và GET bằng CLI (5 phút), thử negative case sai header và URL hết hạn; kiểm tra checksum SHA-256, CORS preflight, lifecycle và multipart upload dở dang.</li>
+<li>Cấu hình <strong>CloudFront Distribution</strong> với <strong>Origin Access Control (OAC)</strong> kết nối an toàn tới S3.</li>
+<li>Kiểm chứng Negative Case: Truy cập trực tiếp link S3 bị trả về HTTP 403 Forbidden; truy cập qua CloudFront trả về HTTP 200 OK.</li>
+<li>Kiểm nghiệm hành vi bộ đệm qua header phản hồi <code>X-Cache: Hit/Miss from cloudfront</code>.</li>
+<li>Thực hiện dọn dẹp sạch sẽ tài nguyên (disable &amp; delete CloudFront distribution, dọn sạch mọi version và delete marker trong S3).</li>
+</ol>
+<p>👉 Mở bài hướng dẫn chi tiết tại: <strong><a href="../labs/06-storage-and-content-delivery/README.html">labs/06-storage-and-content-delivery/README.md</a></strong>.</p>
+<hr>
+<h2 id="phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút"><a class="anchor" href="#phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi phổ biến (25 phút)</a></h2>
+<h3 id="1-truy-cập-qua-cloudfront-trả-về-lỗi-http-403-forbidden"><a class="anchor" href="#1-truy-cập-qua-cloudfront-trả-về-lỗi-http-403-forbidden">1. Truy cập qua CloudFront trả về lỗi HTTP 403 Forbidden</a></h3>
+<ul>
+<li><strong>Nguyên nhân 1: Bucket Policy chưa cấp quyền cho OAC.</strong> Kiểm tra xem policy trên S3 đã có <code>Service: cloudfront.amazonaws.com</code> và điều kiện <code>AWS:SourceArn</code> khớp chính xác với ARN của CloudFront Distribution chưa.</li>
+<li><strong>Nguyên nhân 2: File không tồn tại trong S3.</strong> Khi S3 origin chặn quyền đọc hoặc file không tồn tại trong private bucket, S3 thường trả về mã 403 Forbidden (thay vì 404 Not Found) để tránh tiết lộ sự tồn tại của file cho kẻ tấn công bên ngoài.</li>
+<li><strong>Nguyên nhân 3: Nhầm lẫn giữa S3 REST Endpoint và S3 Website Endpoint.</strong> OAC <strong>chỉ hỗ trợ S3 REST API endpoint</strong> (<code>&lt;bucket-name&gt;.s3.&lt;region&gt;.amazonaws.com</code>), không hỗ trợ S3 Static Website Hosting endpoint (<code>&lt;bucket-name&gt;.s3-website-&lt;region&gt;.amazonaws.com</code>).</li>
+</ul>
+<h3 id="2-trình-duyệt-báo-lỗi-cors-khi-tải-file-từ-frontend"><a class="anchor" href="#2-trình-duyệt-báo-lỗi-cors-khi-tải-file-từ-frontend">2. Trình duyệt báo lỗi CORS khi tải file từ frontend</a></h3>
+<ul>
+<li><strong>Hiện tượng:</strong> <code>Access to XMLHttpRequest at &#39;...&#39; from origin &#39;https://...&#39; has been blocked by CORS policy</code>.</li>
+<li><strong>Cách khắc phục:</strong> Kiểm tra cấu hình S3 CORS:<ul>
+<li>Cột <code>AllowedOrigins</code> đã chứa chính xác domain frontend (kèm cả giao thức <code>https://</code> và cổng port nếu chạy local dev) chưa.</li>
+<li>Cột <code>AllowedMethods</code> đã bao gồm method đang gọi (<code>PUT</code>, <code>GET</code>, <code>OPTIONS</code>) chưa.</li>
+<li>Nếu frontend có gửi custom headers (ví dụ <code>x-amz-checksum-sha256</code>), cột <code>AllowedHeaders</code> phải chứa header đó hoặc cấu hình <code>*</code>.</li>
+</ul>
+</li>
+</ul>
+<h3 id="3-cập-nhật-file-trên-s3-nhưng-người-dùng-vẫn-thấy-phiên-bản-cũ"><a class="anchor" href="#3-cập-nhật-file-trên-s3-nhưng-người-dùng-vẫn-thấy-phiên-bản-cũ">3. Cập nhật file trên S3 nhưng người dùng vẫn thấy phiên bản cũ</a></h3>
+<ul>
+<li><strong>Nguyên nhân:</strong> File vẫn đang nằm trong bộ nhớ đệm của CloudFront hoặc browser cache do TTL chưa hết.</li>
+<li><strong>Cách kiểm tra:</strong> Dùng lệnh <code>curl -I https://&lt;distribution-domain&gt;/&lt;file-path&gt;</code> và quan sát header <code>Age</code> cùng <code>X-Cache</code>.</li>
+<li><strong>Cách xử lý:</strong> Tạo một cache invalidation cho file (<code>aws cloudfront create-invalidation --distribution-id ... --paths &quot;/banner.png&quot;</code>) hoặc áp dụng chuẩn <strong>Versioned Filename</strong> trong đường dẫn (<code>/banner-v2.png</code>).</li>
+</ul>
+<hr>
+<h2 id="câu-hỏi-tự-kiểm-tra"><a class="anchor" href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></h2>
+<ol>
+<li>Tại sao tính năng S3 Block Public Access được coi là chốt an toàn quan trọng nhất trong việc ngăn ngừa rò rỉ dữ liệu đám mây?</li>
+<li>So sánh cơ chế hoạt động, độ bảo mật và chi phí giữa <strong>Presigned URL</strong> và việc mở bucket ra công khai (Public Bucket) để chia sẻ tài liệu?</li>
+<li>Tại sao khi sử dụng CloudFront CDN, các kỹ sư thường được khuyến nghị áp dụng kỹ thuật &quot;Cache Busting / Versioned Filenames&quot; trong quy trình CI/CD thay vì lạm dụng lệnh tạo Cache Invalidation?</li>
+<li>Trình bày sự khác biệt giữa DNS CNAME và Route 53 Alias Record? Tại sao không thể dùng CNAME cho Apex domain (<code>example.com</code>)?</li>
+<li>Vì sao khi tạo chứng chỉ SSL/TLS bằng AWS Certificate Manager (ACM) để gắn vào CloudFront, bạn bắt buộc phải yêu cầu chứng chỉ tại Region <code>us-east-1</code>?</li>
+<li>Bucket bật đủ 4 cờ Block Public Access, vậy vì sao CloudFront vẫn đọc được để phục vụ người dùng Internet?</li>
+<li>Bạn đã chạy <code>aws s3 rm s3://bucket --recursive</code> nhưng hóa đơn S3 tháng sau không giảm. Liệt kê ít nhất hai nơi dữ liệu vẫn còn nằm.</li>
+</ol>
+<hr>
+<h2 id="tài-liệu-tham-khảo-chính-thức"><a class="anchor" href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></h2>
+<ul>
+<li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/" target="_blank" rel="noopener">Amazon S3 User Guide</a></li>
+<li><a href="https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html" target="_blank" rel="noopener">Restricting access to Amazon S3 using Origin Access Control (OAC)</a></li>
+<li><a href="https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/" target="_blank" rel="noopener">Amazon CloudFront Developer Guide</a></li>
+<li><a href="https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-types.html" target="_blank" rel="noopener">Choosing between Alias and Non-Alias records in Route 53</a></li>
+<li><a href="https://docs.aws.amazon.com/acm/latest/userguide/acm-services.html" target="_blank" rel="noopener">AWS Certificate Manager for CloudFront</a></li>
+</ul>
+<h2 id="trạng-thái-kiểm-chứng"><a class="anchor" href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></h2>
+<ul>
+<li><strong>Đối chiếu tài liệu (2026-10-31):</strong> OAC là cơ chế được khuyến nghị (OAI là legacy, vẫn hoạt động); Block Public Access bật mặc định cho bucket mới (từ 4/2023); SSE-S3 mặc định cho object mới (từ 1/2023); <code>aws s3 presign</code> chỉ hỗ trợ GET; certificate ACM cho CloudFront phải ở <code>us-east-1</code>; OAC không hỗ trợ S3 website endpoint.</li>
+<li><strong>Chưa chạy thử trên AWS:</strong> lệnh trong lab chưa được thực thi trên account thật; output là minh họa.</li>
+<li><strong>Chi phí:</strong> lab chỉ dùng vài MB S3 và vài chục request CloudFront, ước tính dưới $0.05 kể cả khi không có Free Tier (xem bảng trong lab). Giá trong bài là minh họa, cần tra lại theo Region.</li>
+</ul>
+<hr>
+<h2 id="đáp-án-gợi-ý"><a class="anchor" href="#đáp-án-gợi-ý">Đáp án gợi ý</a></h2>
+<details>
+<summary>Mở để xem đáp án</summary>
+
+<ol>
+<li>S3 Block Public Access (BPA) hoạt động như một lớp màng lọc bảo vệ tối cao (Centralized Guardrail) độc lập với Bucket Policy và ACL. Ngay cả khi một lập trình viên hoặc script sơ ý gắn nhầm policy <code>Allow *</code> hoặc cấp quyền công khai qua ACL, 4 cờ BPA sẽ ngay lập tức chặn đứng hoặc vô hiệu hóa các quyền công khai này, đảm bảo dữ liệu không bao giờ bị lộ ra ngoài Internet do lỗi sơ suất của con người.</li>
+<li>So sánh:<ul>
+<li><strong>Public Bucket:</strong> Mọi đối tượng đều mở cho bất kỳ ai trên Internet đọc mà không có hạn chế nào. Dễ dẫn tới rò rỉ dữ liệu nhạy cảm, bị lạm dụng băng thông dẫn tới hóa đơn tiền mạng tăng vọt và không kiểm soát được danh tính người đọc.</li>
+<li><strong>Presigned URL:</strong> Bucket vẫn được bảo vệ 100% riêng tư. Quyền truy cập chỉ được cấp tạm thời cho một object cụ thể, có thời hạn sống ngắn tính bằng phút hoặc giây do backend ứng dụng quyết định. URL mang chữ ký mật mã HMAC-SHA256, không thể sửa đổi tham số và hết hạn tức thời, mang lại mức độ bảo mật vượt trội.</li>
+</ul>
+</li>
+<li>Vì:<ul>
+<li><strong>Tức thời và tin cậy:</strong> Versioned Filename (ví dụ <code>main.8f2d9c.js</code>) tạo ra một đường dẫn hoàn toàn mới. Trình duyệt người dùng và toàn bộ Edge Location đều nhận diện đây là file mới 100%, không bao giờ gặp tình trạng người dùng xem phải file JS/CSS cũ hay lỗi giao diện do cache chưa kịp xóa.</li>
+<li><strong>Không phụ thuộc cache ngoài tầm kiểm soát:</strong> Invalidation chỉ xóa cache ở CloudFront; trình duyệt và proxy vẫn giữ bản cũ tới hết <code>max-age</code>. Tên file mới tránh được cả hai.</li>
+<li><strong>Không làm origin chịu tải dồn:</strong> Invalidate <code>/*</code> sau mỗi deploy biến toàn bộ request kế tiếp thành Miss. Versioned filename giữ nguyên cache cho asset không đổi.</li>
+<li><strong>Chi phí:</strong> chỉ đáng kể khi invalidate nhiều path cụ thể (quá 1.000 path/tháng, khoảng $0.005/path). Wildcard <code>/*</code> tính là một path, nên chi phí thường không phải lý do chính.</li>
+</ul>
+</li>
+<li>Sự khác biệt:<ul>
+<li><strong>CNAME:</strong> Thuộc chuẩn RFC DNS thế giới. Chỉ có thể trỏ tên miền phụ (subdomain) sang một tên miền khác. RFC DNS nghiêm cấm tạo CNAME tại gốc tên miền (Zone Apex <code>example.com</code>) vì nó sẽ xung đột với các bản ghi SOA và NS bắt buộc phải có tại apex.</li>
+<li><strong>Route 53 Alias Record:</strong> Là tính năng riêng của Route 53. Cho phép trỏ an toàn Zone Apex <code>example.com</code> trực tiếp sang CloudFront Distribution hoặc ALB mà vẫn tuân thủ RFC DNS (vì Route 53 tự phân giải nội bộ ra địa chỉ A/AAAA khi trả về cho client). Đồng thời, truy vấn Alias tới tài nguyên AWS được miễn phí DNS query.</li>
+</ul>
+</li>
+<li>CloudFront là dịch vụ global, control plane đặt ở <code>us-east-1</code>, và tài liệu CloudFront quy định chỉ đọc certificate ACM ở Region này để phân phối ra các edge. Certificate ACM là tài nguyên theo Region, nên certificate tạo ở <code>ap-southeast-1</code> không hiện trong danh sách chọn của CloudFront. (Certificate cho ALB/API Gateway regional thì ngược lại: phải ở <strong>cùng Region</strong> với tài nguyên đó.)</li>
+<li>Block Public Access chặn quyền <strong>công khai</strong> (ACL public, policy cho <code>Principal: &quot;*&quot;</code> không điều kiện). Policy OAC cấp <code>s3:GetObject</code> cho service principal <code>cloudfront.amazonaws.com</code> kèm <code>AWS:SourceArn</code> của một distribution cụ thể, nên S3 không coi là public. Người dùng Internet nói chuyện với CloudFront; CloudFront ký request SigV4 tới S3 bằng OAC. Truy cập thẳng S3 vẫn bị 403.</li>
+<li>(a) Bucket có versioning: <code>rm</code> chỉ thêm delete marker, các version cũ vẫn tính tiền. (b) Multipart upload dở dang: không hiện trong <code>ls</code> nhưng các part đã upload vẫn tính tiền. Cách xử lý: xóa theo <code>VersionId</code>, abort multipart, và đặt lifecycle <code>NoncurrentVersionExpiration</code> + <code>AbortIncompleteMultipartUpload</code>. (Ngoài ra còn bản sao do replication sang bucket khác nếu có.)</li>
+</ol>
+</details>
+
+
+<footer>Sinh tự động từ <code>notes/06-storage-and-content-delivery.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

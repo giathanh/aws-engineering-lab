@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab 08 — Container: ECR, ECS Fargate sau ALB, rolling deploy, rollback và graceful shutdown</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="../../notes/01-foundations.html">01. Lý thuyết</a><a href="../01-foundations/README.html">01. Lab</a><a href="../../notes/02-identity-and-access.html">02. Lý thuyết</a><a href="../02-identity-and-access/README.html">02. Lab</a><a href="../../notes/03-cost-management.html">03. Lý thuyết</a><a href="../03-cost-management/README.html">03. Lab</a><a href="../../notes/04-networking.html">04. Lý thuyết</a><a href="../04-networking/README.html">04. Lab</a><a href="../../notes/05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../05-compute-and-load-balancing/README.html">05. Lab</a><a href="../../notes/06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../06-storage-and-content-delivery/README.html">06. Lab</a><a href="../../notes/07-databases-and-cache.html">07. Lý thuyết</a><a href="../07-databases-and-cache/README.html">07. Lab</a><a href="../../notes/08-containers.html">08. Lý thuyết</a><a href="README.html" class="active">08. Lab</a><a href="../../notes/09-serverless.html">09. Lý thuyết</a><a href="../09-serverless/README.html">09. Lab</a><a href="../../notes/10-observability-and-application-security.html">10. Lý thuyết</a><a href="../10-observability-and-application-security/README.html">10. Lab</a><a href="../../notes/11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../11-messaging-and-workflows/README.html">11. Lab</a><a href="../../notes/12-iac-and-cicd.html">12. Lý thuyết</a><a href="../12-iac-and-cicd/README.html">12. Lab</a><a href="../../notes/13-reliability-and-performance.html">13. Lý thuyết</a><a href="../13-reliability-and-performance/README.html">13. Lab</a><a href="../../notes/14-architecture-and-governance.html">14. Lý thuyết</a><a href="../14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></li><li><a href="#quy-ước-placeholder">Quy ước placeholder</a></li><li><a href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></li><li><a href="#sơ-đồ-kiến-trúc-lab-08">Sơ đồ kiến trúc Lab 08</a></li><li><a href="#bước-0--biến-và-mạng-lab">Bước 0 — Biến và mạng lab</a></li><li><a href="#bước-1--ecr-repository">Bước 1 — ECR repository</a></li><li><a href="#bước-2--build-push-và-pin-theo-digest">Bước 2 — Build, push và pin theo digest</a></li><li><a href="#bước-3--execution-role-và-task-role">Bước 3 — Execution role và task role</a></li><li><a href="#bước-4--cluster-log-group-target-group-alb">Bước 4 — Cluster, log group, target group, ALB</a></li><li><a href="#bước-5--task-definition-pin-digest-và-service">Bước 5 — Task definition (pin digest) và service</a></li><li><a href="#bước-6--kiểm-chứng-phân-phối-lưu-lượng">Bước 6 — Kiểm chứng phân phối lưu lượng</a></li><li><a href="#bước-7--rolling-deploy-v1--v2-và-đo-lỗi-request">Bước 7 — Rolling deploy v1 → v2 và đo lỗi request</a></li><li><a href="#bước-8--negative-case-bản-v3-sai-cổng-và-tự-rollback">Bước 8 — Negative case: bản v3 sai cổng và tự rollback</a></li><li><a href="#bước-9--scale-in-và-graceful-shutdown">Bước 9 — Scale-in và graceful shutdown</a></li><li><a href="#bước-10--tham-khảo-lỗi-cannotpullcontainererror">Bước 10 — (Tham khảo) Lỗi CannotPullContainerError</a></li><li><a href="#bước-11--dọn-dẹp-theo-dependency">Bước 11 — Dọn dẹp theo dependency</a></li><li><a href="#checklist-hoàn-thành">Checklist hoàn thành</a></li><li><a href="#troubleshooting-nhanh">Troubleshooting nhanh</a></li><li><a href="#tiếp-theo">Tiếp theo</a></li></ol></aside>
+<main>
+<h1 id="lab-08--container-ecr-ecs-fargate-sau-alb-rolling-deploy-rollback-và-graceful-shutdown"><a class="anchor" href="#lab-08--container-ecr-ecs-fargate-sau-alb-rolling-deploy-rollback-và-graceful-shutdown">Lab 08 — Container: ECR, ECS Fargate sau ALB, rolling deploy, rollback và graceful shutdown</a></h1>
+<blockquote>
+<p><strong>Lý thuyết:</strong> <a href="../../notes/08-containers.html">notes/08-containers.md</a>. Đọc phần 1–5 trước khi thực hiện lab.
+<strong>Thời lượng:</strong> khoảng 120–150 phút (deploy và rollback mỗi lần mất 5–10 phút).
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Mọi output và số đo là <strong>minh họa</strong>, thông tin định danh dùng placeholder. Lab chưa được chạy thử trên account thật.</p>
+</blockquote>
+<hr>
+<h2 id="lab-này-làm-gì-và-không-làm-gì"><a class="anchor" href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>✅ Có</th>
+<th>❌ Không</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Mạng lab riêng: 2 public subnet (ALB, NAT), 2 private subnet (task), 1 NAT Gateway</td>
+<td>Dùng Default VPC hoặc gán public IP cho task</td>
+</tr>
+<tr>
+<td>ECR: tag immutable, scan on push, lifecycle; negative case push đè tag</td>
+<td>Dùng tag <code>latest</code></td>
+</tr>
+<tr>
+<td>Image <code>linux/arm64</code>, chạy user không phải root; task definition <strong>pin theo digest</strong></td>
+<td>Bake secret hoặc access key vào image</td>
+</tr>
+<tr>
+<td>Execution role và task role tách biệt</td>
+<td>Gắn quyền ứng dụng vào execution role</td>
+</tr>
+<tr>
+<td>ECS service Fargate, <code>desiredCount=2</code>, circuit breaker + rollback</td>
+<td>EKS, EC2 launch type</td>
+</tr>
+<tr>
+<td>Rolling deploy v1 → v2 trong khi đo lỗi request liên tục</td>
+<td>Load test lưu lượng lớn</td>
+</tr>
+<tr>
+<td>Negative case: bản v3 sai cổng → health check fail → tự rollback</td>
+<td></td>
+</tr>
+<tr>
+<td>Scale-in để quan sát draining → <code>SIGTERM</code> → thoát sạch</td>
+<td></td>
+</tr>
+<tr>
+<td>Cleanup theo dependency, kiểm tra inventory</td>
+<td>Để NAT/ALB chạy qua đêm</td>
+</tr>
+</tbody></table>
+</div>
+<hr>
+<h2 id="quy-ước-placeholder"><a class="anchor" href="#quy-ước-placeholder">Quy ước placeholder</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Biến</th>
+<th>Ý nghĩa</th>
+<th>Ví dụ minh họa</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>aws-lab</code></td>
+<td>Named profile CLI đã cấu hình ở Lab 01</td>
+<td><code>aws-lab</code></td>
+</tr>
+<tr>
+<td><code>AWS_REGION</code></td>
+<td>Region học tập</td>
+<td><code>ap-southeast-1</code></td>
+</tr>
+<tr>
+<td><code>ACCOUNT_ID</code></td>
+<td>Account ID (lấy tự động)</td>
+<td><code>111122223333</code></td>
+</tr>
+<tr>
+<td><code>VPC_ID</code>, <code>PUB_SUB_*</code>, <code>PRI_SUB_*</code>, <code>NAT_ID</code></td>
+<td>Mạng lab</td>
+<td><code>vpc-0123456789abcdef0</code></td>
+</tr>
+<tr>
+<td><code>ECR_URI</code></td>
+<td>URI repository</td>
+<td><code>111122223333.dkr.ecr.ap-southeast-1.amazonaws.com/lab08-order-api</code></td>
+</tr>
+<tr>
+<td><code>DIGEST_V1</code>, <code>DIGEST_V2</code></td>
+<td>Digest image</td>
+<td><code>sha256:7b5d...</code></td>
+</tr>
+<tr>
+<td><code>TD_V1</code>, <code>TD_V2</code>, <code>TD_V3</code></td>
+<td>ARN task definition theo revision</td>
+<td><code>arn:aws:ecs:...:task-definition/lab08-order-api:1</code></td>
+</tr>
+<tr>
+<td><code>TG_ARN</code>, <code>ALB_ARN</code>, <code>ALB_DNS</code></td>
+<td>Target group, ALB</td>
+<td><code>lab08-alb-123.ap-southeast-1.elb.amazonaws.com</code></td>
+</tr>
+</tbody></table>
+</div>
+<p>Tên cố định: <code>lab08-*</code> cho mọi tài nguyên, <code>Lab08TaskExecutionRole</code>/<code>Lab08TaskRole</code> cho IAM. Mọi tài nguyên hỗ trợ tag đều mang <code>Project=aws-lab-08</code>.</p>
+<hr>
+<h2 id="điều-kiện-đầu-vào"><a class="anchor" href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></h2>
+<ul>
+<li><input type="checkbox"> Đã hoàn thành <a href="../05-compute-and-load-balancing/README.html">Lab 05</a> (ALB, target group, NAT). Lab này tự tạo mạng riêng theo cùng mô hình.</li>
+<li><input type="checkbox"> Docker Desktop/Engine đang chạy (<code>docker version</code>), hỗ trợ <code>--platform linux/arm64</code> (Apple Silicon build native; máy Intel cần buildx/QEMU, Docker Desktop có sẵn). Cài <code>jq</code>, <code>curl</code>.</li>
+<li><input type="checkbox"> Quyền cần thiết (không cần <code>AdministratorAccess</code>):<ul>
+<li><strong>ECR:</strong> <code>ecr:CreateRepository</code>, <code>PutLifecyclePolicy</code>, <code>DescribeRepositories</code>, <code>DescribeImages</code>, <code>DescribeImageScanFindings</code>, <code>GetAuthorizationToken</code>, <code>InitiateLayerUpload</code>, <code>UploadLayerPart</code>, <code>CompleteLayerUpload</code>, <code>BatchCheckLayerAvailability</code>, <code>PutImage</code>, <code>DeleteRepository</code>, <code>TagResource</code>.</li>
+<li><strong>ECS:</strong> <code>ecs:CreateCluster</code>, <code>RegisterTaskDefinition</code>, <code>DeregisterTaskDefinition</code>, <code>DeleteTaskDefinitions</code>, <code>ListTaskDefinitions</code>, <code>CreateService</code>, <code>UpdateService</code>, <code>DeleteService</code>, <code>DescribeServices</code>, <code>ListTasks</code>, <code>DescribeTasks</code>, <code>DeleteCluster</code>, <code>TagResource</code>.</li>
+<li><strong>IAM:</strong> <code>iam:CreateRole</code>, <code>AttachRolePolicy</code>, <code>DetachRolePolicy</code>, <code>DeleteRole</code>, <code>GetRole</code>, <code>TagRole</code>, <strong><code>iam:PassRole</code> trên <code>Lab08TaskExecutionRole</code> và <code>Lab08TaskRole</code></strong> (bắt buộc khi đăng ký task definition/tạo service), <code>iam:CreateServiceLinkedRole</code> nếu account chưa từng dùng ECS/ELB.</li>
+<li><strong>EC2/VPC, ELB:</strong> như <a href="../05-compute-and-load-balancing/README.html">Lab 05</a> (mạng, NAT, EIP, SG, ALB, target group).</li>
+<li><strong>CloudWatch Logs:</strong> <code>logs:CreateLogGroup</code>, <code>PutRetentionPolicy</code>, <code>FilterLogEvents</code>, <code>DeleteLogGroup</code>.</li>
+</ul>
+</li>
+<li><input type="checkbox"> Không sử dụng tài khoản production.</li>
+</ul>
+<h3 id="chi-phí-ước-tính-giá-minh-họa-tra-lại-fargate-pricinghttpsawsamazoncomfargatepricing-cho-region-của-bạn"><a class="anchor" href="#chi-phí-ước-tính-giá-minh-họa-tra-lại-fargate-pricinghttpsawsamazoncomfargatepricing-cho-region-của-bạn">Chi phí ước tính (giá minh họa, tra lại <a href="https://aws.amazon.com/fargate/pricing/" target="_blank" rel="noopener">Fargate pricing</a> cho Region của bạn)</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tài nguyên</th>
+<th>Số lượng</th>
+<th>Đơn giá minh họa</th>
+<th>Mỗi giờ</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>NAT Gateway (giờ)</td>
+<td>1</td>
+<td>~$0.059/giờ</td>
+<td>~$0.059</td>
+</tr>
+<tr>
+<td>Public IPv4 (EIP của NAT + 2 IP của ALB)</td>
+<td>3</td>
+<td>~$0.005/giờ/IP</td>
+<td>~$0.015</td>
+</tr>
+<tr>
+<td>ALB (giờ + ~1 LCU)</td>
+<td>1</td>
+<td>~$0.0252 + ~$0.008</td>
+<td>~$0.033</td>
+</tr>
+<tr>
+<td>Fargate ARM 0,25 vCPU / 0,5 GB</td>
+<td>2 (tối đa 4 lúc deploy)</td>
+<td>~$0.01/task-giờ</td>
+<td>~$0.02–0.04</td>
+</tr>
+<tr>
+<td>NAT data processing (pull image ~50 MB × vài lần)</td>
+<td>&lt; 1 GB</td>
+<td>~$0.059/GB</td>
+<td>&lt; $0.05 tổng</td>
+</tr>
+<tr>
+<td>ECR storage + CloudWatch Logs</td>
+<td>&lt; 200 MB</td>
+<td>~$0.10/GB-tháng</td>
+<td>&lt; $0.01</td>
+</tr>
+<tr>
+<td><strong>Tổng</strong></td>
+<td></td>
+<td></td>
+<td><strong>~$0.13–0.15/giờ</strong></td>
+</tr>
+</tbody></table>
+</div>
+<ul>
+<li>Làm lab 2,5 giờ: khoảng <strong>$0.35–0.40</strong>.</li>
+<li><strong>Quên xóa 1 tháng: khoảng $95–110</strong>, trong đó NAT + ALB chiếm phần lớn.</li>
+<li><strong>Điều kiện dừng:</strong> nếu sau 3 giờ chưa xong, chạy cleanup (Bước 11) rồi làm lại sau.</li>
+</ul>
+<hr>
+<h2 id="sơ-đồ-kiến-trúc-lab-08"><a class="anchor" href="#sơ-đồ-kiến-trúc-lab-08">Sơ đồ kiến trúc Lab 08</a></h2>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Laptop ── docker push (linux/arm64) ──▶ ECR lab08-order-api (IMMUTABLE, scan on push)
+                                              ▲ pull theo digest (qua NAT)
+┌──────────────────── VPC lab08 10.80.0.0/16 ─┼──────────────────────────────────┐
+│ Public A 10.80.1.0/24      Public B .2.0/24 │                                  │
+│ ┌──────────────────────────────────────┐    │   ┌─────────┐                    │
+│ │ ALB lab08-alb :80 (lab08-alb-sg)     │    │   │ NAT GW  │◀── 0.0.0.0/0 ──┐   │
+│ └──────────────┬───────────────────────┘    │   └─────────┘                │   │
+│                │ target type ip, :8080      │                              │   │
+│ Private A 10.80.10.0/24     Private B 10.80.20.0/24                        │   │
+│ ┌──────────────▼───────────┐  ┌──────────────────────────┐                 │   │
+│ │ Task (awsvpc ENI)        │  │ Task (awsvpc ENI)        │─────────────────┘   │
+│ │ lab08-task-sg: 8080 từ   │  │ không public IP          │                     │
+│ │ lab08-alb-sg             │  │                          │──▶ CloudWatch Logs  │
+│ └──────────────────────────┘  └──────────────────────────┘                     │
+└────────────────────────────────────────────────────────────────────────────────┘
+ECS service lab08-order-api: desired 2, min 100%, max 200%, circuit breaker + rollback
+Execution role: pull ECR + ghi log │ Task role: rỗng (app không gọi AWS)</code></pre></div>
+<p>Task trong private subnet ra ECR, S3 (layer) và CloudWatch Logs qua NAT. Phương án không cần NAT là VPC endpoint cho <code>ecr.api</code>, <code>ecr.dkr</code>, <code>logs</code> (interface) và <code>s3</code> (gateway); với 2 AZ, 3 interface endpoint tốn khoảng $0.08/giờ, đắt hơn một NAT trong lab nhỏ này (xem lý thuyết Phần 7).</p>
+<hr>
+<h2 id="bước-0--biến-và-mạng-lab"><a class="anchor" href="#bước-0--biến-và-mạng-lab">Bước 0 — Biến và mạng lab</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export AWS_PROFILE=&quot;aws-lab&quot;
+export AWS_REGION=&quot;ap-southeast-1&quot;
+export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+export LAB_DIR=$(mktemp -d) &amp;&amp; cd &quot;${LAB_DIR}&quot;
+TAG=&quot;{Key=Project,Value=aws-lab-08}&quot;
+ec2() { aws ec2 &quot;$@&quot;; }
+
+read -r AZ_A AZ_B &lt; &lt;(ec2 describe-availability-zones \
+  --filters Name=zone-type,Values=availability-zone Name=state,Values=available \
+  --query 'AvailabilityZones[0:2].ZoneName' --output text)
+
+VPC_ID=$(ec2 create-vpc --cidr-block 10.80.0.0/16 \
+  --tag-specifications &quot;ResourceType=vpc,Tags=[{Key=Name,Value=lab08-vpc},${TAG}]&quot; --query Vpc.VpcId --output text)
+ec2 modify-vpc-attribute --vpc-id &quot;${VPC_ID}&quot; --enable-dns-hostnames '{&quot;Value&quot;: true}'
+IGW_ID=$(ec2 create-internet-gateway \
+  --tag-specifications &quot;ResourceType=internet-gateway,Tags=[{Key=Name,Value=lab08-igw},${TAG}]&quot; \
+  --query InternetGateway.InternetGatewayId --output text)
+ec2 attach-internet-gateway --vpc-id &quot;${VPC_ID}&quot; --internet-gateway-id &quot;${IGW_ID}&quot;
+
+mksub() { ec2 create-subnet --vpc-id &quot;${VPC_ID}&quot; --cidr-block &quot;$1&quot; --availability-zone &quot;$2&quot; \
+  --tag-specifications &quot;ResourceType=subnet,Tags=[{Key=Name,Value=$3},${TAG}]&quot; --query Subnet.SubnetId --output text; }
+PUB_SUB_A=$(mksub 10.80.1.0/24  &quot;${AZ_A}&quot; lab08-public-a)
+PUB_SUB_B=$(mksub 10.80.2.0/24  &quot;${AZ_B}&quot; lab08-public-b)
+PRI_SUB_A=$(mksub 10.80.10.0/24 &quot;${AZ_A}&quot; lab08-private-a)
+PRI_SUB_B=$(mksub 10.80.20.0/24 &quot;${AZ_B}&quot; lab08-private-b)
+
+mkrt() { ec2 create-route-table --vpc-id &quot;${VPC_ID}&quot; \
+  --tag-specifications &quot;ResourceType=route-table,Tags=[{Key=Name,Value=$1},${TAG}]&quot; --query RouteTable.RouteTableId --output text; }
+PUB_RT_ID=$(mkrt lab08-public-rt)
+ec2 create-route --route-table-id &quot;${PUB_RT_ID}&quot; --destination-cidr-block 0.0.0.0/0 --gateway-id &quot;${IGW_ID}&quot; &gt;/dev/null
+ec2 associate-route-table --subnet-id &quot;${PUB_SUB_A}&quot; --route-table-id &quot;${PUB_RT_ID}&quot; &gt;/dev/null
+ec2 associate-route-table --subnet-id &quot;${PUB_SUB_B}&quot; --route-table-id &quot;${PUB_RT_ID}&quot; &gt;/dev/null
+
+# NAT Gateway: bắt đầu tính phí từ đây
+EIP_ALLOC_ID=$(ec2 allocate-address --domain vpc \
+  --tag-specifications &quot;ResourceType=elastic-ip,Tags=[{Key=Name,Value=lab08-nat-eip},${TAG}]&quot; --query AllocationId --output text)
+NAT_ID=$(ec2 create-nat-gateway --subnet-id &quot;${PUB_SUB_A}&quot; --allocation-id &quot;${EIP_ALLOC_ID}&quot; \
+  --tag-specifications &quot;ResourceType=natgateway,Tags=[{Key=Name,Value=lab08-nat},${TAG}]&quot; --query NatGateway.NatGatewayId --output text)
+ec2 wait nat-gateway-available --nat-gateway-ids &quot;${NAT_ID}&quot;
+PRI_RT_ID=$(mkrt lab08-private-rt)
+ec2 create-route --route-table-id &quot;${PRI_RT_ID}&quot; --destination-cidr-block 0.0.0.0/0 --nat-gateway-id &quot;${NAT_ID}&quot; &gt;/dev/null
+ec2 associate-route-table --subnet-id &quot;${PRI_SUB_A}&quot; --route-table-id &quot;${PRI_RT_ID}&quot; &gt;/dev/null
+ec2 associate-route-table --subnet-id &quot;${PRI_SUB_B}&quot; --route-table-id &quot;${PRI_RT_ID}&quot; &gt;/dev/null
+
+mksg() { ec2 create-security-group --vpc-id &quot;${VPC_ID}&quot; --group-name &quot;$1&quot; --description &quot;$1&quot; \
+  --tag-specifications &quot;ResourceType=security-group,Tags=[{Key=Name,Value=$1},${TAG}]&quot; --query GroupId --output text; }
+SG_ALB_ID=$(mksg lab08-alb-sg)
+SG_TASK_ID=$(mksg lab08-task-sg)
+ec2 authorize-security-group-ingress --group-id &quot;${SG_ALB_ID}&quot; --protocol tcp --port 80 --cidr 0.0.0.0/0 &gt;/dev/null
+ec2 authorize-security-group-ingress --group-id &quot;${SG_TASK_ID}&quot; --protocol tcp --port 8080 --source-group &quot;${SG_ALB_ID}&quot; &gt;/dev/null
+echo &quot;VPC=${VPC_ID} NAT=${NAT_ID} SG_ALB=${SG_ALB_ID} SG_TASK=${SG_TASK_ID}&quot;</code></pre></div>
+<p><em>Kỳ vọng:</em> in đủ ID, NAT <code>available</code>. Giải thích từng lệnh mạng xem <a href="../04-networking/README.html">Lab 04</a> và <a href="../05-compute-and-load-balancing/README.html">Lab 05</a>.</p>
+<hr>
+<h2 id="bước-1--ecr-repository"><a class="anchor" href="#bước-1--ecr-repository">Bước 1 — ECR repository</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export ECR_URI=$(aws ecr create-repository --repository-name lab08-order-api \
+  --image-tag-mutability IMMUTABLE \
+  --image-scanning-configuration scanOnPush=true \
+  --tags Key=Project,Value=aws-lab-08 \
+  --query repository.repositoryUri --output text)
+echo &quot;ECR_URI=${ECR_URI}&quot;
+
+cat &gt; ecr-lifecycle.json &lt;&lt; 'EOF'
+{
+  &quot;rules&quot;: [
+    { &quot;rulePriority&quot;: 1, &quot;description&quot;: &quot;Xóa image không tag sau 1 ngày&quot;,
+      &quot;selection&quot;: { &quot;tagStatus&quot;: &quot;untagged&quot;, &quot;countType&quot;: &quot;sinceImagePushed&quot;, &quot;countUnit&quot;: &quot;days&quot;, &quot;countNumber&quot;: 1 },
+      &quot;action&quot;: { &quot;type&quot;: &quot;expire&quot; } },
+    { &quot;rulePriority&quot;: 2, &quot;description&quot;: &quot;Giữ 10 image mới nhất&quot;,
+      &quot;selection&quot;: { &quot;tagStatus&quot;: &quot;any&quot;, &quot;countType&quot;: &quot;imageCountMoreThan&quot;, &quot;countNumber&quot;: 10 },
+      &quot;action&quot;: { &quot;type&quot;: &quot;expire&quot; } }
+  ]
+}
+EOF
+aws ecr put-lifecycle-policy --repository-name lab08-order-api \
+  --lifecycle-policy-text file://ecr-lifecycle.json &gt;/dev/null</code></pre></div>
+<p>Production thường giữ lại image đang chạy và vài bản trước để rollback; lifecycle &quot;giữ 10 bản&quot; không biết image nào đang được service dùng, nên đặt số đủ lớn.</p>
+<hr>
+<h2 id="bước-2--build-push-và-pin-theo-digest"><a class="anchor" href="#bước-2--build-push-và-pin-theo-digest">Bước 2 — Build, push và pin theo digest</a></h2>
+<h3 id="1-ứng-dụng-có-xử-lý-sigterm"><a class="anchor" href="#1-ứng-dụng-có-xử-lý-sigterm">1. Ứng dụng có xử lý <code>SIGTERM</code></a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>mkdir -p app &amp;&amp; cd app
+cat &gt; server.js &lt;&lt; 'EOF'
+const http = require('http');
+const os = require('os');
+
+const PORT = Number(process.env.PORT || 8080);
+const VERSION = process.env.APP_VERSION || 'dev';
+const log = (msg, extra = {}) =&gt; console.log(JSON.stringify({ msg, version: VERSION, task: os.hostname(), ...extra }));
+
+const server = http.createServer((req, res) =&gt; {
+  if (req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end('{&quot;status&quot;:&quot;UP&quot;}');
+  }
+  if (req.url === '/api/orders') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ version: VERSION, task: os.hostname() }));
+  }
+  res.writeHead(404);
+  res.end('Not Found');
+});
+
+process.on('SIGTERM', () =&gt; {
+  log('SIGTERM nhận được, ngừng nhận kết nối mới');
+  server.close(() =&gt; { log('đã đóng hết kết nối, thoát 0'); process.exit(0); });
+  server.closeIdleConnections();           // keep-alive từ ALB sẽ giữ server.close() mãi nếu không đóng
+  setTimeout(() =&gt; { log('quá 20s, thoát 1'); process.exit(1); }, 20000).unref();
+});
+
+server.listen(PORT, '0.0.0.0', () =&gt; log('đang lắng nghe', { port: PORT }));
+EOF
+
+cat &gt; Dockerfile &lt;&lt; 'EOF'
+FROM node:22-alpine
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION} NODE_ENV=production
+WORKDIR /app
+COPY server.js .
+USER node
+EXPOSE 8080
+# Exec form: node là PID 1 và nhận SIGTERM trực tiếp. Shell form (&quot;CMD node server.js&quot;) sẽ để /bin/sh làm PID 1 và nuốt tín hiệu.
+CMD [&quot;node&quot;, &quot;server.js&quot;]
+EOF</code></pre></div>
+<h3 id="2-build-linuxarm64-và-push-hai-phiên-bản"><a class="anchor" href="#2-build-linuxarm64-và-push-hai-phiên-bản">2. Build <code>linux/arm64</code> và push hai phiên bản</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ecr get-login-password | docker login --username AWS --password-stdin &quot;${ECR_URI%%/*}&quot;
+
+build_push() {  # $1 = tag, $2 = APP_VERSION
+  docker build --platform linux/arm64 --provenance=false \
+    --build-arg APP_VERSION=&quot;$2&quot; -t &quot;${ECR_URI}:$1&quot; . &amp;&amp;
+  docker push &quot;${ECR_URI}:$1&quot; &gt;/dev/null &amp;&amp;
+  aws ecr describe-images --repository-name lab08-order-api --image-ids imageTag=&quot;$1&quot; \
+    --query 'imageDetails[0].imageDigest' --output text
+}
+DIGEST_V1=$(build_push v1 1.0.0)
+DIGEST_V2=$(build_push v2 2.0.0)
+cd ..
+echo &quot;V1=${DIGEST_V1}&quot;; echo &quot;V2=${DIGEST_V2}&quot;</code></pre></div>
+<p><em>Kỳ vọng:</em> hai digest <code>sha256:...</code> khác nhau. Task definition sẽ dùng <code>${ECR_URI}@${DIGEST}</code> thay cho tag: dù ai đó xóa và push lại tag, task vẫn chạy đúng byte đã kiểm tra.</p>
+<h3 id="3-negative-case-push-đè-tag-immutable"><a class="anchor" href="#3-negative-case-push-đè-tag-immutable">3. Negative case: push đè tag immutable</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cd app &amp;&amp; docker build --platform linux/arm64 --provenance=false --build-arg APP_VERSION=hack \
+  -t &quot;${ECR_URI}:v1&quot; . -q &amp;&amp; docker push &quot;${ECR_URI}:v1&quot;; cd ..</code></pre></div>
+<p><em>Kỳ vọng:</em> push thất bại với thông điệp dạng <code>tag invalid: The image tag &#39;v1&#39; already exists in the &#39;lab08-order-api&#39; repository and cannot be overwritten because the repository is immutable.</code></p>
+<h3 id="4-kết-quả-scan"><a class="anchor" href="#4-kết-quả-scan">4. Kết quả scan</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ecr wait image-scan-complete --repository-name lab08-order-api --image-id imageTag=v2
+aws ecr describe-image-scan-findings --repository-name lab08-order-api --image-id imageTag=v2 \
+  --query 'imageScanFindings.findingSeverityCounts'</code></pre></div>
+<p><em>Kỳ vọng:</em> một object đếm theo mức độ (có thể rỗng <code>{}</code> hoặc vài <code>LOW</code>/<code>MEDIUM</code> từ base image). Basic scanning chỉ quét package hệ điều hành; nếu account đã bật Amazon Inspector enhanced scanning, lệnh này trả kết quả khác và có thể tính phí Inspector.</p>
+<hr>
+<h2 id="bước-3--execution-role-và-task-role"><a class="anchor" href="#bước-3--execution-role-và-task-role">Bước 3 — Execution role và task role</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat &gt; ecs-trust.json &lt;&lt; EOF
+{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Principal&quot;: { &quot;Service&quot;: &quot;ecs-tasks.amazonaws.com&quot; },
+    &quot;Action&quot;: &quot;sts:AssumeRole&quot;,
+    &quot;Condition&quot;: { &quot;StringEquals&quot;: { &quot;aws:SourceAccount&quot;: &quot;${ACCOUNT_ID}&quot; } }
+  }]
+}
+EOF
+
+aws iam create-role --role-name Lab08TaskExecutionRole --assume-role-policy-document file://ecs-trust.json \
+  --tags Key=Project,Value=aws-lab-08 &gt;/dev/null
+aws iam attach-role-policy --role-name Lab08TaskExecutionRole \
+  --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+aws iam create-role --role-name Lab08TaskRole --assume-role-policy-document file://ecs-trust.json \
+  --tags Key=Project,Value=aws-lab-08 &gt;/dev/null
+
+EXEC_ROLE_ARN=$(aws iam get-role --role-name Lab08TaskExecutionRole --query Role.Arn --output text)
+TASK_ROLE_ARN=$(aws iam get-role --role-name Lab08TaskRole --query Role.Arn --output text)</code></pre></div>
+<ul>
+<li><strong>Execution role</strong> được ECS agent dùng <strong>trước và quanh</strong> container: pull image từ ECR, ghi log vào CloudWatch, lấy secret để inject. Managed policy trên chỉ có quyền ECR pull và <code>logs:CreateLogStream</code>/<code>PutLogEvents</code>.</li>
+<li><strong>Task role</strong> để trống vì app không gọi AWS. Khi app cần S3/DynamoDB, thêm quyền <strong>vào task role</strong>, không vào execution role.</li>
+</ul>
+<hr>
+<h2 id="bước-4--cluster-log-group-target-group-alb"><a class="anchor" href="#bước-4--cluster-log-group-target-group-alb">Bước 4 — Cluster, log group, target group, ALB</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ecs create-cluster --cluster-name lab08-cluster --tags key=Project,value=aws-lab-08 &gt;/dev/null
+aws logs create-log-group --log-group-name /ecs/lab08-order-api --tags Project=aws-lab-08
+aws logs put-retention-policy --log-group-name /ecs/lab08-order-api --retention-in-days 1
+
+TG_ARN=$(aws elbv2 create-target-group --name lab08-tg \
+  --protocol HTTP --port 8080 --vpc-id &quot;${VPC_ID}&quot; --target-type ip \
+  --health-check-path /health --health-check-interval-seconds 10 \
+  --health-check-timeout-seconds 5 --healthy-threshold-count 2 --unhealthy-threshold-count 2 \
+  --tags Key=Project,Value=aws-lab-08 \
+  --query 'TargetGroups[0].TargetGroupArn' --output text)
+aws elbv2 modify-target-group-attributes --target-group-arn &quot;${TG_ARN}&quot; \
+  --attributes Key=deregistration_delay.timeout_seconds,Value=30 &gt;/dev/null
+
+ALB_ARN=$(aws elbv2 create-load-balancer --name lab08-alb --type application --scheme internet-facing \
+  --subnets &quot;${PUB_SUB_A}&quot; &quot;${PUB_SUB_B}&quot; --security-groups &quot;${SG_ALB_ID}&quot; \
+  --tags Key=Project,Value=aws-lab-08 --query 'LoadBalancers[0].LoadBalancerArn' --output text)
+aws elbv2 wait load-balancer-available --load-balancer-arns &quot;${ALB_ARN}&quot;
+aws elbv2 create-listener --load-balancer-arn &quot;${ALB_ARN}&quot; --protocol HTTP --port 80 \
+  --default-actions Type=forward,TargetGroupArn=&quot;${TG_ARN}&quot; &gt;/dev/null
+ALB_DNS=$(aws elbv2 describe-load-balancers --load-balancer-arns &quot;${ALB_ARN}&quot; \
+  --query 'LoadBalancers[0].DNSName' --output text)
+echo &quot;ALB_DNS=${ALB_DNS}&quot;</code></pre></div>
+<p>Target type phải là <code>ip</code>: task Fargate có ENI riêng và không gắn với EC2 instance nào. Deregistration delay 30 giây là đủ cho API trả lời trong vài trăm ms; production nên đặt theo request dài nhất.</p>
+<hr>
+<h2 id="bước-5--task-definition-pin-digest-và-service"><a class="anchor" href="#bước-5--task-definition-pin-digest-và-service">Bước 5 — Task definition (pin digest) và service</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>taskdef() {  # $1 = digest, $2 = cổng app thực sự lắng nghe (để tạo bản lỗi ở Bước 8)
+  cat &gt; td.json &lt;&lt; EOF
+{
+  &quot;family&quot;: &quot;lab08-order-api&quot;,
+  &quot;networkMode&quot;: &quot;awsvpc&quot;,
+  &quot;requiresCompatibilities&quot;: [&quot;FARGATE&quot;],
+  &quot;runtimePlatform&quot;: { &quot;cpuArchitecture&quot;: &quot;ARM64&quot;, &quot;operatingSystemFamily&quot;: &quot;LINUX&quot; },
+  &quot;cpu&quot;: &quot;256&quot;,
+  &quot;memory&quot;: &quot;512&quot;,
+  &quot;executionRoleArn&quot;: &quot;${EXEC_ROLE_ARN}&quot;,
+  &quot;taskRoleArn&quot;: &quot;${TASK_ROLE_ARN}&quot;,
+  &quot;containerDefinitions&quot;: [{
+    &quot;name&quot;: &quot;order-api&quot;,
+    &quot;image&quot;: &quot;${ECR_URI}@$1&quot;,
+    &quot;essential&quot;: true,
+    &quot;portMappings&quot;: [{ &quot;containerPort&quot;: 8080, &quot;protocol&quot;: &quot;tcp&quot; }],
+    &quot;environment&quot;: [{ &quot;name&quot;: &quot;PORT&quot;, &quot;value&quot;: &quot;$2&quot; }],
+    &quot;stopTimeout&quot;: 30,
+    &quot;readonlyRootFilesystem&quot;: true,
+    &quot;logConfiguration&quot;: {
+      &quot;logDriver&quot;: &quot;awslogs&quot;,
+      &quot;options&quot;: {
+        &quot;awslogs-group&quot;: &quot;/ecs/lab08-order-api&quot;,
+        &quot;awslogs-region&quot;: &quot;${AWS_REGION}&quot;,
+        &quot;awslogs-stream-prefix&quot;: &quot;order-api&quot;
+      }
+    }
+  }]
+}
+EOF
+  aws ecs register-task-definition --cli-input-json file://td.json \
+    --tags key=Project,value=aws-lab-08 --query taskDefinition.taskDefinitionArn --output text
+}
+TD_V1=$(taskdef &quot;${DIGEST_V1}&quot; 8080)
+echo &quot;TD_V1=${TD_V1}&quot;
+
+aws ecs create-service --cluster lab08-cluster --service-name lab08-order-api \
+  --task-definition &quot;${TD_V1}&quot; --desired-count 2 --launch-type FARGATE \
+  --network-configuration &quot;awsvpcConfiguration={subnets=[${PRI_SUB_A},${PRI_SUB_B}],securityGroups=[${SG_TASK_ID}],assignPublicIp=DISABLED}&quot; \
+  --load-balancers &quot;targetGroupArn=${TG_ARN},containerName=order-api,containerPort=8080&quot; \
+  --health-check-grace-period-seconds 30 \
+  --deployment-configuration &quot;deploymentCircuitBreaker={enable=true,rollback=true},maximumPercent=200,minimumHealthyPercent=100&quot; \
+  --tags key=Project,value=aws-lab-08 --propagate-tags SERVICE &gt;/dev/null
+
+aws ecs wait services-stable --cluster lab08-cluster --services lab08-order-api   # 2–5 phút</code></pre></div>
+<ul>
+<li><code>runtimePlatform</code> phải khớp kiến trúc image; image arm64 chạy trên Fargate x86_64 (mặc định) sẽ dừng với <code>exec format error</code>.</li>
+<li><code>deploymentCircuitBreaker</code> với <code>rollback=true</code>: nếu deployment mới không đạt trạng thái ổn định, ECS đánh dấu thất bại và tự quay về revision cũ. Không bật thì ECS cứ thử khởi động task lỗi mãi.</li>
+<li><code>stopTimeout: 30</code> là khoảng ECS chờ giữa <code>SIGTERM</code> và <code>SIGKILL</code>.</li>
+</ul>
+<hr>
+<h2 id="bước-6--kiểm-chứng-phân-phối-lưu-lượng"><a class="anchor" href="#bước-6--kiểm-chứng-phân-phối-lưu-lượng">Bước 6 — Kiểm chứng phân phối lưu lượng</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws elbv2 describe-target-health --target-group-arn &quot;${TG_ARN}&quot; \
+  --query 'TargetHealthDescriptions[].[Target.Id,Target.AvailabilityZone,TargetHealth.State]' --output table
+for i in $(seq 1 6); do curl -s &quot;http://${ALB_DNS}/api/orders&quot;; echo; done</code></pre></div>
+<p><em>Kỳ vọng (minh họa):</em> hai IP private <code>10.80.10.x</code> và <code>10.80.20.x</code> ở trạng thái <code>healthy</code>; response có <code>&quot;version&quot;:&quot;1.0.0&quot;</code> và hai giá trị <code>task</code> khác nhau. Nếu <code>curl</code> không phân giải được tên, chờ 1–2 phút cho DNS của ALB.</p>
+<hr>
+<h2 id="bước-7--rolling-deploy-v1--v2-và-đo-lỗi-request"><a class="anchor" href="#bước-7--rolling-deploy-v1--v2-và-đo-lỗi-request">Bước 7 — Rolling deploy v1 → v2 và đo lỗi request</a></h2>
+<p>Chạy một vòng <code>curl</code> liên tục ở nền để làm bằng chứng, rồi deploy:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>probe() {  # $1 = số giây; in mã lỗi khác 200 và tổng kết
+  local ok=0 bad=0 end=$(( $(date +%s) + $1 )) c
+  while [ &quot;$(date +%s)&quot; -lt &quot;${end}&quot; ]; do
+    c=$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 &quot;http://${ALB_DNS}/api/orders&quot;)
+    if [ &quot;$c&quot; = 200 ]; then ok=$((ok+1)); else bad=$((bad+1)); echo &quot;$(date +%T) HTTP $c&quot;; fi
+    sleep 0.2
+  done
+  echo &quot;TỔNG: OK=${ok} LỖI=${bad}&quot;
+}
+probe 480 &gt; probe-v2.log 2&gt;&amp;1 &amp;
+PROBE_PID=$!
+
+TD_V2=$(taskdef &quot;${DIGEST_V2}&quot; 8080)
+aws ecs update-service --cluster lab08-cluster --service lab08-order-api --task-definition &quot;${TD_V2}&quot; &gt;/dev/null
+aws ecs wait services-stable --cluster lab08-cluster --services lab08-order-api
+wait &quot;${PROBE_PID}&quot;; tail -5 probe-v2.log
+curl -s &quot;http://${ALB_DNS}/api/orders&quot;; echo</code></pre></div>
+<p><em>Kỳ vọng (minh họa):</em> <code>TỔNG: OK=1900 LỖI=0</code> (số OK tùy mạng), response cuối là <code>&quot;version&quot;:&quot;2.0.0&quot;</code>. Trong lúc deploy có lúc 4 task chạy song song (max 200%).</p>
+<p>Xem thứ tự sự kiện và log <code>SIGTERM</code> của task v1:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ecs describe-services --cluster lab08-cluster --services lab08-order-api \
+  --query 'services[0].events[0:8].[createdAt,message]' --output text
+aws logs filter-log-events --log-group-name /ecs/lab08-order-api --filter-pattern '&quot;1.0.0&quot;' \
+  --query 'events[].message' --output text | grep -E 'SIGTERM|thoát'</code></pre></div>
+<p><em>Kỳ vọng:</em> với mỗi task v1, events có <code>has begun draining connections on 1 tasks</code> và <code>deregistered 1 targets</code> trước <code>has stopped 1 running tasks</code>; log v1 có <code>SIGTERM nhận được...</code> rồi <code>đã đóng hết kết nối, thoát 0</code>. ECS chờ target draining xong (30 giây) <strong>rồi mới</strong> gửi <code>SIGTERM</code>.</p>
+<p>Nếu <code>LỖI</code> &gt; 0: ghi lại thời điểm và mã (<code>502</code> thường do task bị kill khi còn kết nối; <code>503</code> do target group trống). So sánh với thứ tự event để tìm nguyên nhân, đây chính là lý do &quot;rolling deploy&quot; chưa đủ nếu thiếu draining và xử lý <code>SIGTERM</code>.</p>
+<hr>
+<h2 id="bước-8--negative-case-bản-v3-sai-cổng-và-tự-rollback"><a class="anchor" href="#bước-8--negative-case-bản-v3-sai-cổng-và-tự-rollback">Bước 8 — Negative case: bản v3 sai cổng và tự rollback</a></h2>
+<p>Bản v3 dùng image v2 nhưng app lắng nghe <code>9999</code>, trong khi target group health check vào <code>8080</code>:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>probe 900 &gt; probe-v3.log 2&gt;&amp;1 &amp;
+PROBE_PID=$!
+TD_V3=$(taskdef &quot;${DIGEST_V2}&quot; 9999)
+aws ecs update-service --cluster lab08-cluster --service lab08-order-api --task-definition &quot;${TD_V3}&quot; &gt;/dev/null
+
+# Theo dõi deployment tới khi rollback xong (thường 5–15 phút)
+for i in $(seq 1 60); do
+  aws ecs describe-services --cluster lab08-cluster --services lab08-order-api \
+    --query 'services[0].deployments[].[status,rolloutState,taskDefinition,failedTasks]' --output text
+  echo &quot;---&quot;
+  read -r P_TD P_STATE &lt; &lt;(aws ecs describe-services --cluster lab08-cluster --services lab08-order-api \
+    --query &quot;services[0].deployments[?status=='PRIMARY'] | [0].[taskDefinition,rolloutState]&quot; --output text)
+  if [ &quot;${P_TD}&quot; = &quot;${TD_V2}&quot; ] &amp;&amp; [ &quot;${P_STATE}&quot; = COMPLETED ]; then echo &quot;Đã rollback về ${TD_V2##*/}&quot;; break; fi
+  sleep 20
+done
+kill &quot;${PROBE_PID}&quot; 2&gt;/dev/null; tail -3 probe-v3.log</code></pre></div>
+<p><em>Kỳ vọng (minh họa):</em></p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>PRIMARY  IN_PROGRESS  .../lab08-order-api:3  1
+ACTIVE   COMPLETED    .../lab08-order-api:2  0
+---
+...
+PRIMARY  IN_PROGRESS  .../lab08-order-api:2  0
+ACTIVE   FAILED       .../lab08-order-api:3  3
+---
+Đã rollback về lab08-order-api:2</code></pre></div>
+<p>Bằng chứng nguyên nhân:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ecs describe-services --cluster lab08-cluster --services lab08-order-api \
+  --query 'services[0].events[0:6].message' --output text | grep -iE 'circuit|roll|fail|health'
+aws ecs describe-tasks --cluster lab08-cluster \
+  --tasks $(aws ecs list-tasks --cluster lab08-cluster --desired-status STOPPED --query 'taskArns[0:3]' --output text) \
+  --query 'tasks[].[taskDefinitionArn,stoppedReason,containers[0].exitCode]' --output text</code></pre></div>
+<p><em>Kỳ vọng:</em> event chứa <code>deployment failed: tasks failed to start</code> và <code>rolling back to deployment ...</code>; <code>stoppedReason</code> của task v3 là <code>Task failed ELB health checks in (target-group ...)</code>. <code>probe-v3.log</code> không có (hoặc rất ít) lỗi vì task v2 vẫn phục vụ suốt thời gian đó nhờ <code>minimumHealthyPercent=100</code>.</p>
+<p>Circuit breaker cần ít nhất 3 task thất bại (với <code>desiredCount</code> nhỏ) trước khi kết luận, nên rollback không tức thì.</p>
+<hr>
+<h2 id="bước-9--scale-in-và-graceful-shutdown"><a class="anchor" href="#bước-9--scale-in-và-graceful-shutdown">Bước 9 — Scale-in và graceful shutdown</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ecs update-service --cluster lab08-cluster --service lab08-order-api --desired-count 1 &gt;/dev/null
+aws ecs wait services-stable --cluster lab08-cluster --services lab08-order-api
+aws ecs describe-services --cluster lab08-cluster --services lab08-order-api \
+  --query 'services[0].events[0:3].[createdAt,message]' --output text
+aws logs filter-log-events --log-group-name /ecs/lab08-order-api --start-time $(( ($(date +%s) - 300) * 1000 )) \
+  --query 'events[].message' --output text | grep -E 'SIGTERM|thoát'</code></pre></div>
+<p><em>Kỳ vọng:</em> event <code>draining</code> khoảng 30 giây trước <code>stopped 1 running tasks</code>; log của task bị dừng có <code>SIGTERM</code> và <code>thoát 0</code> cách nhau dưới 1 giây (không còn kết nối dở). Nếu thấy <code>quá 20s, thoát 1</code> hoặc exit code <code>137</code>, app không đóng kịp và bị <code>SIGKILL</code>.</p>
+<hr>
+<h2 id="bước-10--tham-khảo-lỗi-cannotpullcontainererror"><a class="anchor" href="#bước-10--tham-khảo-lỗi-cannotpullcontainererror">Bước 10 — (Tham khảo) Lỗi <code>CannotPullContainerError</code></a></h2>
+<p>Không cần chạy. Nếu private route table mất route tới NAT (hoặc thiếu VPC endpoint), task mới dừng với <code>stoppedReason</code> dạng <code>CannotPullContainerError: ... dial tcp ...:443: i/o timeout</code>. Nếu execution role thiếu quyền ECR, thông điệp sẽ là <code>... not authorized to perform: ecr:...</code>. Phân biệt hai loại bằng chữ trong <code>stoppedReason</code>, rồi sửa đúng chỗ, không mở rộng quyền.</p>
+<hr>
+<h2 id="bước-11--dọn-dẹp-theo-dependency"><a class="anchor" href="#bước-11--dọn-dẹp-theo-dependency">Bước 11 — Dọn dẹp theo dependency</a></h2>
+<p>Thứ tự: service → task definition → cluster → ALB → target group → NAT → EIP → SG → mạng → ECR → log group → IAM.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code># 1. Service (desired 0, xóa, chờ INACTIVE) rồi task definition và cluster
+aws ecs update-service --cluster lab08-cluster --service lab08-order-api --desired-count 0 &gt;/dev/null
+aws ecs delete-service --cluster lab08-cluster --service lab08-order-api --force &gt;/dev/null
+aws ecs wait services-inactive --cluster lab08-cluster --services lab08-order-api
+for TD in $(aws ecs list-task-definitions --family-prefix lab08-order-api --query 'taskDefinitionArns[]' --output text); do
+  aws ecs deregister-task-definition --task-definition &quot;${TD}&quot; &gt;/dev/null
+done
+aws ecs delete-task-definitions --task-definitions \
+  $(aws ecs list-task-definitions --family-prefix lab08-order-api --status INACTIVE --query 'taskDefinitionArns[]' --output text) &gt;/dev/null
+aws ecs delete-cluster --cluster lab08-cluster &gt;/dev/null
+
+# 2. ALB, rồi target group
+aws elbv2 delete-load-balancer --load-balancer-arn &quot;${ALB_ARN}&quot;
+aws elbv2 wait load-balancers-deleted --load-balancer-arns &quot;${ALB_ARN}&quot;
+aws elbv2 delete-target-group --target-group-arn &quot;${TG_ARN}&quot;
+
+# 3. NAT (chờ deleted), rồi EIP
+ec2 delete-nat-gateway --nat-gateway-id &quot;${NAT_ID}&quot; &gt;/dev/null
+ec2 wait nat-gateway-deleted --nat-gateway-ids &quot;${NAT_ID}&quot;
+ec2 release-address --allocation-id &quot;${EIP_ALLOC_ID}&quot;
+
+# 4. Security group: ENI của ALB/task có thể còn vài phút, nên thử lại
+for sg in &quot;${SG_TASK_ID}&quot; &quot;${SG_ALB_ID}&quot;; do
+  for i in $(seq 1 20); do
+    ec2 delete-security-group --group-id &quot;${sg}&quot; 2&gt;/dev/null &amp;&amp; { echo &quot;deleted ${sg}&quot;; break; }
+    echo &quot;chờ ENI giải phóng ${sg}...&quot;; sleep 15
+  done
+done
+
+# 5. Mạng
+for sub in &quot;${PUB_SUB_A}&quot; &quot;${PUB_SUB_B}&quot; &quot;${PRI_SUB_A}&quot; &quot;${PRI_SUB_B}&quot;; do ec2 delete-subnet --subnet-id &quot;${sub}&quot;; done
+ec2 delete-route-table --route-table-id &quot;${PUB_RT_ID}&quot;
+ec2 delete-route-table --route-table-id &quot;${PRI_RT_ID}&quot;
+ec2 detach-internet-gateway --internet-gateway-id &quot;${IGW_ID}&quot; --vpc-id &quot;${VPC_ID}&quot;
+ec2 delete-internet-gateway --internet-gateway-id &quot;${IGW_ID}&quot;
+ec2 delete-vpc --vpc-id &quot;${VPC_ID}&quot;
+
+# 6. ECR (--force xóa cả image), log group
+aws ecr delete-repository --repository-name lab08-order-api --force &gt;/dev/null
+aws logs delete-log-group --log-group-name /ecs/lab08-order-api
+
+# 7. IAM
+aws iam detach-role-policy --role-name Lab08TaskExecutionRole \
+  --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+aws iam delete-role --role-name Lab08TaskExecutionRole
+aws iam delete-role --role-name Lab08TaskRole
+
+# 8. Image local và file tạm
+docker rmi -f $(docker image ls &quot;${ECR_URI}&quot; -q | sort -u) 2&gt;/dev/null
+cd ~ &amp;&amp; rm -rf &quot;${LAB_DIR}&quot;</code></pre></div>
+<h3 id="kiểm-tra-inventory-sau-cleanup"><a class="anchor" href="#kiểm-tra-inventory-sau-cleanup">Kiểm tra inventory sau cleanup</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>echo &quot;== ECS cluster&quot;; aws ecs describe-clusters --clusters lab08-cluster --query &quot;clusters[?status=='ACTIVE'].clusterName&quot; --output text
+echo &quot;== Task def&quot;;    aws ecs list-task-definitions --family-prefix lab08-order-api --query 'taskDefinitionArns' --output text
+echo &quot;== ALB&quot;;         aws elbv2 describe-load-balancers --names lab08-alb 2&gt;&amp;1 | grep -o LoadBalancerNotFound
+echo &quot;== NAT&quot;;         aws ec2 describe-nat-gateways --filter Name=tag:Project,Values=aws-lab-08 --query 'NatGateways[?State!=`deleted`].NatGatewayId' --output text
+echo &quot;== EIP&quot;;         aws ec2 describe-addresses --filters Name=tag:Project,Values=aws-lab-08 --query 'Addresses[].AllocationId' --output text
+echo &quot;== VPC&quot;;         aws ec2 describe-vpcs --filters Name=tag:Project,Values=aws-lab-08 --query 'Vpcs[].VpcId' --output text
+echo &quot;== ECR&quot;;         aws ecr describe-repositories --repository-names lab08-order-api 2&gt;&amp;1 | grep -o RepositoryNotFoundException
+echo &quot;== Log group&quot;;   aws logs describe-log-groups --log-group-name-prefix /ecs/lab08 --query 'logGroups[].logGroupName' --output text
+echo &quot;== IAM&quot;;         aws iam list-roles --query &quot;Roles[?starts_with(RoleName,'Lab08')].RoleName&quot; --output text</code></pre></div>
+<p><em>Kỳ vọng:</em> mọi mục rỗng, riêng ALB in <code>LoadBalancerNotFound</code> và ECR in <code>RepositoryNotFoundException</code>. Billing có độ trễ, nên inventory qua API mới là bằng chứng cleanup.</p>
+<h3 id="nếu-lab-dừng-giữa-chừng-hoặc-mất-shell"><a class="anchor" href="#nếu-lab-dừng-giữa-chừng-hoặc-mất-shell">Nếu lab dừng giữa chừng hoặc mất shell</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export AWS_PROFILE=&quot;aws-lab&quot; AWS_REGION=&quot;ap-southeast-1&quot;
+export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+export LAB_DIR=$(mktemp -d) &amp;&amp; cd &quot;${LAB_DIR}&quot;
+ec2() { aws ec2 &quot;$@&quot;; }
+q() { ec2 &quot;$@&quot; --output text; }
+sub() { q describe-subnets --filters Name=vpc-id,Values=&quot;${VPC_ID}&quot; Name=tag:Name,Values=&quot;$1&quot; --query 'Subnets[0].SubnetId'; }
+rt()  { q describe-route-tables --filters Name=vpc-id,Values=&quot;${VPC_ID}&quot; Name=tag:Name,Values=&quot;$1&quot; --query 'RouteTables[0].RouteTableId'; }
+sg()  { q describe-security-groups --filters Name=vpc-id,Values=&quot;${VPC_ID}&quot; Name=group-name,Values=&quot;$1&quot; --query 'SecurityGroups[0].GroupId'; }
+
+VPC_ID=$(q describe-vpcs --filters Name=tag:Project,Values=aws-lab-08 --query 'Vpcs[0].VpcId')
+IGW_ID=$(q describe-internet-gateways --filters Name=attachment.vpc-id,Values=&quot;${VPC_ID}&quot; --query 'InternetGateways[0].InternetGatewayId')
+PUB_SUB_A=$(sub lab08-public-a);  PUB_SUB_B=$(sub lab08-public-b)
+PRI_SUB_A=$(sub lab08-private-a); PRI_SUB_B=$(sub lab08-private-b)
+PUB_RT_ID=$(rt lab08-public-rt);  PRI_RT_ID=$(rt lab08-private-rt)
+SG_ALB_ID=$(sg lab08-alb-sg);     SG_TASK_ID=$(sg lab08-task-sg)
+NAT_ID=$(q describe-nat-gateways --filter Name=tag:Project,Values=aws-lab-08 --query 'NatGateways[?State!=`deleted`]|[0].NatGatewayId')
+EIP_ALLOC_ID=$(q describe-addresses --filters Name=tag:Project,Values=aws-lab-08 --query 'Addresses[0].AllocationId')
+ALB_ARN=$(aws elbv2 describe-load-balancers --names lab08-alb --query 'LoadBalancers[0].LoadBalancerArn' --output text 2&gt;/dev/null)
+TG_ARN=$(aws elbv2 describe-target-groups --names lab08-tg --query 'TargetGroups[0].TargetGroupArn' --output text 2&gt;/dev/null)
+ECR_URI=&quot;${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/lab08-order-api&quot;
+echo &quot;VPC=${VPC_ID} NAT=${NAT_ID} ALB=${ALB_ARN}&quot;</code></pre></div>
+<p>Sau đó chạy lại Bước 11. Lệnh nào báo <code>NotFound</code>, <code>ServiceNotFoundException</code>, <code>ClusterNotFoundException</code>, <code>NoSuchEntity</code> nghĩa là tài nguyên đó chưa tạo hoặc đã xóa: bỏ qua và chạy tiếp. Ưu tiên xóa <strong>NAT Gateway và ALB</strong> trước nếu không đủ thời gian.</p>
+<hr>
+<h2 id="checklist-hoàn-thành"><a class="anchor" href="#checklist-hoàn-thành">Checklist hoàn thành</a></h2>
+<ul>
+<li><input type="checkbox"> Có bảng chi phí và điều kiện dừng trước khi bắt đầu.</li>
+<li><input type="checkbox"> ECR immutable: push đè tag <code>v1</code> bị từ chối; đọc được kết quả scan.</li>
+<li><input type="checkbox"> Task definition tham chiếu image bằng <strong>digest</strong>, <code>runtimePlatform</code> ARM64.</li>
+<li><input type="checkbox"> Giải thích được vì sao task role để trống còn execution role có quyền ECR/logs.</li>
+<li><input type="checkbox"> Hai task <code>healthy</code> ở hai private subnet, không có public IP; ALB trả về hai <code>task</code> khác nhau.</li>
+<li><input type="checkbox"> Rolling deploy v1 → v2 với số liệu <code>OK/LỖI</code> từ <code>probe</code>; thấy log <code>SIGTERM</code> → <code>thoát 0</code> của task v1.</li>
+<li><input type="checkbox"> Bản v3 sai cổng bị circuit breaker đánh dấu <code>FAILED</code> và tự rollback; có <code>stoppedReason</code> làm bằng chứng.</li>
+<li><input type="checkbox"> Scale-in: thấy draining trước <code>SIGTERM</code>.</li>
+<li><input type="checkbox"> Cleanup xong; inventory rỗng (ECS, ALB, NAT, EIP, VPC, ECR, log group, IAM).</li>
+</ul>
+<hr>
+<h2 id="troubleshooting-nhanh"><a class="anchor" href="#troubleshooting-nhanh">Troubleshooting nhanh</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Triệu chứng</th>
+<th>Nguyên nhân khả dĩ</th>
+<th>Bằng chứng / Khắc phục</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Task dừng với <code>CannotPullContainerError ... i/o timeout</code></td>
+<td>Private subnet không có đường tới ECR/S3</td>
+<td><code>describe-route-tables</code> của private RT phải có <code>0.0.0.0/0 → nat-...</code>, NAT <code>available</code>; hoặc thêm VPC endpoint</td>
+</tr>
+<tr>
+<td><code>CannotPullContainerError ... not authorized</code></td>
+<td>Execution role thiếu quyền ECR hoặc sai role trong task definition</td>
+<td><code>aws ecs describe-task-definition --task-definition ${TD_V1} --query taskDefinition.executionRoleArn</code></td>
+</tr>
+<tr>
+<td>Task dừng, log có <code>exec format error</code></td>
+<td>Kiến trúc image khác <code>runtimePlatform</code></td>
+<td><code>docker image inspect ${ECR_URI}:v1 --format &#39;{{.Architecture}}&#39;</code> phải là <code>arm64</code></td>
+</tr>
+<tr>
+<td>Task dừng <code>OutOfMemoryError</code>, exit code <code>137</code></td>
+<td>App vượt <code>memory</code> của task</td>
+<td>Tăng <code>memory</code> hoặc giảm dùng bộ nhớ; exit <code>137</code> cũng xuất hiện khi bị <code>SIGKILL</code> sau <code>stopTimeout</code></td>
+</tr>
+<tr>
+<td>Exit code <code>1</code> ngay khi start</td>
+<td>App lỗi khi khởi động</td>
+<td><code>aws logs tail /ecs/lab08-order-api --since 10m</code></td>
+</tr>
+<tr>
+<td>Target <code>unhealthy</code> với <code>Target.Timeout</code></td>
+<td>SG task không nhận 8080 từ SG ALB, hoặc app lắng nghe cổng khác</td>
+<td>Kiểm tra rule <code>lab08-task-sg</code>; biến <code>PORT</code> trong task definition</td>
+</tr>
+<tr>
+<td>Target <code>unhealthy</code> với <code>Target.ResponseCodeMismatch</code></td>
+<td><code>/health</code> trả mã khác 200 (ALB mặc định chỉ chấp nhận <code>200</code>)</td>
+<td>Sửa app hoặc <code>--matcher HttpCode=200-299</code></td>
+</tr>
+<tr>
+<td><code>create-service</code> báo lỗi <code>iam:PassRole</code></td>
+<td>Người chạy lab thiếu PassRole trên hai role</td>
+<td>Xin <code>iam:PassRole</code> giới hạn trên <code>Lab08TaskExecutionRole</code>, <code>Lab08TaskRole</code></td>
+</tr>
+<tr>
+<td><code>update-service</code> báo <code>container port ... not found</code></td>
+<td>Task definition mới đổi <code>containerPort</code> khác với cấu hình load balancer của service</td>
+<td>Giữ <code>containerPort</code> cố định; đổi cổng cần cập nhật cả <code>--load-balancers</code></td>
+</tr>
+<tr>
+<td>Deployment kẹt <code>IN_PROGRESS</code> rất lâu</td>
+<td>Circuit breaker chưa đủ số task thất bại, hoặc không bật</td>
+<td>Xem <code>failedTasks</code>; chờ; kiểm tra <code>deploymentConfiguration</code></td>
+</tr>
+<tr>
+<td><code>delete-cluster</code> báo <code>ClusterContainsServicesException</code></td>
+<td>Service chưa <code>INACTIVE</code></td>
+<td><code>aws ecs wait services-inactive</code> rồi xóa lại</td>
+</tr>
+</tbody></table>
+</div>
+<hr>
+<h2 id="tiếp-theo"><a class="anchor" href="#tiếp-theo">Tiếp theo</a></h2>
+<p>Bạn đã đóng gói, deploy theo digest và chứng minh được rolling deploy, rollback và graceful shutdown bằng số liệu. Bài tiếp theo: <strong><a href="../../notes/09-serverless.html">Bài 09 — Serverless: Lambda, API Gateway</a></strong>.</p>
+
+<footer>Sinh tự động từ <code>labs/08-containers/README.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

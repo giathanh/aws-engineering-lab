@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bài 04 — Mạng trong AWS: VPC, Subnet, Route Table, IGW, NAT và Security Group</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="01-foundations.html">01. Lý thuyết</a><a href="../labs/01-foundations/README.html">01. Lab</a><a href="02-identity-and-access.html">02. Lý thuyết</a><a href="../labs/02-identity-and-access/README.html">02. Lab</a><a href="03-cost-management.html">03. Lý thuyết</a><a href="../labs/03-cost-management/README.html">03. Lab</a><a href="04-networking.html" class="active">04. Lý thuyết</a><a href="../labs/04-networking/README.html">04. Lab</a><a href="05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../labs/05-compute-and-load-balancing/README.html">05. Lab</a><a href="06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../labs/06-storage-and-content-delivery/README.html">06. Lab</a><a href="07-databases-and-cache.html">07. Lý thuyết</a><a href="../labs/07-databases-and-cache/README.html">07. Lab</a><a href="08-containers.html">08. Lý thuyết</a><a href="../labs/08-containers/README.html">08. Lab</a><a href="09-serverless.html">09. Lý thuyết</a><a href="../labs/09-serverless/README.html">09. Lab</a><a href="10-observability-and-application-security.html">10. Lý thuyết</a><a href="../labs/10-observability-and-application-security/README.html">10. Lab</a><a href="11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../labs/11-messaging-and-workflows/README.html">11. Lab</a><a href="12-iac-and-cicd.html">12. Lý thuyết</a><a href="../labs/12-iac-and-cicd/README.html">12. Lab</a><a href="13-reliability-and-performance.html">13. Lý thuyết</a><a href="../labs/13-reliability-and-performance/README.html">13. Lab</a><a href="14-architecture-and-governance.html">14. Lý thuyết</a><a href="../labs/14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#mục-tiêu">Mục tiêu</a></li><li><a href="#phần-1--không-gian-địa-chỉ-cidr-private-ip-và-cấu-trúc-subnet-45-phút">Phần 1 — Không gian địa chỉ: CIDR, Private IP và Cấu trúc Subnet (45 phút)</a></li><li><a href="#phần-2--vpc-subnet-route-table-và-internet-gateway-50-phút">Phần 2 — VPC, Subnet, Route Table và Internet Gateway (50 phút)</a></li><li><a href="#phần-3--nat-gateway-và-vpc-endpoints-45-phút">Phần 3 — NAT Gateway và VPC Endpoints (45 phút)</a></li><li><a href="#phần-4--security-groups-stateful-vs-network-acls-stateless-45-phút">Phần 4 — Security Groups (Stateful) vs Network ACLs (Stateless) (45 phút)</a></li><li><a href="#phần-5--dns-nội-bộ-request-flow-và-vpc-flow-logs-30-phút">Phần 5 — DNS nội bộ, Request Flow và VPC Flow Logs (30 phút)</a></li><li><a href="#phần-6--giới-thiệu-bài-thực-hành-lab-04">Phần 6 — Giới thiệu bài thực hành (Lab 04)</a></li><li><a href="#phần-7--troubleshooting-và-các-lỗi-mạng-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi mạng phổ biến (25 phút)</a></li><li><a href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></li><li><a href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></li><li><a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></li><li><a href="#đáp-án-gợi-ý">Đáp án gợi ý</a></li></ol></aside>
+<main>
+<h1 id="bài-04--mạng-trong-aws-vpc-subnet-route-table-igw-nat-và-security-group"><a class="anchor" href="#bài-04--mạng-trong-aws-vpc-subnet-route-table-igw-nat-và-security-group">Bài 04 — Mạng trong AWS: VPC, Subnet, Route Table, IGW, NAT và Security Group</a></h1>
+<blockquote>
+<p><strong>Đối tượng:</strong> developer có kinh nghiệm nhưng mới học AWS.
+<strong>Thời lượng:</strong> khoảng 5–6 giờ, chia hai buổi. Buổi 1 gồm phần 1–4 (lý thuyết &amp; kiến trúc mạng). Buổi 2 gồm phần 5–7 và <a href="../labs/04-networking/README.html">lab thực hành</a>.
+<strong>Kế hoạch gốc:</strong> <a href="../plans/04-networking.md">plans/04-networking.md</a>
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Xem <a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a> ở cuối bài.</p>
+</blockquote>
+<h2 id="mục-tiêu"><a class="anchor" href="#mục-tiêu">Mục tiêu</a></h2>
+<p>Sau bài này, bạn có thể:</p>
+<ol>
+<li>Giải thích ký hiệu <strong>CIDR</strong>, các dải địa chỉ IP Private theo RFC 1918 và quy tắc <strong>5 địa chỉ IP dự trữ</strong> trong mỗi subnet của AWS.</li>
+<li>Phân biệt phạm vi của <strong>VPC (Regional)</strong> và <strong>Subnet (Zonal)</strong>; giải thích vì sao một subnet không thể trải dài qua nhiều Availability Zone.</li>
+<li>Hiểu cơ chế hoạt động của <strong>Route Table</strong>, <strong>Local Route</strong> và <strong>Internet Gateway (IGW)</strong>; định nghĩa chính xác về mặt kỹ thuật thế nào là <strong>Public Subnet</strong> và <strong>Private Subnet</strong>.</li>
+<li>Phân tích giải pháp kết nối Internet một chiều (Outbound) cho Private Subnet bằng <strong>NAT Gateway</strong> và so sánh với <strong>VPC Endpoint</strong> (Gateway Endpoint vs Interface Endpoint/PrivateLink) về mặt bảo mật và chi phí.</li>
+<li>So sánh chuyên sâu giữa <strong>Security Group (Stateful)</strong> và <strong>Network ACL (Stateless)</strong>, bao gồm cơ chế theo dõi trạng thái kết nối và dải cổng tạm thời (Ephemeral Ports).</li>
+<li>Nắm vững đường đi của gói tin (Packet Flow / Request Path) qua các lớp bảo vệ và vai trò của <strong>VPC Flow Logs</strong> trong việc chẩn đoán sự cố mạng.</li>
+</ol>
+<hr>
+<h2 id="phần-1--không-gian-địa-chỉ-cidr-private-ip-và-cấu-trúc-subnet-45-phút"><a class="anchor" href="#phần-1--không-gian-địa-chỉ-cidr-private-ip-và-cấu-trúc-subnet-45-phút">Phần 1 — Không gian địa chỉ: CIDR, Private IP và Cấu trúc Subnet (45 phút)</a></h2>
+<h3 id="ký-hiệu-cidr-classless-inter-domain-routing"><a class="anchor" href="#ký-hiệu-cidr-classless-inter-domain-routing">Ký hiệu CIDR (Classless Inter-Domain Routing)</a></h3>
+<p>Trong mạng IP, một khối địa chỉ được biểu diễn dưới dạng <code>IPv4/prefix_length</code>:</p>
+<ul>
+<li>Prefix length (số sau dấu gạch chéo) đại diện cho số bit cố định của phần mạng (Network ID).</li>
+<li>Số bit còn lại là dành cho các máy trạm (Host ID): <code>Số IP lý thuyết = 2^(32 - prefix)</code>.</li>
+</ul>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Ký hiệu CIDR</th>
+<th>Mặt nạ mạng (Subnet Mask)</th>
+<th>Số địa chỉ IP lý thuyết</th>
+<th>Trường hợp sử dụng điển hình trong AWS</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>/16</code></td>
+<td><code>255.255.0.0</code></td>
+<td>65,536</td>
+<td>Kích thước chuẩn cho một Virtual Private Cloud (VPC)</td>
+</tr>
+<tr>
+<td><code>/20</code></td>
+<td><code>255.255.240.0</code></td>
+<td>4,096</td>
+<td>Subnet lớn cho cụm Kubernetes (EKS) hoặc microservices</td>
+</tr>
+<tr>
+<td><code>/24</code></td>
+<td><code>255.255.255.0</code></td>
+<td>256</td>
+<td>Kích thước chuẩn phổ biến cho Subnet trong lab và ứng dụng vừa</td>
+</tr>
+<tr>
+<td><code>/28</code></td>
+<td><code>255.255.255.240</code></td>
+<td>16</td>
+<td>Subnet nhỏ nhất được phép tạo trong AWS</td>
+</tr>
+</tbody></table>
+</div>
+<h3 id="các-dải-địa-chỉ-private-chuẩn-rfc-1918"><a class="anchor" href="#các-dải-địa-chỉ-private-chuẩn-rfc-1918">Các dải địa chỉ Private chuẩn (RFC 1918)</a></h3>
+<p>AWS VPC cho phép bạn sử dụng bất kỳ dải IP riêng tư nào sau đây mà không sợ bị trùng lặp với Internet công cộng:</p>
+<ul>
+<li><code>10.0.0.0/8</code> (từ <code>10.0.0.0</code> đến <code>10.255.255.255</code>) — <em>Phổ biến nhất trong thiết kế doanh nghiệp</em>.</li>
+<li><code>172.16.0.0/12</code> (từ <code>172.16.0.0</code> đến <code>172.31.255.255</code>) — <em>Default VPC của AWS mặc định dùng dải <code>172.31.0.0/16</code></em>.</li>
+<li><code>192.168.0.0/16</code> (từ <code>192.168.0.0</code> đến <code>192.168.255.255</code>) — <em>Thường dùng cho mạng gia đình hoặc văn phòng nhỏ</em>.</li>
+</ul>
+<blockquote>
+<p>[!WARNING]
+<strong>Tránh trùng lặp CIDR (CIDR Overlap):</strong>
+Nếu công ty bạn dự định kết nối VPC này với mạng nội bộ văn phòng (On-premises) qua VPN/Direct Connect, hoặc nối với VPC khác qua VPC Peering / Transit Gateway, <strong>tuyệt đối không chọn dải CIDR trùng lặp</strong>. Nếu cả hai bên đều dùng <code>10.0.0.0/16</code>, việc định tuyến gói tin sẽ bị xung đột và không thể giao tiếp được.</p>
+</blockquote>
+<h3 id="5-địa-chỉ-ip-dự-trữ-của-aws-trong-mỗi-subnet"><a class="anchor" href="#5-địa-chỉ-ip-dự-trữ-của-aws-trong-mỗi-subnet">5 địa chỉ IP dự trữ của AWS trong mỗi Subnet</a></h3>
+<p>Nếu bạn tạo một subnet <code>/24</code> có 256 địa chỉ IP (ví dụ <code>10.0.1.0/24</code>), bạn <strong>không có đủ 256 IP</strong> để gán cho máy chủ. AWS <strong>tự động dành riêng 5 địa chỉ IP</strong> cho hạ tầng:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Dải IP Subnet: 10.0.1.0/24 (Tổng 256 IPs)
+├── 10.0.1.0   : Network address (địa chỉ mạng).
+├── 10.0.1.1   : AWS VPC Router nội bộ (Default Gateway của subnet).
+├── 10.0.1.2   : Dành riêng cho DNS (DNS server thực tế của VPC nằm ở base VPC + 2, ví dụ 10.0.0.2).
+├── 10.0.1.3   : AWS dành riêng cho mục đích sử dụng trong tương lai.
+├── 10.0.1.4 đến 10.0.1.254 : (251 IPs khả dụng cho ứng dụng của bạn)
+└── 10.0.1.255 : Network broadcast address (AWS không hỗ trợ broadcast, nhưng vẫn giữ chỗ).</code></pre></div>
+<p>Số IP thực tế có thể sử dụng = <code>2^(32 - prefix) - 5</code>. Với subnet <code>/24</code>, bạn có chính xác <strong>251 IP khả dụng</strong>.</p>
+<hr>
+<h2 id="phần-2--vpc-subnet-route-table-và-internet-gateway-50-phút"><a class="anchor" href="#phần-2--vpc-subnet-route-table-và-internet-gateway-50-phút">Phần 2 — VPC, Subnet, Route Table và Internet Gateway (50 phút)</a></h2>
+<h3 id="phạm-vi-địa-lý-vpc-là-regional-subnet-là-zonal"><a class="anchor" href="#phạm-vi-địa-lý-vpc-là-regional-subnet-là-zonal">Phạm vi địa lý: VPC là Regional, Subnet là Zonal</a></h3>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>AWS Region (vd: ap-southeast-1 - Singapore)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Virtual Private Cloud (VPC): 10.0.0.0/16                                   │
+│                                                                             │
+│   Availability Zone 1 (ap-southeast-1a)  Availability Zone 2 (ap-southeast-1b)
+│   ┌──────────────────────────────────┐   ┌──────────────────────────────────┐
+│   │ Public Subnet A (10.0.1.0/24)    │   │ Public Subnet B (10.0.2.0/24)    │
+│   └──────────────────────────────────┘   └──────────────────────────────────┘
+│   ┌──────────────────────────────────┐   ┌──────────────────────────────────┐
+│   │ Private Subnet A (10.0.10.0/24)  │   │ Private Subnet B (10.0.20.0/24)  │
+│   └──────────────────────────────────┘   └──────────────────────────────────┘
+└─────────────────────────────────────────────────────────────────────────────┘</code></pre></div>
+<ul>
+<li><strong>VPC là tài nguyên Regional:</strong> Trải rộng trên toàn bộ các Availability Zone trong một Region.</li>
+<li><strong>Subnet là tài nguyên Zonal:</strong> Khi tạo subnet, bạn <strong>bắt buộc phải gắn nó vào duy nhất một AZ</strong>. Không có subnet nào có thể vắt ngang qua 2 AZ. Muốn đạt tính sẵn sàng cao (High Availability), bạn phải tạo ít nhất 2 subnet ở 2 AZ độc lập.</li>
+</ul>
+<h3 id="định-nghĩa-kỹ-thuật-public-subnet-vs-private-subnet"><a class="anchor" href="#định-nghĩa-kỹ-thuật-public-subnet-vs-private-subnet">Định nghĩa kỹ thuật: Public Subnet vs Private Subnet</a></h3>
+<p>Trong AWS, thuật ngữ &quot;Public Subnet&quot; và &quot;Private Subnet&quot; <strong>không phải là thuộc tính cấu hình trực tiếp</strong> trên subnet, mà được quyết định hoàn toàn bởi <strong>Route Table (Bảng định tuyến)</strong> gắn với nó:</p>
+<ol>
+<li><strong>Local Route (Bắt buộc):</strong> Khi tạo VPC, một Route Table luôn có một route mặc định cho dải CIDR của VPC trỏ tới <code>local</code> (ví dụ: <code>10.0.0.0/16 -&gt; local</code>). Route này <strong>không thể xóa</strong>, đảm bảo mọi máy chủ trong cùng VPC luôn định tuyến được tới nhau qua private IP (còn có được phép kết nối hay không là do SG/NACL). Trường hợp nâng cao, target của local route có thể được đổi sang một network appliance để kiểm tra traffic, nằm ngoài phạm vi bài này.</li>
+<li><strong>Internet Gateway (IGW):</strong> Một thành phần VPC có tính sẵn sàng cao, phân tán và co giãn tự động của AWS, đóng vai trò là cửa ngõ chuyển đổi địa chỉ (1-to-1 NAT) giữa Private IP của instance và Public IP trên Internet.</li>
+<li><strong>Định nghĩa chuẩn:</strong><ul>
+<li><strong>Public Subnet:</strong> Là subnet có Route Table chứa một route trỏ ra Internet Gateway:
+<code>0.0.0.0/0 -&gt; igw-xxxxxxxx</code></li>
+<li><strong>Private Subnet:</strong> Là subnet mà Route Table <strong>không có route trực tiếp tới Internet Gateway</strong>. Gói tin từ subnet này không thể tự ý đi thẳng ra internet công cộng.</li>
+</ul>
+</li>
+</ol>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>[ Public Route Table ]
+Destination       Target
+10.0.0.0/16       local          (Giao tiếp nội bộ VPC)
+0.0.0.0/0         igw-0123abcd   (Đi ra ngoài Internet qua IGW) ──► PUBLIC SUBNET
+
+[ Private Route Table ]
+Destination       Target
+10.0.0.0/16       local          (Chỉ giao tiếp nội bộ VPC)     ──► PRIVATE SUBNET</code></pre></div>
+<blockquote>
+<p>[!NOTE]
+Một EC2 instance nằm trong Public Subnet muốn giao tiếp được 2 chiều với Internet cần thỏa mãn <strong>đủ 3 điều kiện</strong>:</p>
+<ol>
+<li>Subnet có route <code>0.0.0.0/0 -&gt; IGW</code>.</li>
+<li>Instance được gán một <strong>Public IPv4</strong> (hoặc Elastic IP).</li>
+<li>Security Group và NACL cho phép lưu lượng truy cập tương ứng.</li>
+</ol>
+</blockquote>
+<hr>
+<h2 id="phần-3--nat-gateway-và-vpc-endpoints-45-phút"><a class="anchor" href="#phần-3--nat-gateway-và-vpc-endpoints-45-phút">Phần 3 — NAT Gateway và VPC Endpoints (45 phút)</a></h2>
+<p>Các máy chủ ứng dụng chứa cơ sở dữ liệu hoặc logic thanh toán (Order Service) <strong>phải nằm trong Private Subnet</strong> để bảo vệ khỏi sự tấn công trực diện từ Internet. Nhưng làm sao các máy chủ này có thể tải bản vá bảo mật (<code>apt update</code> / <code>dnf upgrade</code>) hoặc gọi webhook ra cổng thanh toán bên ngoài?</p>
+<h3 id="nat-gateway-network-address-translation"><a class="anchor" href="#nat-gateway-network-address-translation">NAT Gateway (Network Address Translation)</a></h3>
+<p>AWS NAT Gateway là dịch vụ quản lý giúp các máy ảo trong Private Subnet khởi tạo kết nối <strong>một chiều đi ra ngoài Internet</strong>, đồng thời ngăn chặn bất kỳ ai từ Internet khởi tạo kết nối đi vào.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>INTERNET
+   ▲
+   │ (Lưu lượng 2 chiều)
+   ▼
+[ Internet Gateway ]
+   ▲
+   │
+[ Public Subnet ]
+   │
+   └──► [ NAT Gateway (Gắn Elastic IP công cộng) ]
+           ▲
+           │ (Chỉ cho phép outbound - một chiều)
+[ Private Subnet ]
+   │
+   └──► [ EC2 Private (Chỉ có IP nội bộ 10.0.10.5) ]</code></pre></div>
+<p><strong>Đặc điểm kiến trúc của NAT Gateway:</strong></p>
+<ul>
+<li>Public NAT Gateway (loại phổ biến, zonal) được đặt trong <strong>Public Subnet</strong> và gắn một <strong>Elastic IP</strong>.</li>
+<li>Trong Private Route Table, bạn cấu hình: <code>0.0.0.0/0 -&gt; nat-xxxxxxxx</code>.</li>
+<li><strong>Chi phí:</strong> NAT Gateway tính phí theo <strong>giờ tồn tại</strong> + theo <strong>GB dữ liệu xử lý</strong>, cộng phí public IPv4 của EIP (xem Bài 03). Với giá minh họa, một NAT Gateway để quên cả tháng tốn khoảng $40–50 dù không có traffic. Tra giá thực tế theo Region trên trang <a href="https://aws.amazon.com/vpc/pricing/" target="_blank" rel="noopener">VPC pricing</a>.</li>
+<li><strong>Đánh đổi:</strong> NAT Gateway là zonal. Production thường đặt mỗi AZ một NAT để một AZ hỏng không làm mất outbound của AZ còn lại (chi phí nhân theo số AZ). Lab thì dùng một NAT duy nhất, chỉ bật khi cần và xóa ngay sau khi xong.</li>
+</ul>
+<h3 id="vpc-endpoints-đường-cao-tốc-riêng-tư-tới-dịch-vụ-aws"><a class="anchor" href="#vpc-endpoints-đường-cao-tốc-riêng-tư-tới-dịch-vụ-aws">VPC Endpoints: Đường cao tốc riêng tư tới dịch vụ AWS</a></h3>
+<p>Nếu máy chủ trong Private Subnet chỉ cần giao tiếp với các dịch vụ khác của AWS (như tải dữ liệu từ Amazon S3, đọc ghi bảng DynamoDB, hoặc ghi logs lên CloudWatch), bạn <strong>không cần phải dùng NAT Gateway đi vòng qua Internet</strong>! Thay vào đó, hãy dùng <strong>VPC Endpoints</strong>:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>┌────────────────────────────────────────────────────────┐
+│ Virtual Private Cloud (VPC)                            │
+│                                                        │
+│ [ Private Subnet ]                                     │
+│   EC2 Private ────────► VPC Endpoint (Gateway/Interface)│
+│                             │                          │
+└─────────────────────────────┼──────────────────────────┘
+                              │ Đi qua mạng nội bộ của AWS
+                              ▼
+              [ S3 / DynamoDB / SSM / ECR / ... ]</code></pre></div>
+<p>Có hai loại VPC Endpoint:</p>
+<ol>
+<li><strong>Gateway Endpoints:</strong><ul>
+<li>Hỗ trợ cho 2 dịch vụ: <strong>Amazon S3</strong> và <strong>Amazon DynamoDB</strong>.</li>
+<li><strong>Hoàn toàn miễn phí</strong> (không tính phí duy trì cổng hay phí truyền dữ liệu).</li>
+<li>Cơ chế: Tự động chèn một route vào Route Table của subnet (ví dụ <code>pl-xxxx (S3 prefix) -&gt; vpce-xxxx</code>).</li>
+</ul>
+</li>
+<li><strong>Interface Endpoints (AWS PrivateLink):</strong><ul>
+<li>Hỗ trợ hầu hết các dịch vụ AWS còn lại (ECR, Secrets Manager, CloudWatch, SQS, STS...).</li>
+<li>Cơ chế: Tạo một card mạng ảo <strong>Elastic Network Interface (ENI)</strong> với IP private nằm trực tiếp bên trong subnet của bạn.</li>
+<li>Có tính phí theo giờ <strong>cho mỗi endpoint ở mỗi AZ</strong> + phí theo GB dữ liệu xử lý. Một service cần nhiều endpoint (ví dụ SSM cần <code>ssm</code> và <code>ssmmessages</code>) thì chi phí nhân lên tương ứng.</li>
+</ul>
+</li>
+</ol>
+<h3 id="ví-dụ-systems-manager-ssm-từ-private-subnet"><a class="anchor" href="#ví-dụ-systems-manager-ssm-từ-private-subnet">Ví dụ: Systems Manager (SSM) từ private subnet</a></h3>
+<p>SSM Session Manager (dùng ở Bài 05) cho phép quản trị instance mà không cần SSH. Nhưng <strong>private subnet không mặc nhiên kết nối được SSM</strong>. Instance cần đủ ba điều kiện:</p>
+<ol>
+<li>SSM Agent đang chạy (có sẵn trên Amazon Linux 2023).</li>
+<li>Instance profile có quyền tương đương managed policy <code>AmazonSSMManagedInstanceCore</code>.</li>
+<li><strong>Đường mạng outbound HTTPS (443)</strong> tới SSM endpoints, qua một trong hai cách:<ul>
+<li>NAT Gateway (instance đi ra internet tới endpoint public của SSM), hoặc</li>
+<li>Interface endpoints <code>com.amazonaws.&lt;region&gt;.ssm</code> và <code>com.amazonaws.&lt;region&gt;.ssmmessages</code> (agent cũ có thể cần thêm <code>ec2messages</code>), với SG của endpoint cho phép 443 từ instance và VPC bật DNS hostnames/support.</li>
+</ul>
+</li>
+</ol>
+<p>Thiếu điều kiện 3, instance vẫn chạy bình thường nhưng hiện &quot;offline&quot; trong Session Manager.</p>
+<hr>
+<h2 id="phần-4--security-groups-stateful-vs-network-acls-stateless-45-phút"><a class="anchor" href="#phần-4--security-groups-stateful-vs-network-acls-stateless-45-phút">Phần 4 — Security Groups (Stateful) vs Network ACLs (Stateless) (45 phút)</a></h2>
+<p>Bảo mật mạng trong AWS được xây dựng theo mô hình nhiều lớp (Defense in Depth):</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Gói tin từ Internet
+       │
+       ▼
+ [ Network ACL (NACL) ]    ◄─── Tường lửa cấp Subnet (Stateless)
+       │
+       ▼
+[ Security Group (SG) ]    ◄─── Tường lửa cấp Card mạng / Instance (Stateful)
+       │
+       ▼
+  [ EC2 Instance ]</code></pre></div>
+<h3 id="bảng-so-sánh-toàn-diện"><a class="anchor" href="#bảng-so-sánh-toàn-diện">Bảng so sánh toàn diện:</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tiêu chí</th>
+<th>Security Group (SG)</th>
+<th>Network ACL (NACL)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Cấp độ áp dụng</strong></td>
+<td>Gắn trên từng <strong>Network Interface (ENI)</strong> của instance/ALB.</td>
+<td>Gắn trên ranh giới của toàn bộ <strong>Subnet</strong>.</td>
+</tr>
+<tr>
+<td><strong>Loại trạng thái (State)</strong></td>
+<td><strong>Stateful:</strong> Tự động nhớ trạng thái kết nối.</td>
+<td><strong>Stateless:</strong> Hoàn toàn không nhớ trạng thái.</td>
+</tr>
+<tr>
+<td><strong>Quy tắc (Rules)</strong></td>
+<td>Chỉ hỗ trợ quy tắc <strong>ALLOW</strong>. SG mới: inbound trống (chặn tất cả), outbound mặc định <strong>cho phép tất cả</strong>.</td>
+<td>Hỗ trợ cả <strong>ALLOW</strong> lẫn <strong>DENY</strong>. <strong>Default NACL</strong> của VPC cho phép tất cả hai chiều; <strong>custom NACL</strong> mới tạo chặn tất cả cho đến khi bạn thêm rule.</td>
+</tr>
+<tr>
+<td><strong>Thứ tự đánh giá</strong></td>
+<td>Đánh giá <strong>đồng thời tất cả các rules</strong> trước khi quyết định.</td>
+<td>Đánh giá theo <strong>thứ tự số thứ tự (Rule Number)</strong> từ thấp đến cao (100, 200...). Rule nào khớp trước sẽ áp dụng ngay.</td>
+</tr>
+<tr>
+<td><strong>Lưu lượng phản hồi (Return Traffic)</strong></td>
+<td><strong>Tự động cho phép</strong> gói tin phản hồi quay lại, bất kể cấu hình outbound/inbound thế nào.</td>
+<td><strong>Phải mở tường minh cả 2 chiều:</strong> Inbound Rule và Outbound Rule tương ứng.</td>
+</tr>
+</tbody></table>
+</div>
+<h3 id="cơ-chế-stateful-của-security-group"><a class="anchor" href="#cơ-chế-stateful-của-security-group">Cơ chế Stateful của Security Group</a></h3>
+<p>Khi một client gửi request HTTP tới cổng 80 của EC2:</p>
+<ul>
+<li>Nếu Inbound Rule của Security Group cho phép cổng 80, gói tin được đi vào.</li>
+<li>Khi EC2 phản hồi lại cho client (gói tin response mang cổng nguồn 80 và cổng đích là cổng tạm của client), Security Group <strong>tự động cho phép gói tin đi ra</strong>, ngay cả khi Outbound Rules của SG bị xóa sạch!</li>
+</ul>
+<h3 id="cơ-chế-stateless-của-nacl-và-ephemeral-ports-cổng-tạm-thời"><a class="anchor" href="#cơ-chế-stateless-của-nacl-và-ephemeral-ports-cổng-tạm-thời">Cơ chế Stateless của NACL và Ephemeral Ports (Cổng tạm thời)</a></h3>
+<p>NACL không nhớ trạng thái kết nối. Khi một client kết nối tới cổng 80 của web server, client sẽ dùng một cổng tạm thời ngẫu nhiên (Ephemeral Port, dải cổng từ <code>1024</code> đến <code>65535</code> tùy hệ điều hành) để nhận dữ liệu phản hồi.</p>
+<ul>
+<li>Do đó, nếu bạn dùng NACL cho Subnet, bạn <strong>bắt buộc phải cấu hình 2 chiều</strong>:<ul>
+<li>Inbound: Cho phép Port 80 từ Internet (<code>0.0.0.0/0</code>).</li>
+<li>Outbound: Cho phép Port <code>1024-65535</code> tới Internet (<code>0.0.0.0/0</code>) để trả về dữ liệu. Nếu quên mở outbound rule này, server sẽ nhận được request nhưng client sẽ bị treo và timeout!</li>
+</ul>
+</li>
+</ul>
+<h3 id="kỹ-thuật-xâu-chuỗi-security-group-security-group-chaining"><a class="anchor" href="#kỹ-thuật-xâu-chuỗi-security-group-security-group-chaining">Kỹ thuật xâu chuỗi Security Group (Security Group Chaining)</a></h3>
+<p>Một trong những sức mạnh lớn nhất của Security Group là khả năng <strong>tham chiếu một Security Group khác làm Source</strong>, thay vì điền địa chỉ IP cố định:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>[ Client ngoài Internet ]
+         │ (Port 80/443)
+         ▼
+[ ALB Security Group ] (sg-alb)
+         │
+         │ (Chỉ cho phép Port 8080 từ Source: sg-alb)
+         ▼
+[ App Security Group ] (sg-app)
+         │
+         │ (Chỉ cho phép Port 5432 từ Source: sg-app)
+         ▼
+[ Database Security Group ] (sg-db)</code></pre></div>
+<p>Với mô hình này, tầng Database chỉ chấp nhận kết nối từ tầng App, và tầng App chỉ chấp nhận kết nối từ Load Balancer. Không ai có thể chọc thẳng vào database từ bên ngoài!</p>
+<hr>
+<h2 id="phần-5--dns-nội-bộ-request-flow-và-vpc-flow-logs-30-phút"><a class="anchor" href="#phần-5--dns-nội-bộ-request-flow-và-vpc-flow-logs-30-phút">Phần 5 — DNS nội bộ, Request Flow và VPC Flow Logs (30 phút)</a></h2>
+<h3 id="dns-trong-vpc"><a class="anchor" href="#dns-trong-vpc">DNS trong VPC</a></h3>
+<p>Mỗi VPC có hai thuộc tính boolean quan trọng:</p>
+<ul>
+<li><code>enableDnsSupport</code>: Bật DNS server nội bộ của AWS (Route 53 Resolver), truy cập tại <strong>base của VPC CIDR + 2</strong> (ví dụ <code>10.0.0.2</code> với VPC <code>10.0.0.0/16</code>) hoặc <code>169.254.169.253</code>.</li>
+<li><code>enableDnsHostnames</code>: Cấp public DNS hostname cho instance có public IP. Thuộc tính này (cùng <code>enableDnsSupport</code>) cũng là điều kiện để dùng <strong>private DNS của interface endpoint</strong>, ví dụ để <code>ssm.&lt;region&gt;.amazonaws.com</code> phân giải về IP private của endpoint.</li>
+</ul>
+<h3 id="đường-đi-của-một-request-requestresponse-path"><a class="anchor" href="#đường-đi-của-một-request-requestresponse-path">Đường đi của một request (request/response path)</a></h3>
+<p>Khi client ngoài internet gọi <code>http://&lt;public-ip&gt;</code> của một EC2 trong public subnet:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Client ──► IGW (dịch public IP → private IP) ──► Route table subnet ──► NACL inbound (port 80)
+       ──► SG inbound (port 80) ──► Ứng dụng
+Ứng dụng trả lời ──► SG (stateful, tự cho phép) ──► NACL outbound (port ephemeral của client!)
+       ──► Route 0.0.0.0/0 → IGW ──► Client</code></pre></div>
+<p>Mỗi mũi tên là một chỗ có thể làm request thất bại. Khi debug timeout, đi lần lượt từng chặng theo <strong>cả hai chiều</strong>, kể cả bước phân giải DNS trước khi gửi request.</p>
+<h3 id="vpc-flow-logs"><a class="anchor" href="#vpc-flow-logs">VPC Flow Logs</a></h3>
+<p>VPC Flow Logs ghi nhận metadata của traffic IP đi qua các ENI (bật ở cấp VPC, subnet hoặc từng ENI), gửi về CloudWatch Logs, S3 hoặc Firehose. Lưu ý:</p>
+<ul>
+<li>Flow Logs ghi theo <strong>flow được gộp trong một khoảng thời gian</strong> (1 hoặc 10 phút), không ghi từng gói tin và không chứa payload.</li>
+<li>Một số traffic <strong>không được ghi</strong>, ví dụ: truy vấn tới Amazon DNS server, DHCP, Instance Metadata (<code>169.254.169.254</code>).</li>
+<li>Flow Logs có chi phí (ingestion/lưu trữ log) và có độ trễ vài phút.</li>
+</ul>
+<p>Mỗi dòng log chứa thông tin cốt lõi:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>&lt;version&gt; &lt;account-id&gt; &lt;interface-id&gt; &lt;srcaddr&gt; &lt;dstaddr&gt; &lt;srcport&gt; &lt;dstport&gt; &lt;protocol&gt; &lt;packets&gt; &lt;bytes&gt; &lt;start&gt; &lt;end&gt; &lt;action&gt; &lt;log-status&gt;
+2 111122223333 eni-01234567 198.51.100.25 10.0.1.5 54321 80 6 10 840 1600000000 1600000060 ACCEPT OK
+2 111122223333 eni-01234567 203.0.113.10  10.0.1.5 43210 22 6  4  160 1600000000 1600000060 REJECT OK</code></pre></div>
+<p>Nhìn vào trường <code>&lt;action&gt;</code>:</p>
+<ul>
+<li><code>ACCEPT</code>: Gói tin được cho phép đi qua bởi cả Security Group và NACL.</li>
+<li><code>REJECT</code>: Traffic bị chặn bởi Security Group hoặc NACL. Đây là bằng chứng quan trọng khi debug lỗi mạng không thông.</li>
+<li>Mẹo: nếu thấy inbound <code>ACCEPT</code> nhưng chiều trả về <code>REJECT</code>, thủ phạm thường là <strong>NACL outbound</strong> thiếu dải ephemeral port (SG là stateful nên không gây ra kiểu lỗi này).</li>
+<li>Nếu <strong>không có dòng log nào</strong>, traffic có thể chưa tới được ENI (sai route, sai DNS, chặn ở phía client) hoặc thuộc loại không được ghi.</li>
+</ul>
+<hr>
+<h2 id="phần-6--giới-thiệu-bài-thực-hành-lab-04"><a class="anchor" href="#phần-6--giới-thiệu-bài-thực-hành-lab-04">Phần 6 — Giới thiệu bài thực hành (Lab 04)</a></h2>
+<p>Trong bài thực hành đi kèm:</p>
+<ul>
+<li>Bạn sẽ tự tay thiết kế và triển khai một <strong>Custom Lab VPC</strong> mang dải CIDR <code>10.0.0.0/16</code> trải dài trên <strong>2 Availability Zones</strong>.</li>
+<li>Tạo 2 Public Subnets và 2 Private Subnets.</li>
+<li>Khởi tạo và gắn một <strong>Internet Gateway (IGW)</strong> vào VPC.</li>
+<li>Tạo <strong>Public Route Table</strong> (chứa route trỏ ra IGW) và gán vào 2 public subnets; tạo <strong>Private Route Table</strong> (chỉ có local route) và gán vào 2 private subnets.</li>
+<li>Thiết lập mô hình <strong>xâu chuỗi Security Group (SG Chaining)</strong> giữa Web Tier và App Tier.</li>
+<li>Negative test miễn phí: tạo subnet sai kích thước/ngoài CIDR, xóa VPC khi còn dependency.</li>
+<li>Nhánh tùy chọn (chi phí vài cent): chạy một EC2 tạm trong public subnet để kiểm chứng route tới IGW, tính stateful của SG và tính stateless của NACL (ephemeral ports).</li>
+<li>Dọn dẹp sạch toàn bộ tài nguyên theo đúng thứ tự phụ thuộc. Bài 05 sẽ tự tạo lại mạng riêng, nên không cần giữ VPC này.</li>
+</ul>
+<p>👉 Mở bài hướng dẫn chi tiết tại: <strong><a href="../labs/04-networking/README.html">labs/04-networking/README.md</a></strong>.</p>
+<hr>
+<h2 id="phần-7--troubleshooting-và-các-lỗi-mạng-phổ-biến-25-phút"><a class="anchor" href="#phần-7--troubleshooting-và-các-lỗi-mạng-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi mạng phổ biến (25 phút)</a></h2>
+<h3 id="1-kết-nối-bị-timeout"><a class="anchor" href="#1-kết-nối-bị-timeout">1. Kết nối bị timeout</a></h3>
+<ul>
+<li><strong>Triệu chứng:</strong> <code>curl</code> treo rồi báo timeout (khác với <code>Connection refused</code>, nghĩa là đã tới máy nhưng không có process lắng nghe cổng đó).</li>
+<li><strong>Đi theo request path, cả hai chiều:</strong><ol>
+<li><strong>DNS:</strong> tên miền có phân giải ra đúng IP không (<code>dig</code>/<code>nslookup</code>)?</li>
+<li><strong>Route:</strong> subnet được gắn route table nào (<code>describe-route-tables --filters Name=association.subnet-id,Values=&lt;subnet&gt;</code>)? Có <code>0.0.0.0/0 → igw-...</code> không? Instance có public IP không?</li>
+<li><strong>Security Group:</strong> inbound có mở cổng cho đúng nguồn không?</li>
+<li><strong>NACL:</strong> inbound có cho phép cổng đích, và <strong>outbound có cho phép dải ephemeral <code>1024-65535</code></strong> để trả về không?</li>
+<li><strong>Bằng chứng:</strong> bật VPC Flow Logs trên ENI để xem <code>ACCEPT</code>/<code>REJECT</code> ở từng chiều.</li>
+</ol>
+</li>
+<li><strong>Sửa có phạm vi nhỏ:</strong> thêm đúng route/rule còn thiếu; không mở <code>0.0.0.0/0</code> tất cả cổng để &quot;thử cho chạy&quot;.</li>
+</ul>
+<h3 id="2-instance-không-hiện-trong-ssm-session-manager"><a class="anchor" href="#2-instance-không-hiện-trong-ssm-session-manager">2. Instance không hiện trong SSM Session Manager</a></h3>
+<ul>
+<li>Kiểm tra lần lượt ba điều kiện ở Phần 3: agent, instance profile, đường outbound 443 tới SSM (NAT hoặc interface endpoints <code>ssm</code> + <code>ssmmessages</code>). Instance trong private subnet chỉ có local route là trường hợp hay gặp nhất.</li>
+</ul>
+<h3 id="3-cidr-overlap"><a class="anchor" href="#3-cidr-overlap">3. CIDR overlap</a></h3>
+<ul>
+<li><strong>Triệu chứng:</strong> không tạo được VPC peering/Transit Gateway attachment, hoặc route bị xung đột, không đi tới mạng bên kia.</li>
+<li><strong>Phòng tránh:</strong> lên kế hoạch dải IP cho mọi VPC và mạng on-premises <strong>trước khi</strong> tạo. Không thể đổi CIDR chính của VPC sau khi tạo; chỉ có thể thêm secondary CIDR hoặc xây lại.</li>
+</ul>
+<h3 id="4-không-thể-xóa-vpc-dependencyviolation"><a class="anchor" href="#4-không-thể-xóa-vpc-dependencyviolation">4. Không thể xóa VPC (<code>DependencyViolation</code>)</a></h3>
+<ul>
+<li><strong>Hiện tượng:</strong> Chạy lệnh <code>delete-vpc</code> bị lỗi <code>The vpc &#39;vpc-xxxx&#39; has dependencies and cannot be deleted</code>.</li>
+<li><strong>Nguyên nhân:</strong> Trong VPC vẫn còn ENI (của EC2, ALB, NAT, VPC endpoint, Lambda...), Internet Gateway chưa detach, subnet, route table, NACL hoặc Security Group tùy biến chưa xóa.</li>
+<li><strong>Bằng chứng:</strong> <code>aws ec2 describe-network-interfaces --filters Name=vpc-id,Values=&lt;vpc-id&gt;</code> cho biết ENI nào còn sót và thuộc dịch vụ gì (<code>InterfaceType</code>, <code>Description</code>).</li>
+<li><strong>Thứ tự dọn dẹp chuẩn:</strong><ol>
+<li>Terminate EC2, xóa Load Balancer, xóa VPC endpoints; đợi ENI của chúng biến mất.</li>
+<li>Xóa NAT Gateway và đợi trạng thái <code>deleted</code>, sau đó release Elastic IP.</li>
+<li>Xóa Security Groups tùy biến (SG tham chiếu SG khác thì xóa trước).</li>
+<li>Xóa Subnets (association với route table/NACL tự mất theo).</li>
+<li>Xóa Custom Route Tables và Custom NACLs.</li>
+<li>Detach rồi xóa Internet Gateway.</li>
+<li>Xóa VPC (default SG, main route table, default NACL tự xóa theo).</li>
+</ol>
+</li>
+</ul>
+<hr>
+<h2 id="câu-hỏi-tự-kiểm-tra"><a class="anchor" href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></h2>
+<ol>
+<li>Một subnet có dải CIDR <code>10.0.2.0/23</code> có tổng cộng bao nhiêu địa chỉ IP lý thuyết, và bao nhiêu địa chỉ IP thực tế có thể cấp phát cho các máy ảo?</li>
+<li>Điều gì phân biệt một Public Subnet và một Private Subnet trong AWS VPC?</li>
+<li>Nếu Security Group Inbound Rule cho phép cổng 443 từ <code>0.0.0.0/0</code>, nhưng Security Group Outbound Rules bị xóa hết không còn dòng nào, client gửi request HTTPS tới server có nhận được kết quả không? Vì sao?</li>
+<li>Tại sao một máy chủ nằm trong Private Subnet khi kết nối ra ngoài Internet thông qua NAT Gateway thì người bên ngoài Internet lại không thể chủ động kết nối vào máy chủ đó?</li>
+<li>Sự khác biệt cơ bản về mặt chi phí và phạm vi dịch vụ giữa Gateway Endpoint và Interface Endpoint là gì?</li>
+<li>Một instance có public IP nằm trong subnet chỉ có local route. Instance đó có truy cập được internet không? Public IP có đủ không?</li>
+<li>Security Group cho phép inbound port 80 và request tới được server, nhưng client vẫn timeout. NACL inbound cho phép port 80. Giả thuyết hợp lý nhất là gì, và bạn kiểm chứng bằng cách nào?</li>
+</ol>
+<hr>
+<h2 id="tài-liệu-tham-khảo-chính-thức"><a class="anchor" href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></h2>
+<ul>
+<li><a href="https://docs.aws.amazon.com/vpc/latest/userguide/what-is-amazon-vpc.html" target="_blank" rel="noopener">What is Amazon VPC?</a></li>
+<li><a href="https://docs.aws.amazon.com/vpc/latest/userguide/configure-subnets.html" target="_blank" rel="noopener">VPCs and subnets</a></li>
+<li><a href="https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Route_Tables.html" target="_blank" rel="noopener">Route tables</a></li>
+<li><a href="https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Internet_Gateway.html" target="_blank" rel="noopener">Internet gateways</a></li>
+<li><a href="https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html" target="_blank" rel="noopener">NAT gateways</a></li>
+<li><a href="https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html" target="_blank" rel="noopener">Security groups</a></li>
+<li><a href="https://docs.aws.amazon.com/vpc/latest/userguide/vpc-network-acls.html" target="_blank" rel="noopener">Network ACLs</a></li>
+<li><a href="https://docs.aws.amazon.com/vpc/latest/privatelink/concepts.html" target="_blank" rel="noopener">VPC Endpoints (AWS PrivateLink)</a></li>
+</ul>
+<h2 id="trạng-thái-kiểm-chứng"><a class="anchor" href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></h2>
+<ul>
+<li><strong>Đối chiếu tài liệu (2026-10-31):</strong> 5 địa chỉ IP dự trữ và vị trí DNS server, SG stateful/NACL stateless và giá trị mặc định, Internet Gateway và route table, điều kiện kết nối SSM, giới hạn của Flow Logs, thứ tự xóa tài nguyên VPC.</li>
+<li><strong>Giá là minh họa:</strong> tra lại trang giá chính thức cho Region của bạn.</li>
+<li><strong>Chưa chạy thử trên AWS:</strong> lệnh trong lab chưa được thực thi trên account thật; output là minh họa.</li>
+<li><strong>Kiến trúc an toàn:</strong> không chỉnh sửa Default VPC; tạo VPC riêng có tag <code>Project=aws-lab-04</code>.</li>
+</ul>
+<hr>
+<h2 id="đáp-án-gợi-ý"><a class="anchor" href="#đáp-án-gợi-ý">Đáp án gợi ý</a></h2>
+<details>
+<summary>Mở để xem đáp án</summary>
+
+<ol>
+<li>Dải <code>/23</code> có số bit dành cho host là <code>32 - 23 = 9</code> bits.<ul>
+<li>Số IP lý thuyết: <code>2^9 = 512</code> địa chỉ IP.</li>
+<li>Số IP thực tế có thể cấp phát: <code>512 - 5 = 507</code> địa chỉ IP. 5 IP dự trữ tính trên <strong>toàn subnet</strong>, không phải trên từng dải /24 con: 4 IP đầu <code>10.0.2.0</code>–<code>10.0.2.3</code> và IP cuối <code>10.0.3.255</code>. Các địa chỉ <code>10.0.2.255</code> và <code>10.0.3.0</code> vẫn cấp phát được bình thường.</li>
+</ul>
+</li>
+<li>Public Subnet được liên kết với một Route Table có route mặc định <code>0.0.0.0/0</code> trỏ tới <strong>Internet Gateway (IGW)</strong>. Ngược lại, Private Subnet không có route trực tiếp trỏ tới IGW (nó chỉ có local route, hoặc route <code>0.0.0.0/0</code> trỏ tới NAT Gateway / VPC Endpoint).</li>
+<li><strong>Có nhận được bình thường.</strong> Do Security Group hoạt động theo cơ chế <strong>Stateful (có nhớ trạng thái)</strong>. Khi một gói tin inbound hợp lệ được chấp nhận đi vào, Security Group tự động theo dõi phiên kết nối và cho phép gói tin phản hồi (response) đi ngược ra ngoài mà không cần kiểm tra Outbound Rules.</li>
+<li>Vì NAT Gateway thực hiện kỹ thuật <strong>Source NAT (SNAT)</strong>: Nó thay thế địa chỉ Private IP của máy chủ bằng địa chỉ Elastic IP công cộng của chính NAT Gateway khi gửi gói tin ra ngoài, và duy trì một bảng trạng thái kết nối (translation table) trong bộ nhớ. Khi có gói tin phản hồi từ bên ngoài về đúng cổng phiên đã mở, NAT Gateway sẽ chuyển tiếp lại cho máy ảo nội bộ. Người ngoài Internet không thể tự ý khởi tạo kết nối đi vào vì NAT Gateway không mở cổng lắng nghe và không có ánh xạ sẵn cho chiều Inbound từ Internet.</li>
+<li><ul>
+<li><strong>Gateway Endpoint:</strong> Hoàn toàn <strong>miễn phí</strong>, chỉ hỗ trợ cho <strong>S3</strong> và <strong>DynamoDB</strong>, hoạt động bằng cách chèn route vào Route Table của Subnet.</li>
+<li><strong>Interface Endpoint:</strong> <strong>Có tính phí</strong> theo giờ cho mỗi endpoint ở mỗi AZ và theo GB dữ liệu xử lý, hỗ trợ hầu hết các dịch vụ AWS khác (và dịch vụ của bên thứ ba qua PrivateLink), hoạt động bằng cách tạo ENI có IP private trong subnet.</li>
+</ul>
+</li>
+<li><strong>Không.</strong> Subnet không có route <code>0.0.0.0/0 → IGW</code> nên gói tin ra internet không có đường đi, dù instance có public IP. Public IP chỉ là một trong ba điều kiện (route tới IGW, public IP, SG/NACL cho phép).</li>
+<li>Giả thuyết: <strong>NACL outbound</strong> của subnet không cho phép dải ephemeral port (<code>1024-65535</code>) tới client, nên response bị chặn ở chiều ra (SG không gây ra lỗi này vì nó stateful). Kiểm chứng: xem outbound rules của NACL (<code>describe-network-acls</code>), và Flow Logs sẽ cho thấy inbound <code>ACCEPT</code> nhưng outbound <code>REJECT</code>. Sửa bằng cách thêm đúng rule outbound cho dải ephemeral, không mở mọi thứ.</li>
+</ol>
+</details>
+
+
+<footer>Sinh tự động từ <code>notes/04-networking.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

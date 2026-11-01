@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab 09 — Serverless: Lambda sau API Gateway HTTP API, lỗi có kiểm soát và giới hạn concurrency</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="../../notes/01-foundations.html">01. Lý thuyết</a><a href="../01-foundations/README.html">01. Lab</a><a href="../../notes/02-identity-and-access.html">02. Lý thuyết</a><a href="../02-identity-and-access/README.html">02. Lab</a><a href="../../notes/03-cost-management.html">03. Lý thuyết</a><a href="../03-cost-management/README.html">03. Lab</a><a href="../../notes/04-networking.html">04. Lý thuyết</a><a href="../04-networking/README.html">04. Lab</a><a href="../../notes/05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../05-compute-and-load-balancing/README.html">05. Lab</a><a href="../../notes/06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../06-storage-and-content-delivery/README.html">06. Lab</a><a href="../../notes/07-databases-and-cache.html">07. Lý thuyết</a><a href="../07-databases-and-cache/README.html">07. Lab</a><a href="../../notes/08-containers.html">08. Lý thuyết</a><a href="../08-containers/README.html">08. Lab</a><a href="../../notes/09-serverless.html">09. Lý thuyết</a><a href="README.html" class="active">09. Lab</a><a href="../../notes/10-observability-and-application-security.html">10. Lý thuyết</a><a href="../10-observability-and-application-security/README.html">10. Lab</a><a href="../../notes/11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../11-messaging-and-workflows/README.html">11. Lab</a><a href="../../notes/12-iac-and-cicd.html">12. Lý thuyết</a><a href="../12-iac-and-cicd/README.html">12. Lab</a><a href="../../notes/13-reliability-and-performance.html">13. Lý thuyết</a><a href="../13-reliability-and-performance/README.html">13. Lab</a><a href="../../notes/14-architecture-and-governance.html">14. Lý thuyết</a><a href="../14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></li><li><a href="#quy-ước-placeholder">Quy ước placeholder</a></li><li><a href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></li><li><a href="#sơ-đồ-kiến-trúc-lab-09">Sơ đồ kiến trúc Lab 09</a></li><li><a href="#bước-0--biến-và-thư-mục-làm-việc">Bước 0 — Biến và thư mục làm việc</a></li><li><a href="#bước-1--mã-nguồn-function">Bước 1 — Mã nguồn function</a></li><li><a href="#bước-2--execution-role-và-log-group">Bước 2 — Execution role và log group</a></li><li><a href="#bước-3--tạo-function">Bước 3 — Tạo function</a></li><li><a href="#bước-4--http-api-route-stage-và-quyền-invoke">Bước 4 — HTTP API, route, stage và quyền invoke</a></li><li><a href="#bước-5--giới-hạn-throttling-và-concurrency">Bước 5 — Giới hạn throttling và concurrency</a></li><li><a href="#bước-6--happy-path-và-invalid-input">Bước 6 — Happy path và invalid input</a></li><li><a href="#bước-7--negative-case-exception-timeout-response-format">Bước 7 — Negative case: exception, timeout, response format</a></li><li><a href="#bước-8-tùy-chọn--s3-trigger-với-prefix-tách-biệt">Bước 8 (tùy chọn) — S3 trigger với prefix tách biệt</a></li><li><a href="#bước-9--dọn-dẹp">Bước 9 — Dọn dẹp</a></li><li><a href="#checklist-hoàn-thành">Checklist hoàn thành</a></li><li><a href="#troubleshooting-nhanh">Troubleshooting nhanh</a></li><li><a href="#tiếp-theo">Tiếp theo</a></li></ol></aside>
+<main>
+<h1 id="lab-09--serverless-lambda-sau-api-gateway-http-api-lỗi-có-kiểm-soát-và-giới-hạn-concurrency"><a class="anchor" href="#lab-09--serverless-lambda-sau-api-gateway-http-api-lỗi-có-kiểm-soát-và-giới-hạn-concurrency">Lab 09 — Serverless: Lambda sau API Gateway HTTP API, lỗi có kiểm soát và giới hạn concurrency</a></h1>
+<blockquote>
+<p><strong>Lý thuyết:</strong> <a href="../../notes/09-serverless.html">notes/09-serverless.md</a>. Đọc phần 1–5 trước khi thực hiện lab.
+<strong>Thời lượng:</strong> khoảng 60–90 phút (thêm 20 phút nếu làm nhánh S3 tùy chọn).
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Mọi output là <strong>minh họa</strong>, thông tin định danh dùng placeholder. Lab chưa được chạy thử trên account thật.</p>
+</blockquote>
+<hr>
+<h2 id="lab-này-làm-gì-và-không-làm-gì"><a class="anchor" href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>✅ Có</th>
+<th>❌ Không</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Lambda Python 3.12 arm64, log group tạo trước với retention 1 ngày</td>
+<td>Ghi toàn bộ <code>event</code> (header, token) vào log</td>
+</tr>
+<tr>
+<td>HTTP API, payload format 2.0, route <code>POST /orders</code>, <code>GET /orders/{orderId}</code></td>
+<td>REST API, custom domain</td>
+</tr>
+<tr>
+<td>Kiểm thử 200/201/400/404, invalid JSON</td>
+<td>Dữ liệu thật hoặc nghiệp vụ nhạy cảm</td>
+</tr>
+<tr>
+<td>Negative case: exception, timeout, response format 2.0 được &quot;đoán&quot;</td>
+<td></td>
+</tr>
+<tr>
+<td>Throttling ở stage và reserved concurrency để giới hạn chi phí</td>
+<td>Load test</td>
+</tr>
+<tr>
+<td>Tùy chọn: S3 trigger với prefix tách biệt để tránh vòng lặp</td>
+<td>Ghi output vào cùng prefix trigger</td>
+</tr>
+<tr>
+<td>Cleanup và kiểm tra inventory</td>
+<td></td>
+</tr>
+</tbody></table>
+</div>
+<blockquote>
+<p>[!WARNING]
+API trong lab <strong>không có authentication</strong>: ai biết URL đều gọi được. Lab chỉ chứa dữ liệu giả, được giới hạn bằng throttling và reserved concurrency, và phải xóa ngay sau buổi học. API thật cần JWT authorizer, IAM auth hoặc Lambda authorizer.</p>
+</blockquote>
+<hr>
+<h2 id="quy-ước-placeholder"><a class="anchor" href="#quy-ước-placeholder">Quy ước placeholder</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Biến</th>
+<th>Ý nghĩa</th>
+<th>Ví dụ minh họa</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>aws-lab</code></td>
+<td>Named profile CLI đã cấu hình ở Lab 01</td>
+<td><code>aws-lab</code></td>
+</tr>
+<tr>
+<td><code>AWS_REGION</code></td>
+<td>Region học tập</td>
+<td><code>ap-southeast-1</code></td>
+</tr>
+<tr>
+<td><code>ACCOUNT_ID</code></td>
+<td>Account ID (lấy tự động)</td>
+<td><code>111122223333</code></td>
+</tr>
+<tr>
+<td><code>API_ID</code>, <code>API_ENDPOINT</code></td>
+<td>HTTP API và URL stage <code>$default</code></td>
+<td><code>a1b2c3d4e5</code>, <code>https://a1b2c3d4e5.execute-api.ap-southeast-1.amazonaws.com</code></td>
+</tr>
+<tr>
+<td><code>FN</code></td>
+<td>Tên function</td>
+<td><code>lab09-order-api</code></td>
+</tr>
+</tbody></table>
+</div>
+<p>Tên cố định: <code>lab09-*</code> cho function/API/bucket, <code>Lab09LambdaRole</code> cho IAM. Tài nguyên hỗ trợ tag mang <code>Project=aws-lab-09</code>.</p>
+<hr>
+<h2 id="điều-kiện-đầu-vào"><a class="anchor" href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></h2>
+<ul>
+<li><input type="checkbox"> Đã hoàn thành <a href="../02-identity-and-access/README.html">Lab 02</a> (IAM role, resource-based policy).</li>
+<li><input type="checkbox"> Công cụ: AWS CLI v2, <code>zip</code>, <code>curl</code>, <code>jq</code>.</li>
+<li><input type="checkbox"> Quyền cần thiết (không cần <code>AdministratorAccess</code>):<ul>
+<li><strong>IAM:</strong> <code>iam:CreateRole</code>, <code>AttachRolePolicy</code>, <code>DetachRolePolicy</code>, <code>DeleteRole</code>, <code>GetRole</code>, <code>TagRole</code>, <strong><code>iam:PassRole</code> trên <code>Lab09LambdaRole</code></strong> (bắt buộc khi tạo function).</li>
+<li><strong>Lambda:</strong> <code>lambda:CreateFunction</code>, <code>GetFunction</code>, <code>GetFunctionConfiguration</code>, <code>UpdateFunctionCode</code>, <code>UpdateFunctionConfiguration</code>, <code>AddPermission</code>, <code>RemovePermission</code>, <code>PutFunctionConcurrency</code>, <code>DeleteFunctionConcurrency</code>, <code>GetAccountSettings</code>, <code>DeleteFunction</code>, <code>TagResource</code>.</li>
+<li><strong>API Gateway:</strong> <code>apigateway:POST</code>, <code>PATCH</code>, <code>GET</code>, <code>DELETE</code> trên <code>arn:aws:apigateway:&lt;region&gt;::/apis*</code>.</li>
+<li><strong>CloudWatch Logs:</strong> <code>logs:CreateLogGroup</code>, <code>PutRetentionPolicy</code>, <code>FilterLogEvents</code>, <code>DeleteLogGroup</code>.</li>
+<li><strong>Nhánh S3:</strong> <code>s3:CreateBucket</code>, <code>PutBucketNotification</code>, <code>PutObject</code>, <code>ListBucket</code>, <code>DeleteObject</code>, <code>DeleteBucket</code>.</li>
+</ul>
+</li>
+<li><input type="checkbox"> Không sử dụng tài khoản production.</li>
+</ul>
+<h3 id="chi-phí-ước-tính-giá-minh-họa-tra-lại-lambda-pricinghttpsawsamazoncomlambdapricing-và-api-gateway-pricinghttpsawsamazoncomapi-gatewaypricing"><a class="anchor" href="#chi-phí-ước-tính-giá-minh-họa-tra-lại-lambda-pricinghttpsawsamazoncomlambdapricing-và-api-gateway-pricinghttpsawsamazoncomapi-gatewaypricing">Chi phí ước tính (giá minh họa, tra lại <a href="https://aws.amazon.com/lambda/pricing/" target="_blank" rel="noopener">Lambda pricing</a> và <a href="https://aws.amazon.com/api-gateway/pricing/" target="_blank" rel="noopener">API Gateway pricing</a>)</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tài nguyên</th>
+<th>Quy mô trong lab</th>
+<th>Đơn giá minh họa</th>
+<th>Chi phí</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Lambda request</td>
+<td>&lt; 200</td>
+<td>~$0.20/triệu request</td>
+<td>&lt; $0.001</td>
+</tr>
+<tr>
+<td>Lambda compute arm64 128 MB</td>
+<td>&lt; 200 × tối đa 3 giây</td>
+<td>~$0.0000133/GB-giây</td>
+<td>&lt; $0.001</td>
+</tr>
+<tr>
+<td>HTTP API request</td>
+<td>&lt; 200</td>
+<td>~$1.00/triệu request</td>
+<td>&lt; $0.001</td>
+</tr>
+<tr>
+<td>CloudWatch Logs</td>
+<td>vài KB</td>
+<td>~$0.50–0.70/GB ingest</td>
+<td>&lt; $0.001</td>
+</tr>
+<tr>
+<td><strong>Tổng</strong></td>
+<td></td>
+<td></td>
+<td><strong>&lt; $0.01</strong></td>
+</tr>
+</tbody></table>
+</div>
+<ul>
+<li>Không có phí theo giờ. Rủi ro chi phí thật là API public bị gọi hàng loạt: throttling (Bước 5) giới hạn tối đa khoảng 2 request/giây.</li>
+<li>Không dựa vào Free Tier; chi phí trên đã tính như không có Free Tier.</li>
+</ul>
+<hr>
+<h2 id="sơ-đồ-kiến-trúc-lab-09"><a class="anchor" href="#sơ-đồ-kiến-trúc-lab-09">Sơ đồ kiến trúc Lab 09</a></h2>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>curl ──HTTPS──▶ API Gateway HTTP API lab09-order-api ($default, auto-deploy, throttle 2 rps / burst 5)
+                  │ route POST /orders, GET /orders/{orderId}
+                  │ integration AWS_PROXY, payload format 2.0, timeout 30 s
+                  ▼ (resource-based policy: chỉ API này được invoke)
+               Lambda lab09-order-api (python3.12, arm64, 128 MB, timeout 3 s, reserved concurrency 5)
+                  │ role Lab09LambdaRole: chỉ ghi log
+                  ▼
+               CloudWatch Logs /aws/lambda/lab09-order-api (retention 1 ngày)
+
+Tùy chọn: S3 lab09-uploads-&lt;ACCOUNT_ID&gt; ──ObjectCreated, prefix uploads/──▶ Lambda (cùng function)</code></pre></div>
+<hr>
+<h2 id="bước-0--biến-và-thư-mục-làm-việc"><a class="anchor" href="#bước-0--biến-và-thư-mục-làm-việc">Bước 0 — Biến và thư mục làm việc</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export AWS_PROFILE=&quot;aws-lab&quot;
+export AWS_REGION=&quot;ap-southeast-1&quot;
+export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+export FN=&quot;lab09-order-api&quot;
+export LAB_DIR=$(mktemp -d) &amp;&amp; cd &quot;${LAB_DIR}&quot;
+aws lambda get-account-settings --query 'AccountLimit.[ConcurrentExecutions,UnreservedConcurrentExecutions]' --output text</code></pre></div>
+<p><em>Kỳ vọng:</em> hai số, ví dụ <code>1000  1000</code>. Account mới có thể có quota thấp hơn (ví dụ <code>10</code>); khi đó bỏ qua phần reserved concurrency ở Bước 5 vì Lambda luôn giữ lại một phần unreserved tối thiểu.</p>
+<hr>
+<h2 id="bước-1--mã-nguồn-function"><a class="anchor" href="#bước-1--mã-nguồn-function">Bước 1 — Mã nguồn function</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat &gt; lambda_function.py &lt;&lt; 'EOF'
+import json
+import os
+import time
+
+# Code ngoài handler chạy một lần trong INIT, tái sử dụng qua các lần invoke warm
+ORDERS = {
+    &quot;ORD-1001&quot;: {&quot;order_id&quot;: &quot;ORD-1001&quot;, &quot;customer&quot;: &quot;Khách Mẫu A&quot;, &quot;total&quot;: 1500000, &quot;status&quot;: &quot;COMPLETED&quot;},
+    &quot;ORD-1002&quot;: {&quot;order_id&quot;: &quot;ORD-1002&quot;, &quot;customer&quot;: &quot;Khách Mẫu B&quot;, &quot;total&quot;: 450000, &quot;status&quot;: &quot;PENDING&quot;},
+}
+COLD = True
+
+
+def lambda_handler(event, context):
+    global COLD
+    if &quot;Records&quot; in event:                      # nhánh S3 tùy chọn
+        return handle_s3(event)
+
+    http = event.get(&quot;requestContext&quot;, {}).get(&quot;http&quot;, {})
+    route = event.get(&quot;routeKey&quot;, &quot;&quot;)
+    # Chỉ log trường cần thiết: không log header (có thể chứa Authorization) hay body
+    print(json.dumps({&quot;route&quot;: route, &quot;requestId&quot;: context.aws_request_id, &quot;cold&quot;: COLD,
+                      &quot;sourceIp&quot;: http.get(&quot;sourceIp&quot;)}))
+    COLD = False
+
+    fault = os.environ.get(&quot;FAULT&quot;, &quot;&quot;)
+    if fault == &quot;exception&quot;:
+        raise RuntimeError(&quot;lỗi giả lập: bug chưa xử lý&quot;)
+    if fault == &quot;timeout&quot;:
+        time.sleep(5)                            # dài hơn timeout 3 giây của function
+    if fault == &quot;raw&quot;:
+        return {&quot;note&quot;: &quot;không có statusCode, API Gateway tự suy ra response&quot;}
+
+    if route == &quot;POST /orders&quot;:
+        try:
+            body = json.loads(event.get(&quot;body&quot;) or &quot;{}&quot;)
+        except json.JSONDecodeError:
+            return response(400, {&quot;error&quot;: &quot;Body không phải JSON hợp lệ&quot;})
+        if not isinstance(body.get(&quot;customer&quot;), str) or not isinstance(body.get(&quot;total&quot;), int) or body[&quot;total&quot;] &lt;= 0:
+            return response(400, {&quot;error&quot;: &quot;Cần 'customer' (chuỗi) và 'total' (số nguyên dương)&quot;})
+        order_id = f&quot;ORD-{context.aws_request_id[:8]}&quot;
+        order = {&quot;order_id&quot;: order_id, &quot;customer&quot;: body[&quot;customer&quot;], &quot;total&quot;: body[&quot;total&quot;], &quot;status&quot;: &quot;CREATED&quot;}
+        ORDERS[order_id] = order                 # chỉ sống trong execution environment này
+        return response(201, order)
+
+    if route == &quot;GET /orders/{orderId}&quot;:
+        order_id = (event.get(&quot;pathParameters&quot;) or {}).get(&quot;orderId&quot;)
+        if order_id in ORDERS:
+            return response(200, ORDERS[order_id])
+        return response(404, {&quot;error&quot;: f&quot;Không tìm thấy đơn '{order_id}'&quot;})
+
+    return response(404, {&quot;error&quot;: f&quot;Route '{route}' không tồn tại&quot;})
+
+
+def handle_s3(event):
+    for r in event[&quot;Records&quot;]:
+        key = r[&quot;s3&quot;][&quot;object&quot;][&quot;key&quot;]
+        print(json.dumps({&quot;s3_key&quot;: key, &quot;size&quot;: r[&quot;s3&quot;][&quot;object&quot;].get(&quot;size&quot;)}))
+    return {&quot;processed&quot;: len(event[&quot;Records&quot;])}
+
+
+def response(status, data):
+    return {
+        &quot;statusCode&quot;: status,
+        &quot;headers&quot;: {&quot;Content-Type&quot;: &quot;application/json; charset=utf-8&quot;},
+        &quot;body&quot;: json.dumps(data, ensure_ascii=False),
+    }
+EOF
+zip -q function.zip lambda_function.py</code></pre></div>
+<ul>
+<li><code>ORDERS</code> là &quot;database giả&quot; trong bộ nhớ: đơn tạo bằng <code>POST</code> chỉ tồn tại trong <strong>một</strong> execution environment và mất khi environment bị thu hồi. Đây là cách minh họa vì sao Lambda phải stateless; bài 07 đã có DynamoDB cho dữ liệu thật.</li>
+<li>Biến <code>FAULT</code> cho phép tạo lỗi có kiểm soát bằng cấu hình, không cần deploy code hỏng.</li>
+</ul>
+<hr>
+<h2 id="bước-2--execution-role-và-log-group"><a class="anchor" href="#bước-2--execution-role-và-log-group">Bước 2 — Execution role và log group</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat &gt; trust.json &lt;&lt; EOF
+{&quot;Version&quot;:&quot;2012-10-17&quot;,&quot;Statement&quot;:[{&quot;Effect&quot;:&quot;Allow&quot;,&quot;Principal&quot;:{&quot;Service&quot;:&quot;lambda.amazonaws.com&quot;},
+ &quot;Action&quot;:&quot;sts:AssumeRole&quot;,&quot;Condition&quot;:{&quot;StringEquals&quot;:{&quot;aws:SourceAccount&quot;:&quot;${ACCOUNT_ID}&quot;}}}]}
+EOF
+aws iam create-role --role-name Lab09LambdaRole --assume-role-policy-document file://trust.json \
+  --tags Key=Project,Value=aws-lab-09 &gt;/dev/null
+aws iam attach-role-policy --role-name Lab09LambdaRole \
+  --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+ROLE_ARN=$(aws iam get-role --role-name Lab09LambdaRole --query Role.Arn --output text)
+
+# Tạo log group trước để đặt retention; nếu để Lambda tự tạo, log giữ vĩnh viễn
+aws logs create-log-group --log-group-name &quot;/aws/lambda/${FN}&quot; --tags Project=aws-lab-09
+aws logs put-retention-policy --log-group-name &quot;/aws/lambda/${FN}&quot; --retention-in-days 1
+sleep 10   # IAM eventually consistent: role mới có thể chưa assume được ngay</code></pre></div>
+<p><code>AWSLambdaBasicExecutionRole</code> chỉ cho <code>logs:CreateLogGroup</code>, <code>CreateLogStream</code>, <code>PutLogEvents</code>. Function không gọi dịch vụ AWS nào khác nên không cần thêm quyền.</p>
+<hr>
+<h2 id="bước-3--tạo-function"><a class="anchor" href="#bước-3--tạo-function">Bước 3 — Tạo function</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>FN_ARN=$(aws lambda create-function --function-name &quot;${FN}&quot; \
+  --runtime python3.12 --architectures arm64 \
+  --role &quot;${ROLE_ARN}&quot; --handler lambda_function.lambda_handler \
+  --zip-file fileb://function.zip --memory-size 128 --timeout 3 \
+  --tags Project=aws-lab-09 \
+  --query FunctionArn --output text)
+aws lambda wait function-active-v2 --function-name &quot;${FN}&quot;
+
+aws lambda invoke --function-name &quot;${FN}&quot; --cli-binary-format raw-in-base64-out \
+  --payload '{&quot;routeKey&quot;:&quot;GET /orders/{orderId}&quot;,&quot;pathParameters&quot;:{&quot;orderId&quot;:&quot;ORD-1001&quot;},&quot;requestContext&quot;:{&quot;http&quot;:{}}}' \
+  out.json --query StatusCode &amp;&amp; cat out.json; echo</code></pre></div>
+<p><em>Kỳ vọng:</em> <code>200</code> và <code>{&quot;statusCode&quot;: 200, ... &quot;body&quot;: &quot;{\&quot;order_id\&quot;: \&quot;ORD-1001\&quot;, ...}&quot;}</code>. Gọi trực tiếp bằng CLI là <strong>synchronous invoke</strong>: nếu function lỗi, không ai retry thay bạn.</p>
+<p>Nếu <code>create-function</code> báo <code>The role defined for the function cannot be assumed by Lambda</code>, IAM chưa propagate: chờ 10–20 giây rồi chạy lại.</p>
+<hr>
+<h2 id="bước-4--http-api-route-stage-và-quyền-invoke"><a class="anchor" href="#bước-4--http-api-route-stage-và-quyền-invoke">Bước 4 — HTTP API, route, stage và quyền invoke</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>API_ID=$(aws apigatewayv2 create-api --name &quot;${FN}&quot; --protocol-type HTTP \
+  --tags Project=aws-lab-09 --query ApiId --output text)
+
+INTEGRATION_ID=$(aws apigatewayv2 create-integration --api-id &quot;${API_ID}&quot; \
+  --integration-type AWS_PROXY --integration-uri &quot;${FN_ARN}&quot; \
+  --payload-format-version 2.0 --timeout-in-millis 30000 \
+  --query IntegrationId --output text)
+
+for RK in &quot;POST /orders&quot; &quot;GET /orders/{orderId}&quot;; do
+  aws apigatewayv2 create-route --api-id &quot;${API_ID}&quot; --route-key &quot;${RK}&quot; \
+    --target &quot;integrations/${INTEGRATION_ID}&quot; &gt;/dev/null
+done
+
+# Lambda resource-based policy: chỉ API này (mọi stage/method/route) được invoke
+aws lambda add-permission --function-name &quot;${FN}&quot; --statement-id AllowHttpApiInvoke \
+  --action lambda:InvokeFunction --principal apigateway.amazonaws.com \
+  --source-arn &quot;arn:aws:execute-api:${AWS_REGION}:${ACCOUNT_ID}:${API_ID}/*&quot; &gt;/dev/null
+
+API_ENDPOINT=$(aws apigatewayv2 get-api --api-id &quot;${API_ID}&quot; --query ApiEndpoint --output text)
+echo &quot;API_ENDPOINT=${API_ENDPOINT}&quot;</code></pre></div>
+<p><code>AuthorizationType</code> của route mặc định là <code>NONE</code> (public). Đây là lý do có cảnh báo ở đầu lab.</p>
+<hr>
+<h2 id="bước-5--giới-hạn-throttling-và-concurrency"><a class="anchor" href="#bước-5--giới-hạn-throttling-và-concurrency">Bước 5 — Giới hạn throttling và concurrency</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws apigatewayv2 create-stage --api-id &quot;${API_ID}&quot; --stage-name '$default' --auto-deploy \
+  --default-route-settings ThrottlingBurstLimit=5,ThrottlingRateLimit=2 &gt;/dev/null
+
+# Bỏ qua lệnh này nếu Bước 0 cho thấy quota account thấp (ví dụ 10)
+aws lambda put-function-concurrency --function-name &quot;${FN}&quot; --reserved-concurrent-executions 5</code></pre></div>
+<ul>
+<li>Throttling ở stage chặn request <strong>trước khi</strong> tới Lambda (<code>429 Too Many Requests</code>), nên không tốn tiền Lambda.</li>
+<li>Reserved concurrency 5 vừa <strong>giữ chỗ</strong> vừa là <strong>trần cứng</strong>: tối đa 5 environment chạy đồng thời. Request vượt trần bị Lambda throttle.</li>
+</ul>
+<hr>
+<h2 id="bước-6--happy-path-và-invalid-input"><a class="anchor" href="#bước-6--happy-path-và-invalid-input">Bước 6 — Happy path và invalid input</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>call() { curl -s -o resp.json -w &quot;HTTP %{http_code}  &quot; &quot;$@&quot;; cat resp.json; echo; }
+
+call &quot;${API_ENDPOINT}/orders/ORD-1001&quot;
+call -X POST &quot;${API_ENDPOINT}/orders&quot; -H 'Content-Type: application/json' -d '{&quot;customer&quot;:&quot;Khách Mẫu C&quot;,&quot;total&quot;:2800000}'
+call -X POST &quot;${API_ENDPOINT}/orders&quot; -H 'Content-Type: application/json' -d '{&quot;customer&quot;:&quot;Thiếu total&quot;}'
+call -X POST &quot;${API_ENDPOINT}/orders&quot; -H 'Content-Type: application/json' -d '{&quot;customer&quot;: &quot;JSON hỏng&quot;,'
+call &quot;${API_ENDPOINT}/orders/ORD-9999&quot;
+call -X DELETE &quot;${API_ENDPOINT}/orders/ORD-1001&quot;</code></pre></div>
+<p><em>Kỳ vọng (minh họa):</em></p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>HTTP 200  {&quot;order_id&quot;: &quot;ORD-1001&quot;, &quot;customer&quot;: &quot;Khách Mẫu A&quot;, &quot;total&quot;: 1500000, &quot;status&quot;: &quot;COMPLETED&quot;}
+HTTP 201  {&quot;order_id&quot;: &quot;ORD-3f2a9c1e&quot;, &quot;customer&quot;: &quot;Khách Mẫu C&quot;, &quot;total&quot;: 2800000, &quot;status&quot;: &quot;CREATED&quot;}
+HTTP 400  {&quot;error&quot;: &quot;Cần 'customer' (chuỗi) và 'total' (số nguyên dương)&quot;}
+HTTP 400  {&quot;error&quot;: &quot;Body không phải JSON hợp lệ&quot;}
+HTTP 404  {&quot;error&quot;: &quot;Không tìm thấy đơn 'ORD-9999'&quot;}
+HTTP 404  {&quot;message&quot;:&quot;Not Found&quot;}</code></pre></div>
+<p>Dòng cuối do <strong>API Gateway</strong> trả (không có route <code>DELETE</code>), Lambda không hề được gọi: so sánh dạng body với các 404 do function trả.</p>
+<p>Kiểm tra log không chứa header hay body:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws logs filter-log-events --log-group-name &quot;/aws/lambda/${FN}&quot; --filter-pattern '&quot;route&quot;' \
+  --query 'events[-3:].message' --output text</code></pre></div>
+<p><em>Kỳ vọng:</em> mỗi dòng chỉ có <code>route</code>, <code>requestId</code>, <code>cold</code>, <code>sourceIp</code>. Dòng đầu tiên có <code>&quot;cold&quot;: true</code>, các dòng sau <code>false</code> (cùng environment được tái sử dụng).</p>
+<hr>
+<h2 id="bước-7--negative-case-exception-timeout-response-format"><a class="anchor" href="#bước-7--negative-case-exception-timeout-response-format">Bước 7 — Negative case: exception, timeout, response format</a></h2>
+<p>Dùng biến môi trường <code>FAULT</code> để bật từng lỗi, rồi gọi lại:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>fault() {
+  aws lambda update-function-configuration --function-name &quot;${FN}&quot; \
+    --environment &quot;Variables={FAULT=$1}&quot; &gt;/dev/null
+  aws lambda wait function-updated-v2 --function-name &quot;${FN}&quot;
+  call &quot;${API_ENDPOINT}/orders/ORD-1001&quot;
+}
+fault exception
+fault timeout
+fault raw
+fault none</code></pre></div>
+<p><em>Kỳ vọng (minh họa):</em></p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>HTTP 500  {&quot;message&quot;:&quot;Internal Server Error&quot;}
+HTTP 500  {&quot;message&quot;:&quot;Internal Server Error&quot;}
+HTTP 200  {&quot;note&quot;: &quot;không có statusCode, API Gateway tự suy ra response&quot;}
+HTTP 200  {&quot;order_id&quot;: &quot;ORD-1001&quot;, ...}</code></pre></div>
+<ul>
+<li><strong>exception / timeout:</strong> HTTP API trả <code>500</code> chung chung cho client; nguyên nhân thật chỉ có trong log. (REST API với Lambda proxy trả <code>502</code> cho cùng loại lỗi, nên đừng học thuộc &quot;lỗi Lambda = 502&quot;.)</li>
+<li><strong>raw:</strong> với payload format <strong>2.0</strong>, nếu function trả JSON hợp lệ mà <strong>không có</strong> <code>statusCode</code>, API Gateway coi cả object là body và trả <code>200</code>. Lỗi thiết kế response vì vậy có thể <strong>không</strong> lộ ra thành mã lỗi; với format 1.0 hoặc REST API, response sai định dạng bị coi là lỗi.</li>
+</ul>
+<p>Đọc nguyên nhân:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws logs filter-log-events --log-group-name &quot;/aws/lambda/${FN}&quot; \
+  --filter-pattern '?&quot;Task timed out&quot; ?RuntimeError ?ERROR' \
+  --query 'events[].message' --output text | head -20</code></pre></div>
+<p><em>Kỳ vọng:</em> thấy <code>RuntimeError: lỗi giả lập: bug chưa xử lý</code> kèm traceback, và <code>Task timed out after 3.00 seconds</code>. Timeout của function (3 giây) nhỏ hơn timeout integration (30 giây), nên Lambda dừng trước và API Gateway nhận lỗi function.</p>
+<h3 id="throttling"><a class="anchor" href="#throttling">Throttling</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>for i in $(seq 1 20); do curl -s -o /dev/null -w '%{http_code} ' &quot;${API_ENDPOINT}/orders/ORD-1001&quot; &amp; done; wait; echo</code></pre></div>
+<p><em>Kỳ vọng:</em> trộn <code>200</code> và <code>429</code>. Số <code>429</code> phụ thuộc thời điểm, nhưng với burst 5 và rate 2/giây, 20 request đồng thời phải có <code>429</code>.</p>
+<hr>
+<h2 id="bước-8-tùy-chọn--s3-trigger-với-prefix-tách-biệt"><a class="anchor" href="#bước-8-tùy-chọn--s3-trigger-với-prefix-tách-biệt">Bước 8 (tùy chọn) — S3 trigger với prefix tách biệt</a></h2>
+<p>Đây là <strong>asynchronous invoke</strong>: S3 gửi event vào hàng đợi nội bộ của Lambda; nếu function lỗi, Lambda tự retry tối đa 2 lần.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>BUCKET=&quot;lab09-uploads-${ACCOUNT_ID}&quot;
+if [ &quot;${AWS_REGION}&quot; = &quot;us-east-1&quot; ]; then aws s3api create-bucket --bucket &quot;${BUCKET}&quot; &gt;/dev/null
+else aws s3api create-bucket --bucket &quot;${BUCKET}&quot; --create-bucket-configuration LocationConstraint=&quot;${AWS_REGION}&quot; &gt;/dev/null; fi
+
+aws lambda add-permission --function-name &quot;${FN}&quot; --statement-id AllowS3Invoke \
+  --action lambda:InvokeFunction --principal s3.amazonaws.com \
+  --source-arn &quot;arn:aws:s3:::${BUCKET}&quot; --source-account &quot;${ACCOUNT_ID}&quot; &gt;/dev/null
+
+cat &gt; notif.json &lt;&lt; EOF
+{&quot;LambdaFunctionConfigurations&quot;:[{&quot;LambdaFunctionArn&quot;:&quot;${FN_ARN}&quot;,&quot;Events&quot;:[&quot;s3:ObjectCreated:*&quot;],
+  &quot;Filter&quot;:{&quot;Key&quot;:{&quot;FilterRules&quot;:[{&quot;Name&quot;:&quot;prefix&quot;,&quot;Value&quot;:&quot;uploads/&quot;}]}}}]}
+EOF
+aws s3api put-bucket-notification-configuration --bucket &quot;${BUCKET}&quot; --notification-configuration file://notif.json
+
+echo &quot;đơn hàng giả&quot; &gt; a.txt
+aws s3 cp a.txt &quot;s3://${BUCKET}/uploads/a.txt&quot;
+aws s3 cp a.txt &quot;s3://${BUCKET}/processed/a.txt&quot;
+sleep 15
+aws logs filter-log-events --log-group-name &quot;/aws/lambda/${FN}&quot; --filter-pattern '&quot;s3_key&quot;' \
+  --query 'events[].message' --output text</code></pre></div>
+<p><em>Kỳ vọng:</em> chỉ có một dòng <code>{&quot;s3_key&quot;: &quot;uploads/a.txt&quot;, ...}</code>; file trong <code>processed/</code> không kích hoạt function. Nếu function ghi output vào <code>uploads/</code>, mỗi lần chạy sẽ tạo event mới và thành vòng lặp; Lambda có cơ chế phát hiện vòng lặp đệ quy cho một số nguồn (SQS, SNS, S3) nhưng đó là lưới an toàn, không phải thiết kế.</p>
+<hr>
+<h2 id="bước-9--dọn-dẹp"><a class="anchor" href="#bước-9--dọn-dẹp">Bước 9 — Dọn dẹp</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code># 1. Nhánh S3 (nếu đã làm)
+BUCKET=&quot;lab09-uploads-${ACCOUNT_ID}&quot;
+aws s3 rm &quot;s3://${BUCKET}&quot; --recursive 2&gt;/dev/null &amp;&amp; aws s3api delete-bucket --bucket &quot;${BUCKET}&quot;
+
+# 2. API (xóa cả route, integration, stage)
+aws apigatewayv2 delete-api --api-id &quot;${API_ID}&quot;
+
+# 3. Function (xóa luôn permission và reserved concurrency), log group
+aws lambda delete-function --function-name &quot;${FN}&quot;
+aws logs delete-log-group --log-group-name &quot;/aws/lambda/${FN}&quot;
+
+# 4. IAM
+aws iam detach-role-policy --role-name Lab09LambdaRole \
+  --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+aws iam delete-role --role-name Lab09LambdaRole
+
+# 5. File tạm
+cd ~ &amp;&amp; rm -rf &quot;${LAB_DIR}&quot;</code></pre></div>
+<p>Xóa log group <strong>sau</strong> function: nếu xóa trước mà function còn được gọi, Lambda sẽ tự tạo lại log group không có retention.</p>
+<h3 id="kiểm-tra-inventory-sau-cleanup"><a class="anchor" href="#kiểm-tra-inventory-sau-cleanup">Kiểm tra inventory sau cleanup</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>echo &quot;== Lambda&quot;;    aws lambda get-function --function-name lab09-order-api 2&gt;&amp;1 | grep -o ResourceNotFoundException
+echo &quot;== API&quot;;       aws apigatewayv2 get-apis --query &quot;Items[?Name=='lab09-order-api'].ApiId&quot; --output text
+echo &quot;== Log group&quot;; aws logs describe-log-groups --log-group-name-prefix /aws/lambda/lab09 --query 'logGroups[].logGroupName' --output text
+echo &quot;== Bucket&quot;;    aws s3api head-bucket --bucket &quot;lab09-uploads-${ACCOUNT_ID}&quot; 2&gt;&amp;1 | grep -oE '404|Not Found'
+echo &quot;== IAM&quot;;       aws iam get-role --role-name Lab09LambdaRole 2&gt;&amp;1 | grep -o NoSuchEntity</code></pre></div>
+<p><em>Kỳ vọng:</em> Lambda in <code>ResourceNotFoundException</code>, bucket in <code>404</code>/<code>Not Found</code>, IAM in <code>NoSuchEntity</code>, API và log group rỗng.</p>
+<h3 id="nếu-lab-dừng-giữa-chừng-hoặc-mất-shell"><a class="anchor" href="#nếu-lab-dừng-giữa-chừng-hoặc-mất-shell">Nếu lab dừng giữa chừng hoặc mất shell</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export AWS_PROFILE=&quot;aws-lab&quot; AWS_REGION=&quot;ap-southeast-1&quot; FN=&quot;lab09-order-api&quot;
+export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+export LAB_DIR=$(mktemp -d) &amp;&amp; cd &quot;${LAB_DIR}&quot;
+API_ID=$(aws apigatewayv2 get-apis --query &quot;Items[?Name=='lab09-order-api'].ApiId | [0]&quot; --output text)
+echo &quot;API_ID=${API_ID}&quot;</code></pre></div>
+<p>Sau đó chạy lại Bước 9. Lệnh nào báo <code>NotFoundException</code>, <code>ResourceNotFoundException</code>, <code>NoSuchEntity</code>, <code>NoSuchBucket</code> nghĩa là tài nguyên đó đã được xóa. Nếu <code>API_ID</code> là <code>None</code>, bỏ qua lệnh xóa API.</p>
+<hr>
+<h2 id="checklist-hoàn-thành"><a class="anchor" href="#checklist-hoàn-thành">Checklist hoàn thành</a></h2>
+<ul>
+<li><input type="checkbox"> Log group có retention 1 ngày, được tạo trước function.</li>
+<li><input type="checkbox"> Function arm64 chạy được qua <code>aws lambda invoke</code> và qua HTTP API.</li>
+<li><input type="checkbox"> Phân biệt được 404 do API Gateway trả (không có route) và 404 do function trả.</li>
+<li><input type="checkbox"> Invalid input (thiếu trường, JSON hỏng) trả <code>400</code>, không làm function lỗi.</li>
+<li><input type="checkbox"> Thấy <code>500</code> khi function ném exception và khi timeout; đọc được nguyên nhân trong log.</li>
+<li><input type="checkbox"> Giải thích được vì sao response thiếu <code>statusCode</code> vẫn trả <code>200</code> với payload format 2.0.</li>
+<li><input type="checkbox"> Thấy <code>429</code> khi vượt throttling; biết reserved concurrency là trần cứng.</li>
+<li><input type="checkbox"> Log không chứa header hay body.</li>
+<li><input type="checkbox"> (Tùy chọn) S3 trigger chỉ chạy với prefix <code>uploads/</code>.</li>
+<li><input type="checkbox"> Cleanup xong; inventory rỗng.</li>
+</ul>
+<hr>
+<h2 id="troubleshooting-nhanh"><a class="anchor" href="#troubleshooting-nhanh">Troubleshooting nhanh</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Triệu chứng</th>
+<th>Nguyên nhân khả dĩ</th>
+<th>Bằng chứng / Khắc phục</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>{&quot;message&quot;:&quot;Not Found&quot;}</code></td>
+<td>Route không khớp method/path, hoặc stage chưa tạo</td>
+<td><code>aws apigatewayv2 get-routes --api-id ${API_ID} --query &#39;Items[].RouteKey&#39;</code>; kiểm tra stage <code>$default</code></td>
+</tr>
+<tr>
+<td><code>500 Internal Server Error</code>, log Lambda không có dòng nào</td>
+<td>API Gateway không được phép invoke function</td>
+<td><code>aws lambda get-policy --function-name ${FN}</code>; <code>source-arn</code> phải chứa đúng <code>API_ID</code></td>
+</tr>
+<tr>
+<td><code>500 Internal Server Error</code>, log có traceback</td>
+<td>Function ném exception</td>
+<td>Đọc traceback; xử lý input không hợp lệ thành <code>400</code></td>
+</tr>
+<tr>
+<td><code>500</code>, log có <code>Task timed out after 3.00 seconds</code></td>
+<td>Function chạy lâu hơn timeout của nó</td>
+<td>Tìm phần chậm; tăng <code>--timeout</code> có chủ đích; timeout function phải nhỏ hơn timeout integration (30 giây với HTTP API)</td>
+</tr>
+<tr>
+<td><code>503 Service Unavailable</code></td>
+<td>Integration chạy quá timeout của API Gateway</td>
+<td>Giảm thời gian xử lý hoặc chuyển sang xử lý bất đồng bộ</td>
+</tr>
+<tr>
+<td><code>429 Too Many Requests</code></td>
+<td>Vượt throttling của stage</td>
+<td>Có chủ đích trong lab; production cần client retry với backoff</td>
+</tr>
+<tr>
+<td>Lỗi 5xx tăng khi tải cao, log không có lỗi code</td>
+<td>Lambda bị throttle do chạm reserved concurrency</td>
+<td>Metric <code>Throttles</code> của function trong CloudWatch; tăng trần có chủ đích hoặc giảm throttling ở stage cho khớp</td>
+</tr>
+<tr>
+<td><code>create-function</code> báo role cannot be assumed</td>
+<td>IAM chưa propagate, hoặc trust policy sai principal</td>
+<td>Chờ 10–20 giây; trust policy phải là <code>lambda.amazonaws.com</code></td>
+</tr>
+<tr>
+<td><code>put-function-concurrency</code> báo vượt unreserved tối thiểu</td>
+<td>Quota concurrency của account thấp</td>
+<td>Bỏ qua bước này, dựa vào throttling của stage</td>
+</tr>
+<tr>
+<td>S3 không kích hoạt function</td>
+<td>Thiếu <code>lambda:AddPermission</code> cho <code>s3.amazonaws.com</code>, sai prefix</td>
+<td><code>aws s3api get-bucket-notification-configuration --bucket ...</code>; <code>aws lambda get-policy</code></td>
+</tr>
+</tbody></table>
+</div>
+<hr>
+<h2 id="tiếp-theo"><a class="anchor" href="#tiếp-theo">Tiếp theo</a></h2>
+<p>Bạn đã chạy một API serverless có giới hạn chi phí và đọc được nguyên nhân lỗi từ log. Bài tiếp theo: <strong><a href="../../notes/10-observability-and-application-security.html">Bài 10 — Quan sát và bảo mật ứng dụng: CloudWatch, CloudTrail, Secrets Manager, Parameter Store, KMS</a></strong>.</p>
+
+<footer>Sinh tự động từ <code>labs/09-serverless/README.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

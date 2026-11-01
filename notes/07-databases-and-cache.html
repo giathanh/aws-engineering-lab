@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bài 07 — Cơ sở dữ liệu và Bộ đệm: RDS, Aurora, DynamoDB và ElastiCache</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="01-foundations.html">01. Lý thuyết</a><a href="../labs/01-foundations/README.html">01. Lab</a><a href="02-identity-and-access.html">02. Lý thuyết</a><a href="../labs/02-identity-and-access/README.html">02. Lab</a><a href="03-cost-management.html">03. Lý thuyết</a><a href="../labs/03-cost-management/README.html">03. Lab</a><a href="04-networking.html">04. Lý thuyết</a><a href="../labs/04-networking/README.html">04. Lab</a><a href="05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../labs/05-compute-and-load-balancing/README.html">05. Lab</a><a href="06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../labs/06-storage-and-content-delivery/README.html">06. Lab</a><a href="07-databases-and-cache.html" class="active">07. Lý thuyết</a><a href="../labs/07-databases-and-cache/README.html">07. Lab</a><a href="08-containers.html">08. Lý thuyết</a><a href="../labs/08-containers/README.html">08. Lab</a><a href="09-serverless.html">09. Lý thuyết</a><a href="../labs/09-serverless/README.html">09. Lab</a><a href="10-observability-and-application-security.html">10. Lý thuyết</a><a href="../labs/10-observability-and-application-security/README.html">10. Lab</a><a href="11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../labs/11-messaging-and-workflows/README.html">11. Lab</a><a href="12-iac-and-cicd.html">12. Lý thuyết</a><a href="../labs/12-iac-and-cicd/README.html">12. Lab</a><a href="13-reliability-and-performance.html">13. Lý thuyết</a><a href="../labs/13-reliability-and-performance/README.html">13. Lab</a><a href="14-architecture-and-governance.html">14. Lý thuyết</a><a href="../labs/14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#mục-tiêu">Mục tiêu</a></li><li><a href="#phần-1--lựa-chọn-cơ-sở-dữ-liệu-theo-access-pattern-và-tải-45-phút">Phần 1 — Lựa chọn Cơ sở dữ liệu theo Access Pattern và Tải (45 phút)</a></li><li><a href="#phần-2--amazon-rds-postgresql-mạng-riêng-tư-connection-pool-và-pitr-50-phút">Phần 2 — Amazon RDS PostgreSQL: Mạng riêng tư, Connection Pool và PITR (50 phút)</a></li><li><a href="#phần-3--multi-az-read-replica-và-đột-phá-của-amazon-aurora-50-phút">Phần 3 — Multi-AZ, Read Replica và Đột phá của Amazon Aurora (50 phút)</a></li><li><a href="#phần-4--amazon-dynamodb-partition-key-gsi-và-conditional-writes-50-phút">Phần 4 — Amazon DynamoDB: Partition Key, GSI và Conditional Writes (50 phút)</a></li><li><a href="#phần-5--amazon-elasticache-cache-aside-ttl-và-phòng-chống-stampede-45-phút">Phần 5 — Amazon ElastiCache: Cache-Aside, TTL và Phòng chống Stampede (45 phút)</a></li><li><a href="#phần-6--giới-thiệu-bài-thực-hành-lab-07">Phần 6 — Giới thiệu bài thực hành (Lab 07)</a></li><li><a href="#phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi phổ biến (25 phút)</a></li><li><a href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></li><li><a href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></li><li><a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></li><li><a href="#đáp-án-gợi-ý">Đáp án gợi ý</a></li></ol></aside>
+<main>
+<h1 id="bài-07--cơ-sở-dữ-liệu-và-bộ-đệm-rds-aurora-dynamodb-và-elasticache"><a class="anchor" href="#bài-07--cơ-sở-dữ-liệu-và-bộ-đệm-rds-aurora-dynamodb-và-elasticache">Bài 07 — Cơ sở dữ liệu và Bộ đệm: RDS, Aurora, DynamoDB và ElastiCache</a></h1>
+<blockquote>
+<p><strong>Đối tượng:</strong> developer có kinh nghiệm nhưng mới học AWS.
+<strong>Thời lượng:</strong> khoảng 6–8 giờ, chia hai buổi. Buổi 1 gồm phần 1–3 (Cơ sở dữ liệu quan hệ RDS, Aurora, High Availability &amp; Disaster Recovery). Buổi 2 gồm phần 4–7 (NoSQL DynamoDB, In-Memory Caching ElastiCache và <a href="../labs/07-databases-and-cache/README.html">lab thực hành</a>).
+<strong>Kế hoạch gốc:</strong> <a href="../plans/07-databases-and-cache.md">plans/07-databases-and-cache.md</a>
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Xem <a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a> ở cuối bài.</p>
+</blockquote>
+<h2 id="mục-tiêu"><a class="anchor" href="#mục-tiêu">Mục tiêu</a></h2>
+<p>Sau bài này, bạn có thể:</p>
+<ol>
+<li>Lựa chọn đúng công nghệ cơ sở dữ liệu dựa trên <strong>Access Pattern</strong>, yêu cầu tính nhất quán (<strong>ACID vs BASE</strong>), mô hình dữ liệu và đặc thù tải hệ thống.</li>
+<li>Thiết kế và vận hành <strong>Amazon RDS</strong> trong mạng riêng tư (Private Subnet), cơ chế sao lưu tự động (<strong>Automated Backup</strong>) và khôi phục về điểm thời gian bất kỳ (<strong>Point-In-Time Recovery - PITR</strong>).</li>
+<li>Phân biệt rõ bản chất kiến trúc giữa <strong>Multi-AZ Deployment</strong> (dự phòng chống thảm họa, đồng bộ) với <strong>Read Replica</strong> (mở rộng năng lực đọc, bất đồng bộ) và đột phá kiến trúc của <strong>Amazon Aurora</strong>.</li>
+<li>Thiết kế dữ liệu NoSQL hiệu năng cao với <strong>Amazon DynamoDB</strong>: cấu trúc Partition Key / Sort Key, phân biệt thao tác <strong>Query vs Scan</strong>, thiết lập <strong>Global Secondary Index (GSI)</strong> và xử lý tương tranh bằng <strong>Conditional Writes</strong>.</li>
+<li>Triển khai mô hình <strong>Cache-Aside</strong> với <strong>Amazon ElastiCache</strong>, kiểm soát hiện tượng nghẽn bộ đệm (<strong>Cache Stampede / Thundering Herd</strong>) và thiết kế khả năng chịu lỗi khi tầng Cache sập.</li>
+</ol>
+<hr>
+<h2 id="phần-1--lựa-chọn-cơ-sở-dữ-liệu-theo-access-pattern-và-tải-45-phút"><a class="anchor" href="#phần-1--lựa-chọn-cơ-sở-dữ-liệu-theo-access-pattern-và-tải-45-phút">Phần 1 — Lựa chọn Cơ sở dữ liệu theo Access Pattern và Tải (45 phút)</a></h2>
+<h3 id="tư-duy-purpose-built-database-trên-cloud"><a class="anchor" href="#tư-duy-purpose-built-database-trên-cloud">Tư duy &quot;Purpose-Built Database&quot; trên Cloud</a></h3>
+<p>Trong kiến trúc nguyên khối (Monolith) truyền thống, doanh nghiệp thường cố gắng nhồi nhét mọi thứ vào một hệ quản trị RDBMS duy nhất (từ thông tin người dùng, đơn hàng, giỏ hàng tạm, đến dữ liệu phân tích và session).</p>
+<p>Trên AWS, tư duy thiết kế hiện đại chuyển sang <strong>Purpose-Built Databases</strong> (chọn đúng công cụ cho từng bài toán cụ thể):</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Cây quyết định lựa chọn Database trên AWS:
+                                  Dữ liệu của bạn là gì?
+                                             │
+             ┌───────────────────────────────┴──────────────────────────────┐
+             ▼                                                              ▼
+    Quan hệ (Relational)?                                         Phi quan hệ (NoSQL / Cache)?
+    - Cần ACID transaction khắt khe                                         │
+    - Cần JOIN nhiều bảng phức tạp                                          │
+    - Schema có cấu trúc chặt chẽ                                           │
+             │                                                              │
+    ┌────────┴────────┐                                     ┌───────────────┴───────────────┐
+    ▼                 ▼                                     ▼                               ▼
+Amazon RDS     Amazon Aurora                         Key-Value / Document?          In-Memory Cache?
+(Chi phí tối   (Tải cực lớn, tự                      - Độ trễ cực thấp (&lt;10ms)      - Đệm dữ liệu thường đọc
+ ưu, chuẩn     co giãn, failover                     - Khả năng scale vô hạn        - Lưu session, rate limit
+ open-source)  nhanh &lt;30s)                           - Không JOIN bảng              - Tải đọc hàng trăm nghìn RPS
+                                                            │                               │
+                                                            ▼                               ▼
+                                                     Amazon DynamoDB                Amazon ElastiCache
+                                                     (Serverless, NoSQL)            (Redis / Valkey / Memcached)</code></pre></div>
+<h3 id="bảng-so-sánh-các-đặc-tính-cốt-lõi"><a class="anchor" href="#bảng-so-sánh-các-đặc-tính-cốt-lõi">Bảng so sánh các đặc tính cốt lõi</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Dịch vụ</th>
+<th>Loại hình</th>
+<th>Mô hình dữ liệu</th>
+<th>Tính nhất quán</th>
+<th>Khả năng mở rộng (Scaling)</th>
+<th>Ca sử dụng điển hình</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Amazon RDS</strong></td>
+<td>Managed RDBMS</td>
+<td>Tables, Rows (Postgres, MySQL, MariaDB)</td>
+<td>ACID mạnh (Strong Consistency)</td>
+<td>Scale dọc (Vertical) là chủ yếu; Scale đọc qua Read Replica</td>
+<td>Nghiệp vụ kế toán, ERP, lõi xử lý thanh toán tài chính</td>
+</tr>
+<tr>
+<td><strong>Amazon Aurora</strong></td>
+<td>Cloud-native RDBMS</td>
+<td>Tương thích PostgreSQL &amp; MySQL</td>
+<td>ACID (một writer)</td>
+<td>Storage tự tăng tới hàng trăm TiB (giới hạn tùy engine version); tối đa 15 Aurora Replicas</td>
+<td>Ứng dụng doanh nghiệp lớn, SaaS đa người dùng, lưu lượng cao</td>
+</tr>
+<tr>
+<td><strong>Amazon DynamoDB</strong></td>
+<td>Managed NoSQL</td>
+<td>Key-Value, Document (JSON)</td>
+<td>Eventual Consistency (mặc định) hoặc Strongly Consistent</td>
+<td>Scale ngang (Horizontal) tự động không giới hạn dung lượng/RPS</td>
+<td>Giỏ hàng e-commerce, tracking đơn hàng, lịch sử thiết bị IoT</td>
+</tr>
+<tr>
+<td><strong>Amazon ElastiCache</strong></td>
+<td>In-memory Data Store</td>
+<td>Key-Value, Hashes, Sets, Sorted Sets</td>
+<td>In-memory Speed (Micro-giây)</td>
+<td>Cluster Sharding / Replication</td>
+<td>Cache truy vấn DB, quản lý session đăng nhập, Bảng xếp hạng (Leaderboard)</td>
+</tr>
+</tbody></table>
+</div>
+<hr>
+<h2 id="phần-2--amazon-rds-postgresql-mạng-riêng-tư-connection-pool-và-pitr-50-phút"><a class="anchor" href="#phần-2--amazon-rds-postgresql-mạng-riêng-tư-connection-pool-và-pitr-50-phút">Phần 2 — Amazon RDS PostgreSQL: Mạng riêng tư, Connection Pool và PITR (50 phút)</a></h2>
+<h3 id="kiến-trúc-triển-khai-rds-an-toàn-trong-vpc"><a class="anchor" href="#kiến-trúc-triển-khai-rds-an-toàn-trong-vpc">Kiến trúc Triển khai RDS An toàn trong VPC</a></h3>
+<p>Nguyên tắc bất di bất dịch trong bảo mật Enterprise: <strong>Không bao giờ đưa cơ sở dữ liệu quan hệ ra Public Subnet!</strong></p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Mô hình triển khai Amazon RDS trong mạng riêng tư:
+┌────────────────────────────────────────────────────────────────────────┐
+│ VPC (10.0.0.0/16)                                                      │
+│                                                                        │
+│  ┌──────────────────────────────┐    ┌──────────────────────────────┐  │
+│  │ Private Subnet 1 (AZ-a)      │    │ Private Subnet 2 (AZ-b)      │  │
+│  │ 10.0.11.0/24                 │    │ 10.0.12.0/24                 │  │
+│  │                              │    │                              │  │
+│  │ ┌──────────────────────────┐ │    │ ┌──────────────────────────┐ │  │
+│  │ │ RDS Primary Instance     │ │    │ │ (Standby Instance        │ │  │
+│  │ │ Port 5432                │ │    │ │  nếu bật Multi-AZ)       │ │  │
+│  │ └──────────────────────────┘ │    │ └──────────────────────────┘ │  │
+│  └──────────────▲───────────────┘    └──────────────────────────────┘  │
+│                 │                                                      │
+│                 │ Chỉ cho phép Inbound Port 5432 từ Security Group App │
+│                 │                                                      │
+│  ┌──────────────┴───────────────┐                                      │
+│  │ App Servers (EC2 / ECS Tasks)│                                      │
+│  │ Security Group: `sg-app`     │                                      │
+│  └──────────────────────────────┘                                      │
+└────────────────────────────────────────────────────────────────────────┘</code></pre></div>
+<ol>
+<li><strong>DB Subnet Group:</strong> RDS bắt buộc bạn phải tạo một DB Subnet Group gồm tối thiểu <strong>2 Subnet nằm ở 2 Availability Zones khác nhau</strong> trong cùng một VPC (nhằm đảm bảo sẵn sàng chuyển đổi dự phòng khi cần).</li>
+<li><strong>Security Group Chaining:</strong> Security Group của RDS (<code>sg-rds</code>) chỉ mở cổng <code>5432</code> với Source là định danh Security Group của máy chủ ứng dụng (<code>sg-app</code>), loại bỏ hoàn toàn việc mở dải IP tĩnh.</li>
+<li><strong>Connection Pooling và RDS Proxy:</strong> Mỗi kết nối mới tới PostgreSQL tiêu tốn khoảng 2–10 MB RAM máy chủ. Khi hàng ngàn hàm Serverless Lambda hoặc container mở kết nối đồng thời, RDS sẽ nhanh chóng cạn kiệt bộ nhớ và báo lỗi <code>FATAL: remaining connection slots are reserved for non-replication superuser connections</code>.<ul>
+<li><strong>Giải pháp:</strong> Sử dụng <strong>Amazon RDS Proxy</strong> đứng trước database để gom và chia sẻ kết nối (Connection Pooling), bảo vệ database khỏi tình trạng cạn kiệt connection.</li>
+</ul>
+</li>
+</ol>
+<h3 id="cơ-chế-sao-lưu-tự-động-và-point-in-time-recovery-pitr"><a class="anchor" href="#cơ-chế-sao-lưu-tự-động-và-point-in-time-recovery-pitr">Cơ chế Sao lưu Tự động và Point-In-Time Recovery (PITR)</a></h3>
+<ul>
+<li><strong>Automated Backup:</strong> RDS tự động chụp snapshot toàn bộ instance hàng ngày trong khung giờ sao lưu (Backup Window) và tải transaction log (WAL với PostgreSQL) lên S3 khoảng mỗi 5 phút.</li>
+<li><strong>Thời gian lưu trữ (Backup Retention Period):</strong> Cấu hình từ 1 đến 35 ngày.</li>
+<li><strong>Point-In-Time Recovery (PITR):</strong> Cho phép bạn khôi phục database về <strong>một giây cụ thể</strong> trong khoảng retention, tới <code>LatestRestorableTime</code> (thường trễ hiện tại khoảng 5 phút). Ví dụ: khôi phục về <code>14:23:15</code> hôm qua, ngay trước khi một script bảo trì vô tình chạy <code>DROP TABLE orders;</code>.</li>
+<li><strong>Manual snapshot</strong> không bị xóa khi xóa instance và tính phí cho tới khi bạn xóa; automated backup thì bị xóa theo instance (trừ khi chọn giữ lại).</li>
+<li><strong>Lưu ý then chốt:</strong> Thao tác Restore từ PITR hoặc Snapshot sẽ <strong>luôn luôn tạo ra một RDS DB Instance hoàn toàn mới</strong> với Endpoint mới, chứ không bao giờ ghi đè trực tiếp lên instance cũ đang chạy.</li>
+<li><strong>Backup chưa phải bằng chứng khôi phục được.</strong> Chỉ một lần restore thật, kiểm tra dữ liệu và đo thời gian mới cho bạn biết RTO/RPO thực tế. Lab 07 làm đúng việc này.</li>
+<li><strong>Mật khẩu master:</strong> dùng <code>--manage-master-user-password</code> để RDS sinh và lưu mật khẩu trong Secrets Manager (có rotation), thay vì truyền mật khẩu qua tham số CLI.</li>
+</ul>
+<hr>
+<h2 id="phần-3--multi-az-read-replica-và-đột-phá-của-amazon-aurora-50-phút"><a class="anchor" href="#phần-3--multi-az-read-replica-và-đột-phá-của-amazon-aurora-50-phút">Phần 3 — Multi-AZ, Read Replica và Đột phá của Amazon Aurora (50 phút)</a></h2>
+<p>Rất nhiều kỹ sư mới học AWS nhầm lẫn giữa <strong>Multi-AZ</strong> và <strong>Read Replica</strong>. Đây là hai cơ chế phục vụ hai mục đích hoàn toàn khác biệt!</p>
+<blockquote>
+<p>[!IMPORTANT]
+&quot;Multi-AZ&quot; không chỉ có một kiểu. Luôn nói rõ topology:</p>
+<ul>
+<li><strong>RDS Multi-AZ DB instance deployment:</strong> 1 primary + 1 standby ở AZ khác, sao chép đồng bộ, <strong>standby không đọc được</strong>. Sơ đồ và bảng dưới đây mô tả kiểu này.</li>
+<li><strong>RDS Multi-AZ DB cluster deployment</strong> (MySQL/PostgreSQL): 1 writer + 2 <strong>reader standby đọc được</strong> ở 3 AZ, sao chép bán đồng bộ (commit khi ít nhất một reader xác nhận), failover thường nhanh hơn.</li>
+<li><strong>Aurora:</strong> storage luôn trải 3 AZ; &quot;Multi-AZ&quot; của Aurora nghĩa là có ít nhất một Aurora Replica ở AZ khác để làm đích failover, và replica đó đọc được.</li>
+</ul>
+</blockquote>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Phân biệt Multi-AZ Deployment vs Read Replica:
+
+Multi-AZ (High Availability - Chống thảm họa):
+┌─────────────────────────┐               ┌─────────────────────────┐
+│ AZ-a (Primary DB)       │ ──Đồng bộ───&gt; │ AZ-b (Standby DB)       │
+│ Nhận Đọc &amp; Ghi (R/W)    │  (Synchronous)│ CHỈ DỰ PHÒNG (Không đọc)│
+└─────────────────────────┘               └─────────────────────────┘
+        │
+        └── Khi AZ-a sập ──&gt; AWS tự động đổi DNS phân giải sang AZ-b (thường 1–2 phút)
+
+Read Replica (Read Scalability - Mở rộng tải đọc):
+┌─────────────────────────┐               ┌─────────────────────────┐
+│ AZ-a (Primary DB)       │ ─Bất đồng bộ─&gt;│ AZ-b (Read Replica)     │
+│ Nhận Đọc &amp; Ghi (R/W)    │ (Async lag)   │ CHỈ CHO PHÉP ĐỌC (RO)   │
+└─────────────────────────┘               └─────────────────────────┘</code></pre></div>
+<h3 id="bảng-đối-chiếu-kỹ-thuật"><a class="anchor" href="#bảng-đối-chiếu-kỹ-thuật">Bảng đối chiếu kỹ thuật</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tiêu chí</th>
+<th>RDS Multi-AZ Deployment</th>
+<th>RDS Read Replica</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Mục đích chính</strong></td>
+<td>Độ sẵn sàng cao (High Availability), chống chịu lỗi phần cứng/AZ</td>
+<td>Mở rộng năng lực đọc (Read Scaling) cho ứng dụng báo cáo/dashboard</td>
+</tr>
+<tr>
+<td><strong>Cơ chế sao chép</strong></td>
+<td><strong>Đồng bộ (Synchronous Replication)</strong> — Transaction chỉ commit khi đã ghi thành công ở cả 2 node</td>
+<td><strong>Bất đồng bộ (Asynchronous Replication)</strong> — Transaction commit ngay trên Primary, sau đó stream log sang Replica</td>
+</tr>
+<tr>
+<td><strong>Khả năng phục vụ traffic</strong></td>
+<td>Standby node <strong>hoàn toàn thụ động (Passive)</strong>, không thể kết nối đọc/ghi</td>
+<td>Replica node mở cổng phục vụ các truy vấn đọc (<code>SELECT</code>)</td>
+</tr>
+<tr>
+<td><strong>Endpoint</strong></td>
+<td>Chỉ có 1 DNS Endpoint duy nhất. Khi failover, AWS đổi bản ghi DNS ngầm; ứng dụng phải reconnect và không cache DNS quá lâu</td>
+<td>Mỗi Read Replica có DNS Endpoint riêng biệt cho ứng dụng đọc</td>
+</tr>
+<tr>
+<td><strong>Độ trễ dữ liệu (Replication Lag)</strong></td>
+<td>Không có lag với transaction đã commit, nên failover không mất dữ liệu đã commit</td>
+<td>Có Replication Lag (từ vài mili-giây đến vài phút tùy tải ghi); đọc ngay sau ghi có thể thấy dữ liệu cũ</td>
+</tr>
+<tr>
+<td><strong>Thời gian failover</strong></td>
+<td>Thường 60–120 giây</td>
+<td>Không tự failover; promote replica là thao tác thủ công, replica trở thành DB độc lập</td>
+</tr>
+<tr>
+<td><strong>Có thay backup không?</strong></td>
+<td>Không: lệnh xóa nhầm được sao chép sang standby</td>
+<td>Không: lệnh xóa nhầm được sao chép sang replica</td>
+</tr>
+</tbody></table>
+</div>
+<h3 id="đột-phá-kiến-trúc-của-amazon-aurora"><a class="anchor" href="#đột-phá-kiến-trúc-của-amazon-aurora">Đột phá Kiến trúc của Amazon Aurora</a></h3>
+<p>Trong kiến trúc RDS truyền thống, compute (máy ảo) và storage (ổ đĩa EBS) gắn liền với nhau. Khi muốn replicate, toàn bộ khối dữ liệu phải được truyền qua mạng.</p>
+<p><strong>Amazon Aurora</strong> tách rời hoàn toàn tầng tính toán (Compute) và tầng lưu trữ (Storage):</p>
+<ul>
+<li><strong>Tầng lưu trữ phân tán (Shared Distributed Storage):</strong> Aurora tự động nhân bản mỗi khối dữ liệu thành <strong>6 bản sao nằm rải rác trên 3 Availability Zones</strong>.</li>
+<li><strong>Không cần nhân bản dữ liệu ở tầng compute:</strong> Writer và tối đa 15 Aurora Replicas đọc chung một tầng lưu trữ (Shared Storage). Replica lag thường dưới 100 ms, và thêm replica mới chỉ mất vài phút vì không phải chép dữ liệu.</li>
+<li><strong>Failover nhanh:</strong> Nếu writer sập, Aurora promote một replica thành writer mới, thường trong khoảng dưới 1 phút (nhanh hơn nếu dùng driver/RDS Proxy nhận biết failover). Không mất transaction đã commit vì dữ liệu nằm ở tầng storage chung. Nếu cluster <strong>không có</strong> replica, Aurora phải tạo instance mới, lâu hơn nhiều.</li>
+<li><strong>Đánh đổi:</strong> Aurora có giá instance cao hơn RDS cùng cỡ và tính phí I/O (hoặc chọn cấu hình I/O-Optimized). Với tải nhỏ, RDS thường rẻ hơn.</li>
+</ul>
+<hr>
+<h2 id="phần-4--amazon-dynamodb-partition-key-gsi-và-conditional-writes-50-phút"><a class="anchor" href="#phần-4--amazon-dynamodb-partition-key-gsi-và-conditional-writes-50-phút">Phần 4 — Amazon DynamoDB: Partition Key, GSI và Conditional Writes (50 phút)</a></h2>
+<h3 id="kiến-trúc-phân-tán-của-amazon-dynamodb"><a class="anchor" href="#kiến-trúc-phân-tán-của-amazon-dynamodb">Kiến trúc Phân tán của Amazon DynamoDB</a></h3>
+<p>DynamoDB là cơ sở dữ liệu NoSQL dạng Key-Value / Document được quản lý hoàn toàn (Fully Managed), mang lại độ trễ ổn định ở mức mili-giây ở bất kỳ quy mô dữ liệu nào (từ vài Megabytes đến hàng trăm Terabytes).</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Cấu trúc Partition trong DynamoDB:
+Bảng: `Orders`
+┌────────────────────────────────────────────────────────────────────────┐
+│ Partition Key (Hash Key): `order_id`                                   │
+│    │                                                                   │
+│    ▼ (Hàm băm nội bộ của DynamoDB)                                     │
+│  Hash(order_id) → dải giá trị băm của từng partition                   │
+│    ├──&gt; Partition 1 (SSD Storage Node A) -&gt; &quot;ORD-001&quot;, &quot;ORD-004&quot;       │
+│    ├──&gt; Partition 2 (SSD Storage Node B) -&gt; &quot;ORD-002&quot;, &quot;ORD-005&quot;       │
+│    └──&gt; Partition 3 (SSD Storage Node C) -&gt; &quot;ORD-003&quot;, &quot;ORD-006&quot;       │
+└────────────────────────────────────────────────────────────────────────┘</code></pre></div>
+<ul>
+<li><strong>Khóa chính (Primary Key):</strong><ul>
+<li><strong>Chỉ có Partition Key (PK - Simple Primary Key):</strong> Mỗi item được xác định duy nhất bởi PK. DynamoDB dùng giá trị này qua hàm băm để quyết định dữ liệu được lưu trên Storage Partition vật lý nào.</li>
+<li><strong>Composite Primary Key (Partition Key + Sort Key):</strong> PK xác định partition, còn Sort Key (SK) quyết định thứ tự sắp xếp vật lý của các item bên trong partition đó. Cho phép thực hiện mô hình 1-Nhiều (ví dụ <code>PK = order_id</code>, <code>SK = item_id</code>).</li>
+</ul>
+</li>
+</ul>
+<h3 id="query-vs-scan-quy-tắc-sinh-tử-về-hiệu-năng-và-chi-phí"><a class="anchor" href="#query-vs-scan-quy-tắc-sinh-tử-về-hiệu-năng-và-chi-phí">Query vs Scan: Quy tắc Sinh tử về Hiệu năng và Chi phí</a></h3>
+<p>Một trong những lỗi nghiêm trọng nhất của lập trình viên chuyển từ SQL sang DynamoDB là thói quen sử dụng lệnh <code>Scan</code>:</p>
+<ul>
+<li><strong>Thao tác <code>Query</code> (Hiệu quả, khuyến nghị 100%):</strong><ul>
+<li>Tìm kiếm các item dựa trên giá trị chính xác của Partition Key và điều kiện lọc trên Sort Key (ví dụ: <code>PK = &#39;USER#123&#39; AND SK begins_with(&#39;ORDER#2026&#39;)</code>).</li>
+<li>DynamoDB nhảy thẳng tới đúng partition vật lý và đọc chính xác các bản ghi cần tìm. Cực nhanh (&lt;10ms) và chỉ tiêu tốn Capacity Unit của số byte thực tế đọc được.</li>
+</ul>
+</li>
+<li><strong>Thao tác <code>Scan</code> (Cực kỳ tốn kém, chống chỉ định cho production):</strong><ul>
+<li>Quét tuần tự toàn bộ từng partition của cả bảng dữ liệu từ đầu đến cuối, sau đó mới lọc kết quả.</li>
+<li>Chi phí và thời gian của <code>Scan</code> tăng <strong>tuyến tính theo kích thước bảng</strong>, không theo số kết quả: <code>FilterExpression</code> lọc <strong>sau khi</strong> đọc, nên bạn vẫn trả RCU cho mọi item bị quét. Bảng 10 triệu item làm một request <code>Scan</code> tốn hàng nghìn lần so với 1.000 item và chiếm capacity của request khác.</li>
+</ul>
+</li>
+</ul>
+<h3 id="chỉ-mục-phụ-toàn-cục-global-secondary-index---gsi"><a class="anchor" href="#chỉ-mục-phụ-toàn-cục-global-secondary-index---gsi">Chỉ mục Phụ Toàn cục (Global Secondary Index - GSI)</a></h3>
+<p>Trong DynamoDB, bạn <strong>chỉ có thể query trực tiếp theo Primary Key</strong>. Nếu bạn muốn tìm đơn hàng theo <code>customer_id</code> hoặc theo <code>order_date</code> mà trường đó không phải là Primary Key, bạn phải tạo một <strong>Global Secondary Index (GSI)</strong>:</p>
+<ul>
+<li>GSI cho phép định nghĩa một bộ Partition Key và Sort Key hoàn toàn mới trên bảng dữ liệu sẵn có.</li>
+<li>Dữ liệu được DynamoDB tự động đồng bộ ngầm sang partition riêng của GSI theo cơ chế bất đồng bộ (Asynchronous).</li>
+<li><strong>Lưu ý then chốt:</strong> Vì đồng bộ bất đồng bộ, truy vấn vào GSI <strong>chỉ hỗ trợ tính nhất quán sau cùng (Eventual Consistency)</strong>, không hỗ trợ Strongly Consistent Read!</li>
+</ul>
+<h3 id="khóa-lạc-quan-với-conditional-writes-optimistic-locking"><a class="anchor" href="#khóa-lạc-quan-với-conditional-writes-optimistic-locking">Khóa Lạc quan với Conditional Writes (Optimistic Locking)</a></h3>
+<p>Khi hai khách hàng cùng bấm nút đặt món hàng cuối cùng trong kho tại cùng một mili-giây, làm sao tránh tình trạng bán vượt số lượng (Overselling)?
+DynamoDB hỗ trợ <strong>Conditional Writes</strong>:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws dynamodb update-item \
+  --table-name Products \
+  --key '{&quot;product_id&quot;: {&quot;S&quot;: &quot;LAPTOP-01&quot;}}' \
+  --update-expression &quot;SET stock = stock - :dec&quot; \
+  --condition-expression &quot;stock &gt;= :dec&quot; \
+  --expression-attribute-values '{&quot;:dec&quot;: {&quot;N&quot;: &quot;1&quot;}}'</code></pre></div>
+<p>Nếu <code>stock</code> nhỏ hơn 1, DynamoDB sẽ từ chối giao dịch với mã lỗi <code>ConditionalCheckFailedException</code> và không ghi đè dữ liệu, đảm bảo toàn vẹn nghiệp vụ mà không cần khóa bảng (Locking).</p>
+<p>Đây là conditional write theo điều kiện nghiệp vụ. <strong>Optimistic locking</strong> tổng quát hơn: mỗi item có thuộc tính <code>version</code>; client đọc item, rồi ghi với <code>ConditionExpression: version = :seen</code> và tăng <code>version</code>. Nếu worker khác đã ghi trước, điều kiện sai và client phải đọc lại rồi quyết định lại.</p>
+<h3 id="capacity-mode-và-ttl"><a class="anchor" href="#capacity-mode-và-ttl">Capacity mode và TTL</a></h3>
+<ul>
+<li><strong>On-demand:</strong> trả theo request, không cần dự báo; hợp với tải khó đoán và lab. <strong>Provisioned</strong> (kèm auto scaling): đặt trước RCU/WCU, rẻ hơn khi tải ổn định. Cả hai đều có thể bị throttle khi một partition quá nóng.</li>
+<li><strong>TTL của DynamoDB</strong> (thuộc tính epoch giây) chỉ đánh dấu item hết hạn; việc xóa diễn ra <strong>nền, thường trong vài ngày</strong>, không phải đúng giây. Item hết hạn nhưng chưa xóa vẫn xuất hiện khi đọc, nên code phải tự lọc <code>expires_at &gt; now</code>. Không dùng TTL làm lịch chạy nghiệp vụ chính xác.</li>
+</ul>
+<hr>
+<h2 id="phần-5--amazon-elasticache-cache-aside-ttl-và-phòng-chống-stampede-45-phút"><a class="anchor" href="#phần-5--amazon-elasticache-cache-aside-ttl-và-phòng-chống-stampede-45-phút">Phần 5 — Amazon ElastiCache: Cache-Aside, TTL và Phòng chống Stampede (45 phút)</a></h2>
+<h3 id="kiến-trúc-bộ-đệm-in-memory"><a class="anchor" href="#kiến-trúc-bộ-đệm-in-memory">Kiến trúc Bộ đệm In-Memory</a></h3>
+<p>Amazon ElastiCache cung cấp dịch vụ quản lý cụm bộ nhớ đệm cực nhanh (độ trễ dưới 1 mili-giây) tương thích với <strong>Redis (hoặc Valkey)</strong> và <strong>Memcached</strong>.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Mô hình Cache-Aside (Lazy Loading):
+┌────────┐                ┌──────────────────┐                ┌────────────┐
+│ Client │ ──1. Đọc dữ liệu─&gt;│ App Server       │ ──2. Đọc Cache──&gt;│ ElastiCache│
+│        │                │                  │&lt;──Cache HIT (3a)─│ (Redis)    │
+│        │                │                  │                  └────────────┘
+│        │                │                  │ Cache MISS (3b)
+│        │                │                  │        │
+│        │                │                  │        ▼
+│        │                │                  │ ┌───────────────┐
+│        │                │                  │ │ Database      │
+│        │                │                  │ │ (RDS/Postgres)│
+│        │                │                  │ └──────┬────────┘
+│        │                │                  │        │ 4. Trả dữ liệu
+│        │                │                  │&lt;───────┘
+│        │                │                  │
+│        │                │                  │ ──5. Ghi vào Cache (kèm TTL)──&gt; ElastiCache
+│        │&lt;──6. Trả kết quả──────────────────│
+└────────┘</code></pre></div>
+<ol>
+<li><strong>Mô hình Cache-Aside (Đọc lười - Lazy Loading):</strong><ul>
+<li>Ứng dụng luôn kiểm tra Cache trước. Nếu có dữ liệu (<strong>Cache Hit</strong>), trả về ngay lập tức.</li>
+<li>Nếu không có (<strong>Cache Miss</strong>), ứng dụng đọc dữ liệu từ Database, trả kết quả cho client, đồng thời ghi bản ghi đó vào Cache kèm thời gian sống (<strong>TTL - Time To Live</strong>, ví dụ 300 giây).</li>
+</ul>
+</li>
+<li><strong>Hiện tượng Cache Stampede (Thundering Herd Problem):</strong><ul>
+<li>Xảy ra khi một key rất &quot;hot&quot; (ví dụ: thông tin khuyến mãi Flash Sale) vừa hết hạn TTL đúng lúc có 10,000 requests ập đến trong cùng một giây.</li>
+<li>Toàn bộ 10,000 request đều gặp Cache Miss và cùng lúc lao thẳng xuống Database để truy vấn và ghi lại cache, khiến Database lập tức quá tải CPU 100% và sụp đổ dây chuyền.</li>
+<li><strong>Giải pháp phòng ngừa:</strong><ul>
+<li>Thêm độ lệch ngẫu nhiên vào TTL (<strong>Jittering TTL</strong>, ví dụ: <code>TTL = 300s + random(0, 30s)</code>) để các key không hết hạn đồng thời.</li>
+<li>Sử dụng Distributed Lock (Redis Mutex) để chỉ cho phép duy nhất 1 request chạy xuống DB cập nhật cache, các request khác chờ vài mili-giây để đọc lại từ cache.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>Chiến lược khi Cache Sập (Resilience against Cache Failure):</strong><ul>
+<li>Cache chỉ là lớp tối ưu hiệu năng, <strong>không bao giờ được là nguồn lưu trữ chuẩn (Source of Truth)</strong>.</li>
+<li>Code ứng dụng phải có khối <code>try/catch</code> bọc quanh các thao tác gọi Redis. Nếu Redis timeout hoặc sập kết nối, ứng dụng phải tự động fallback đọc tạm từ Database thay vì văng lỗi 500 cho người dùng.</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="phần-6--giới-thiệu-bài-thực-hành-lab-07"><a class="anchor" href="#phần-6--giới-thiệu-bài-thực-hành-lab-07">Phần 6 — Giới thiệu bài thực hành (Lab 07)</a></h2>
+<p>Trong bài thực hành đính kèm, bạn sẽ trực tiếp triển khai:</p>
+<ol>
+<li>Viết bảng access pattern, rồi tạo bảng <strong>DynamoDB</strong> (Composite Key <code>order_id</code> + <code>item_id</code>) và <strong>GSI</strong> theo <code>customer_id</code> + <code>created_at</code>.</li>
+<li>Negative case: strongly consistent read trên GSI bị từ chối; <strong>Conditional Write</strong> và optimistic locking với hai worker cạnh tranh.</li>
+<li><strong>RDS PostgreSQL</strong> trong private subnet, mật khẩu do RDS quản lý trong Secrets Manager, kết nối từ client trong VPC qua Session Manager; seed dữ liệu và đo query trước/sau index.</li>
+<li>Snapshot → &quot;xóa nhầm&quot; → restore sang instance mới → chứng minh dữ liệu về và đo thời gian restore.</li>
+<li>Tùy chọn: cache-aside với ElastiCache, quan sát hit/miss, stale data và fallback khi cache lỗi.</li>
+<li>Cleanup theo dependency và kiểm tra inventory (kể cả manual snapshot).</li>
+</ol>
+<p>👉 Mở bài hướng dẫn chi tiết tại: <strong><a href="../labs/07-databases-and-cache/README.html">labs/07-databases-and-cache/README.md</a></strong>.</p>
+<hr>
+<h2 id="phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút"><a class="anchor" href="#phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi phổ biến (25 phút)</a></h2>
+<h3 id="1-ứng-dụng-không-thể-kết-nối-tới-rds-connection-timeout"><a class="anchor" href="#1-ứng-dụng-không-thể-kết-nối-tới-rds-connection-timeout">1. Ứng dụng không thể kết nối tới RDS (Connection Timeout)</a></h3>
+<ul>
+<li><strong>Triệu chứng:</strong> <code>psql: error: connection to server at &quot;...rds.amazonaws.com&quot;, port 5432 failed: Operation timed out</code>.</li>
+<li><strong>Nguyên nhân cốt lõi:</strong> Lỗi định tuyến mạng hoặc Security Group, hoàn toàn chưa liên quan đến username/password.</li>
+<li><strong>Cách khắc phục:</strong><ul>
+<li>Kiểm tra xem máy chủ ứng dụng và RDS có nằm trong cùng VPC không.</li>
+<li>Kiểm tra Inbound Rules của Security Group gắn trên RDS: Đã mở cổng 5432 cho Security Group của ứng dụng chưa.</li>
+<li>Đảm bảo RDS Instance nằm trong Private Subnet có Route Table trỏ đúng dải mạng nội bộ.</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-lỗi-fatal-remaining-connection-slots-are-reserved-trên-postgresql"><a class="anchor" href="#2-lỗi-fatal-remaining-connection-slots-are-reserved-trên-postgresql">2. Lỗi <code>FATAL: remaining connection slots are reserved</code> trên PostgreSQL</a></h3>
+<ul>
+<li><strong>Nguyên nhân:</strong> Số lượng kết nối vượt quá tham số <code>max_connections</code> của RDS (thường tỷ lệ thuận với dung lượng RAM của instance).</li>
+<li><strong>Cách khắc phục:</strong> Triển khai <strong>RDS Proxy</strong> để chia sẻ pool kết nối giữa các application workers, hoặc cấu hình connection pooler ở tầng ứng dụng (PgBouncer, HikariCP) với giới hạn <code>maximumPoolSize</code> hợp lý.</li>
+</ul>
+<h3 id="3-dynamodb-trả-về-lỗi-provisionedthroughputexceededexception-hoặc-bị-nghẽn-throttling"><a class="anchor" href="#3-dynamodb-trả-về-lỗi-provisionedthroughputexceededexception-hoặc-bị-nghẽn-throttling">3. DynamoDB trả về lỗi <code>ProvisionedThroughputExceededException</code> hoặc bị nghẽn (Throttling)</a></h3>
+<ul>
+<li><strong>Nguyên nhân:</strong> Bảng bị hiện tượng <strong>Hot Partition</strong> (quá nhiều request đọc/ghi dồn vào một giá trị Partition Key duy nhất, ví dụ chọn Partition Key là <code>status = &quot;PENDING&quot;</code> khiến mọi đơn hàng mới đều rơi vào 1 partition vật lý).</li>
+<li><strong>Cách khắc phục:</strong> Thiết kế lại Partition Key có độ phân tán cao (High Cardinality) như UUID, hoặc thêm tiền tố ngẫu nhiên (Write Sharding, ví dụ <code>ORDER#2026-10-31#&lt;random_1_to_10&gt;</code>).</li>
+</ul>
+<hr>
+<h2 id="câu-hỏi-tự-kiểm-tra"><a class="anchor" href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></h2>
+<ol>
+<li>Khi nào bạn nên chọn Amazon DynamoDB thay vì một hệ quản trị quan hệ truyền thống như Amazon RDS PostgreSQL?</li>
+<li>Trình bày sự khác biệt cốt lõi giữa <strong>RDS Multi-AZ Deployment</strong> và <strong>RDS Read Replica</strong>? Tại sao không thể dùng Read Replica để thay thế cho cơ chế sao lưu (Backup)?</li>
+<li>Thao tác <code>Scan</code> trong DynamoDB gây ra những tác hại nghiêm trọng nào đối với hiệu năng và ngân sách dự án? Khi nào là trường hợp ngoại lệ duy nhất được dùng <code>Scan</code>?</li>
+<li>Trình bày hiện tượng <strong>Cache Stampede (Thundering Herd)</strong> và hai kỹ thuật kỹ thuật phần mềm phổ biến để triệt tiêu hiện tượng này?</li>
+<li>Tại sao khi thực hiện khôi phục dữ liệu từ Snapshot hoặc Point-In-Time Recovery (PITR) trong RDS, AWS luôn tạo ra một DB instance hoàn toàn mới thay vì khôi phục đè lên instance cũ?</li>
+</ol>
+<hr>
+<h2 id="tài-liệu-tham-khảo-chính-thức"><a class="anchor" href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></h2>
+<ul>
+<li><a href="https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/" target="_blank" rel="noopener">Amazon RDS User Guide</a></li>
+<li><a href="https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/CHAP_AuroraOverview.html" target="_blank" rel="noopener">Amazon Aurora Architecture and Best Practices</a></li>
+<li><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/" target="_blank" rel="noopener">Amazon DynamoDB Developer Guide</a></li>
+<li><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-query-scan.html" target="_blank" rel="noopener">Choosing between Query and Scan in DynamoDB</a></li>
+<li><a href="https://docs.aws.amazon.com/AmazonElastiCache/latest/red-ug/" target="_blank" rel="noopener">Amazon ElastiCache for Redis User Guide</a></li>
+</ul>
+<h2 id="trạng-thái-kiểm-chứng"><a class="anchor" href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></h2>
+<ul>
+<li><strong>Đối chiếu tài liệu (2026-10-31):</strong> ba topology Multi-AZ (DB instance, DB cluster, Aurora); kiến trúc storage của Aurora; restore luôn tạo instance mới; managed master password qua Secrets Manager; GSI chỉ eventually consistent; hành vi xóa nền của DynamoDB TTL; RDS Proxy.</li>
+<li><strong>Chưa chạy thử trên AWS:</strong> lệnh trong lab chưa được thực thi trên account thật; output và số đo là minh họa.</li>
+<li><strong>Chi phí:</strong> lab dùng DynamoDB on-demand, RDS <code>db.t4g.micro</code> Single-AZ và một EC2 <code>t4g.nano</code>, khoảng $0.05–0.08/giờ (xem bảng trong lab). Không dựa vào Free Tier vì điều kiện khác nhau giữa account cũ và mới. Manual snapshot phải xóa thủ công.</li>
+</ul>
+<hr>
+<h2 id="đáp-án-gợi-ý"><a class="anchor" href="#đáp-án-gợi-ý">Đáp án gợi ý</a></h2>
+<details>
+<summary>Mở để xem đáp án</summary>
+
+<ol>
+<li>Bạn nên chọn <strong>Amazon DynamoDB</strong> khi:<ul>
+<li>Hệ thống đòi hỏi khả năng mở rộng quy mô lớn (Horizontal Scalability) với hàng chục ngàn đến hàng triệu RPS mà không muốn phải quản trị cụm máy chủ hay cấu hình sharding thủ công.</li>
+<li>Mô hình truy cập dữ liệu (Access Pattern) đã được xác định rõ ràng ngay từ đầu (chủ yếu là tra cứu theo khóa chính Key-Value hoặc dải Sort Key).</li>
+<li>Đòi hỏi độ trễ đọc/ghi cực thấp và ổn định ở mức mili-giây (Single-digit millisecond latency).</li>
+<li>Ngược lại, nên chọn <strong>RDS</strong> khi dữ liệu có nhiều mối quan hệ phức tạp, cần thực hiện nhiều câu truy vấn <code>JOIN</code>, báo cáo phân tích động với nhiều tiêu chí chưa dự đoán trước, hoặc bắt buộc phải có ACID transaction trên nhiều bảng dữ liệu khác nhau.</li>
+</ul>
+</li>
+<li>Sự khác biệt:<ul>
+<li><strong>Multi-AZ (DB instance deployment):</strong> Phục vụ tính sẵn sàng cao (High Availability). Sao chép đồng bộ (Synchronous), node Standby không nhận traffic đọc. Khi sự cố xảy ra, failover tự động, thường 60–120 giây, với cùng endpoint. (Multi-AZ DB cluster thì có 2 standby đọc được.)</li>
+<li><strong>Read Replica:</strong> Phục vụ mở rộng năng lực đọc (Read Scaling). Sao chép bất đồng bộ (Asynchronous), node Replica mở phục vụ các câu lệnh <code>SELECT</code>. Có endpoint riêng.</li>
+<li><strong>Không thể thay thế Backup:</strong> Vì Read Replica sao chép bất đồng bộ tức thời mọi thay đổi từ Primary. Nếu một kỹ sư chạy nhầm lệnh <code>DROP TABLE orders;</code> trên Primary, lệnh xóa đó sẽ lập tức được stream sang Read Replica và xóa sạch dữ liệu trên Replica chỉ sau vài mili-giây! Muốn cứu dữ liệu, bạn bắt buộc phải dùng bản Snapshot hoặc tính năng PITR để quay ngược thời gian.</li>
+</ul>
+</li>
+<li>Tác hại của <code>Scan</code>:<ul>
+<li><code>Scan</code> đọc tuần tự toàn bộ bảng qua tất cả các phân vùng vật lý. Khi bảng có hàng triệu dòng, nó tiêu tốn toàn bộ Read Capacity Units, làm chậm mọi request của người dùng thật và khiến hóa đơn AWS tăng vọt.</li>
+<li>Trường hợp ngoại lệ duy nhất: Khi bảng dữ liệu có quy mô rất nhỏ (vài chục bản ghi cấu hình hệ thống), hoặc trong các batch job chạy ngầm ban đêm để export dữ liệu phân tích ra Data Lake (S3).</li>
+</ul>
+</li>
+<li><strong>Cache Stampede</strong> là hiện tượng một key rất phổ biến vừa hết hạn TTL thì hàng ngàn request cùng lúc nhận Cache Miss và đồng loạt lao xuống Database truy vấn, làm DB chết đứng vì quá tải.<ul>
+<li>Hai kỹ thuật phòng chống:<ul>
+<li><strong>Jittering TTL:</strong> Cộng thêm một khoảng thời gian ngẫu nhiên nhỏ vào TTL của mỗi item để phân tán thời điểm hết hạn của các key.</li>
+<li><strong>Mutex / Distributed Lock:</strong> Khi gặp Cache Miss, luồng đầu tiên sẽ chiếm lock trong Redis (<code>SET key NX EX 5</code>) và đi truy vấn DB để ghi lại cache; các luồng khác thấy lock đang bận sẽ chờ ngắn (vài ms) rồi đọc lại từ cache. Lock phải có TTL để không kẹt khi luồng giữ lock chết.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>AWS luôn tạo một DB instance hoàn toàn mới vì:<ul>
+<li><strong>An toàn tuyệt đối:</strong> Tránh nguy cơ ghi đè làm mất vĩnh viễn dữ liệu hiện tại của database đang chạy nếu thao tác restore bị nhầm lẫn thời điểm.</li>
+<li><strong>Kiểm chứng song song:</strong> Cho phép kỹ sư kết nối vào database mới khôi phục để đối chiếu, chạy thử nghiệm kiểm tra tính toàn vẹn dữ liệu trước khi chính thức chuyển đổi Endpoint của ứng dụng sang instance mới.</li>
+</ul>
+</li>
+</ol>
+</details>
+
+
+<footer>Sinh tự động từ <code>notes/07-databases-and-cache.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

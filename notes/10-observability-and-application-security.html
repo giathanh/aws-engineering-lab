@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bài 10 — Quan sát và Bảo mật Ứng dụng: CloudWatch, CloudTrail, Secrets Manager, Parameter Store và KMS</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="01-foundations.html">01. Lý thuyết</a><a href="../labs/01-foundations/README.html">01. Lab</a><a href="02-identity-and-access.html">02. Lý thuyết</a><a href="../labs/02-identity-and-access/README.html">02. Lab</a><a href="03-cost-management.html">03. Lý thuyết</a><a href="../labs/03-cost-management/README.html">03. Lab</a><a href="04-networking.html">04. Lý thuyết</a><a href="../labs/04-networking/README.html">04. Lab</a><a href="05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../labs/05-compute-and-load-balancing/README.html">05. Lab</a><a href="06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../labs/06-storage-and-content-delivery/README.html">06. Lab</a><a href="07-databases-and-cache.html">07. Lý thuyết</a><a href="../labs/07-databases-and-cache/README.html">07. Lab</a><a href="08-containers.html">08. Lý thuyết</a><a href="../labs/08-containers/README.html">08. Lab</a><a href="09-serverless.html">09. Lý thuyết</a><a href="../labs/09-serverless/README.html">09. Lab</a><a href="10-observability-and-application-security.html" class="active">10. Lý thuyết</a><a href="../labs/10-observability-and-application-security/README.html">10. Lab</a><a href="11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../labs/11-messaging-and-workflows/README.html">11. Lab</a><a href="12-iac-and-cicd.html">12. Lý thuyết</a><a href="../labs/12-iac-and-cicd/README.html">12. Lab</a><a href="13-reliability-and-performance.html">13. Lý thuyết</a><a href="../labs/13-reliability-and-performance/README.html">13. Lab</a><a href="14-architecture-and-governance.html">14. Lý thuyết</a><a href="../labs/14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#mục-tiêu">Mục tiêu</a></li><li><a href="#phần-1--ba-trụ-cột-quan-sát-logs-metrics-traces-và-structured-logging-45-phút">Phần 1 — Ba Trụ cột Quan sát: Logs, Metrics, Traces và Structured Logging (45 phút)</a></li><li><a href="#phần-2--amazon-cloudwatch-logs-metrics-alarms-và-logs-insights-50-phút">Phần 2 — Amazon CloudWatch: Logs, Metrics, Alarms và Logs Insights (50 phút)</a></li><li><a href="#phần-3--aws-cloudtrail-kiểm-toán-quản-trị-và-truy-vết-hành-vi-45-phút">Phần 3 — AWS CloudTrail: Kiểm toán Quản trị và Truy vết Hành vi (45 phút)</a></li><li><a href="#phần-4--quản-lý-bí-mật-secrets-manager-vs-ssm-parameter-store-50-phút">Phần 4 — Quản lý Bí mật: Secrets Manager vs SSM Parameter Store (50 phút)</a></li><li><a href="#phần-5--aws-key-management-service-kms-mã-hóa-phong-bì-và-quyền-giải-mã-50-phút">Phần 5 — AWS Key Management Service (KMS): Mã hóa Phong bì và Quyền Giải mã (50 phút)</a></li><li><a href="#phần-6--giới-thiệu-bài-thực-hành-lab-10">Phần 6 — Giới thiệu bài thực hành (Lab 10)</a></li><li><a href="#phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi phổ biến (25 phút)</a></li><li><a href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></li><li><a href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></li><li><a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></li><li><a href="#đáp-án-gợi-ý">Đáp án gợi ý</a></li></ol></aside>
+<main>
+<h1 id="bài-10--quan-sát-và-bảo-mật-ứng-dụng-cloudwatch-cloudtrail-secrets-manager-parameter-store-và-kms"><a class="anchor" href="#bài-10--quan-sát-và-bảo-mật-ứng-dụng-cloudwatch-cloudtrail-secrets-manager-parameter-store-và-kms">Bài 10 — Quan sát và Bảo mật Ứng dụng: CloudWatch, CloudTrail, Secrets Manager, Parameter Store và KMS</a></h1>
+<blockquote>
+<p><strong>Đối tượng:</strong> developer có kinh nghiệm nhưng mới học AWS.
+<strong>Thời lượng:</strong> khoảng 6–8 giờ, chia hai buổi. Buổi 1 gồm phần 1–3 (Ba trụ cột Quan sát, Amazon CloudWatch và Kiểm toán CloudTrail). Buổi 2 gồm phần 4–7 (Quản lý Bí mật, Mã hóa Phong bì với AWS KMS và <a href="../labs/10-observability-and-application-security/README.html">lab thực hành</a>).
+<strong>Kế hoạch gốc:</strong> <a href="../plans/10-observability-and-application-security.md">plans/10-observability-and-application-security.md</a>
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Xem <a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a> ở cuối bài.</p>
+</blockquote>
+<h2 id="mục-tiêu"><a class="anchor" href="#mục-tiêu">Mục tiêu</a></h2>
+<p>Sau bài này, bạn có thể:</p>
+<ol>
+<li>Thiết lập ba trụ cột của Khả năng quan sát (<strong>Observability: Logs, Metrics, Traces</strong>), triển khai ghi nhật ký có cấu trúc (<strong>Structured JSON Logging</strong>), mã định danh tương quan (<strong>Correlation ID</strong>) và cơ chế che giấu dữ liệu nhạy cảm (<strong>Redaction / PII masking</strong>).</li>
+<li>Làm chủ <strong>Amazon CloudWatch</strong>: thiết lập thời hạn lưu trữ (<strong>Log Retention</strong>), truy vấn logs phức tạp với <strong>Logs Insights</strong>, xây dựng <strong>CloudWatch Alarms</strong> và bảng điều khiển trực quan (<strong>Dashboards</strong>).</li>
+<li>Phân biệt rõ vai trò của <strong>AWS CloudTrail</strong> trong việc kiểm toán quản trị (<strong>Management Events</strong>) và theo dõi dữ liệu (<strong>Data Events</strong>), trả lời chính xác câu hỏi &quot;Ai đã làm gì, vào lúc nào và từ đâu?&quot;.</li>
+<li>Lựa chọn chính xác giữa <strong>AWS Secrets Manager</strong> và <strong>Systems Manager Parameter Store</strong>, thiết kế cơ chế lấy thông tin xác thực an toàn tại thời điểm chạy (<strong>Runtime Retrieval</strong>), lưu đệm bộ nhớ và tự động xoay vòng mật khẩu (<strong>Automatic Rotation</strong>).</li>
+<li>Nắm vững cơ chế mật mã học <strong>AWS Key Management Service (KMS)</strong>: phân biệt AWS Managed Key với Customer Managed Key (CMK), cơ chế mã hóa phong bì (<strong>Envelope Encryption</strong>), mối quan hệ giữa <strong>KMS Key Policy và IAM Policy</strong>, và ngữ cảnh mã hóa (<strong>Encryption Context</strong>).</li>
+</ol>
+<hr>
+<h2 id="phần-1--ba-trụ-cột-quan-sát-logs-metrics-traces-và-structured-logging-45-phút"><a class="anchor" href="#phần-1--ba-trụ-cột-quan-sát-logs-metrics-traces-và-structured-logging-45-phút">Phần 1 — Ba Trụ cột Quan sát: Logs, Metrics, Traces và Structured Logging (45 phút)</a></h2>
+<p>Trong môi trường phân tán (Microservices &amp; Serverless), một request của người dùng có thể đi qua API Gateway, kích hoạt Lambda, truy vấn DynamoDB và ghi vào S3. Khi có lỗi xảy ra, việc mở từng server kiểm tra log là bất khả thi.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Ba Trụ cột của Khả năng Quan sát (Observability):
+┌─────────────────────────┬─────────────────────────┬─────────────────────────┐
+│       LOGS (Nhật ký)    │      METRICS (Chỉ số)   │      TRACES (Dấu vết)   │
+├─────────────────────────┼─────────────────────────┼─────────────────────────┤
+│ &quot;Chuyện gì đã xảy ra?&quot;  │ &quot;Hệ thống có ổn không?&quot; │ &quot;Nút thắt cổ chai ở đâu?&quot;│
+│                         │                         │                         │
+│ - Chuỗi sự kiện chi tiết│ - Số liệu đo lường      │ - Theo vết đường đi của │
+│ - Thông báo lỗi stack   │   theo chuỗi thời gian  │   1 request xuyên qua   │
+│ - Dạng JSON có cấu trúc │ - Tỷ lệ CPU, RAM, RPS   │   hàng loạt dịch vụ     │
+│ - Request ID &amp; PII ẩn   │ - Tỷ lệ lỗi 5xx, Độ trễ │ - Thời gian chạy từng chặng│
+└─────────────────────────┴─────────────────────────┴─────────────────────────┘</code></pre></div>
+<h3 id="mã-định-danh-tương-quan-correlation-id"><a class="anchor" href="#mã-định-danh-tương-quan-correlation-id">Mã định danh Tương quan (Correlation ID)</a></h3>
+<p>Khi một request bắt đầu tại rìa hệ thống (API Gateway hoặc Load Balancer), một mã định danh duy nhất (ví dụ <code>X-Correlation-Id: c89b3f...</code> hoặc <code>X-Amzn-Trace-Id</code>) được sinh ra và truyền dọc theo tất cả các HTTP header của các dịch vụ nội bộ. Mọi dòng log được in ra ở bất kỳ microservice nào đều phải gắn kèm Correlation ID này để kỹ sư có thể lọc toàn bộ hành trình của một giao dịch đơn lẻ chỉ bằng một câu query.</p>
+<h3 id="traces-dùng-công-cụ-còn-được-hỗ-trợ"><a class="anchor" href="#traces-dùng-công-cụ-còn-được-hỗ-trợ">Traces: dùng công cụ còn được hỗ trợ</a></h3>
+<ul>
+<li>Distributed tracing trên AWS hiển thị trong <strong>AWS X-Ray</strong> (CloudWatch → Traces). Lambda, API Gateway có thể bật tracing ở mức dịch vụ mà không cần sửa code.</li>
+<li>Để instrument code (từng lệnh gọi DB, HTTP, SDK), AWS khuyến nghị <strong>OpenTelemetry</strong> qua AWS Distro for OpenTelemetry (ADOT). Các X-Ray SDK/daemon cũ đã được AWS thông báo chuyển sang chế độ bảo trì; kiểm tra trạng thái trong tài liệu hiện hành trước khi chọn cho dự án mới.</li>
+</ul>
+<h3 id="nhật-ký-có-cấu-trúc-structured-json-logging-và-che-giấu-dữ-liệu-nhạy-cảm"><a class="anchor" href="#nhật-ký-có-cấu-trúc-structured-json-logging-và-che-giấu-dữ-liệu-nhạy-cảm">Nhật ký có Cấu trúc (Structured JSON Logging) và Che giấu Dữ liệu Nhạy cảm</a></h3>
+<ul>
+<li><strong>Không ghi log dạng chuỗi thô (Unstructured Text):</strong> <code>print(&quot;User logged in: &quot; + user)</code> khiến các công cụ phân tích không thể tách trường dữ liệu.</li>
+<li><strong>Chuẩn Structured JSON Logging:</strong><div class="code"><span class="lang">json</span><button type="button">Copy</button><pre><code>{
+  &quot;timestamp&quot;: &quot;2026-10-31T21:45:00Z&quot;,
+  &quot;level&quot;: &quot;INFO&quot;,
+  &quot;service&quot;: &quot;order-service&quot;,
+  &quot;correlation_id&quot;: &quot;c89b3f12-4567-89ab-cdef-0123456789ab&quot;,
+  &quot;event&quot;: &quot;ORDER_CREATED&quot;,
+  &quot;order_id&quot;: &quot;ORD-9982&quot;,
+  &quot;customer_id&quot;: &quot;CUST-104&quot;,
+  &quot;payment_method&quot;: &quot;CREDIT_CARD&quot;,
+  &quot;card_masked&quot;: &quot;************4321&quot;
+}</code></pre></div>
+</li>
+<li><strong>Che giấu dữ liệu (Redaction):</strong> Tuyệt đối không bao giờ ghi Access Keys, mật khẩu, mã OTP, số thẻ tín dụng hoặc thông tin định danh cá nhân (PII) vào log! Bất kỳ dữ liệu nhạy cảm nào cũng phải được băm hoặc che giấu (<code>masking</code>) trước khi đẩy lên hệ thống tập trung.</li>
+</ul>
+<hr>
+<h2 id="phần-2--amazon-cloudwatch-logs-metrics-alarms-và-logs-insights-50-phút"><a class="anchor" href="#phần-2--amazon-cloudwatch-logs-metrics-alarms-và-logs-insights-50-phút">Phần 2 — Amazon CloudWatch: Logs, Metrics, Alarms và Logs Insights (50 phút)</a></h2>
+<p>Amazon CloudWatch là trung tâm điều khiển giám sát toàn diện của AWS.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Hệ sinh thái Giám sát Amazon CloudWatch:
+┌─────────────────┐       ┌────────────────────────┐       ┌──────────────────────┐
+│ AWS Resources   │ ────&gt; │ CloudWatch Logs        │ ────&gt; │ CloudWatch Alarms    │
+│ (EC2, ECS,      │       │ - Log Groups           │       │ - Đạt ngưỡng lỗi?    │
+│  Lambda, RDS)   │       │ - Retention: 7-30 ngày │       │ - Gửi cảnh báo SNS   │
+└────────┬────────┘       │ - Logs Insights Query  │       └──────────────────────┘
+         │                └────────────────────────┘                  │
+         │                                                            ▼
+         │                ┌────────────────────────┐       ┌──────────────────────┐
+         └──────────────&gt; │ CloudWatch Metrics     │ ────&gt; │ CloudWatch Dashboard │
+                          │ - CPU, Latency, Errors │       │ (Trực quan hóa đồ thị│
+                          │ - Custom Metrics       │       │  cho đội vận hành)   │
+                          └────────────────────────┘       └──────────────────────┘</code></pre></div>
+<h3 id="log-group-và-thời-hạn-lưu-trữ-retention-period"><a class="anchor" href="#log-group-và-thời-hạn-lưu-trữ-retention-period">Log Group và Thời hạn Lưu trữ (Retention Period)</a></h3>
+<ul>
+<li>Mặc định, CloudWatch Log Group lưu trữ log <strong>vĩnh viễn (Never Expire)</strong>! Nếu không cấu hình, theo năm tháng dung lượng log tích tụ sẽ đẩy chi phí lưu trữ lên rất cao.</li>
+<li><strong>Best Practice:</strong> Luôn cấu hình <strong>Retention Period</strong> cho mọi Log Group (ví dụ: môi trường dev/staging giữ 7–14 ngày; môi trường production giữ 30–90 ngày rồi đẩy lưu trữ lạnh sang S3 Glacier nếu cần tuân thủ pháp lý).</li>
+</ul>
+<h3 id="truy-vấn-log-với-cloudwatch-logs-insights"><a class="anchor" href="#truy-vấn-log-với-cloudwatch-logs-insights">Truy vấn Log với CloudWatch Logs Insights</a></h3>
+<p>Cung cấp ngôn ngữ truy vấn mạnh mẽ để quét hàng Gigabytes log trong vài giây mà không cần cài đặt cụm Elasticsearch/OpenSearch tốn kém:</p>
+<div class="code"><span class="lang">sql</span><button type="button">Copy</button><pre><code>fields @timestamp, correlation_id, order_id, @message
+| filter level = &quot;ERROR&quot; and @message like /Timeout/
+| sort @timestamp desc
+| limit 50</code></pre></div>
+<h3 id="custom-metric-embedded-metric-format-emf"><a class="anchor" href="#custom-metric-embedded-metric-format-emf">Custom metric: Embedded Metric Format (EMF)</a></h3>
+<p>Thay vì gọi <code>PutMetricData</code> trong code (thêm độ trễ và quyền IAM), ứng dụng có thể in một dòng log JSON theo <strong>Embedded Metric Format</strong>; CloudWatch Logs tự tách thành metric. Đây là cách Lab 10 tạo metric <code>Latency</code> và <code>Errors</code>. Mỗi tổ hợp tên metric + dimension là một custom metric tính phí riêng, nên <strong>không</strong> đưa giá trị nhiều biến thể (order ID, user ID) vào dimension.</p>
+<h3 id="cloudwatch-alarms-ngưỡng-và-xử-lý-dữ-liệu-thiếu-missing-data"><a class="anchor" href="#cloudwatch-alarms-ngưỡng-và-xử-lý-dữ-liệu-thiếu-missing-data">CloudWatch Alarms: Ngưỡng và Xử lý Dữ liệu Thiếu (Missing Data)</a></h3>
+<p>CloudWatch Alarm giám sát một Metric cụ thể qua các chu kỳ thời gian (Evaluation Periods). Khi metric vượt ngưỡng (Threshold), Alarm sẽ chuyển sang trạng thái <code>ALARM</code> và kích hoạt hành động (gửi email qua SNS, kích hoạt Auto Scaling hoặc tự khởi động lại máy ảo EC2).</p>
+<ul>
+<li><strong>Trường <code>TreatMissingData</code>:</strong> Cực kỳ quan trọng!<ul>
+<li><code>missing</code> (mặc định): không tính điểm thiếu; nếu mọi điểm trong cửa sổ đều thiếu, alarm về <code>INSUFFICIENT_DATA</code>.</li>
+<li><code>ignore</code>: giữ nguyên trạng thái hiện tại.</li>
+<li><code>notBreaching</code>: Coi như bình thường (khuyến nghị cho các metric đếm lỗi — khi không có lỗi tức là hệ thống đang hoạt động tốt).</li>
+<li><code>breaching</code>: Coi như vượt ngưỡng (thích hợp cho các heartbeat ping kiểm tra sống còn — không có dữ liệu nghĩa là server đã chết).</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2 id="phần-3--aws-cloudtrail-kiểm-toán-quản-trị-và-truy-vết-hành-vi-45-phút"><a class="anchor" href="#phần-3--aws-cloudtrail-kiểm-toán-quản-trị-và-truy-vết-hành-vi-45-phút">Phần 3 — AWS CloudTrail: Kiểm toán Quản trị và Truy vết Hành vi (45 phút)</a></h2>
+<p>Nếu như CloudWatch trả lời câu hỏi &quot;Ứng dụng hoạt động ra sao?&quot;, thì <strong>AWS CloudTrail</strong> trả lời câu hỏi bảo mật cốt tử: <strong>&quot;Ai đã làm gì, vào lúc nào, từ địa chỉ IP nào và trên tài nguyên nào?&quot;</strong>.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Kiểm toán Tập trung với AWS CloudTrail:
+┌─────────────────┐
+│ IAM User / Role │ ──Gọi AWS API (ví dụ: ec2:TerminateInstances)──&gt; AWS CloudTrail
+└─────────────────┘                                                         │
+                                                                            ▼
+                                                             Ghi nhận Event JSON:
+                                                             - userIdentity: ARN của người gọi
+                                                             - eventTime: 2026-10-31T21:50:12Z
+                                                             - sourceIPAddress: 198.51.100.24
+                                                             - eventName: TerminateInstances
+                                                             - requestParameters: InstanceId</code></pre></div>
+<h3 id="phân-biệt-management-events-vs-data-events"><a class="anchor" href="#phân-biệt-management-events-vs-data-events">Phân biệt Management Events vs Data Events</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tiêu chí</th>
+<th>Management Events (Sự kiện Quản trị)</th>
+<th>Data Events (Sự kiện Dữ liệu)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Phạm vi</strong></td>
+<td>Các thao tác trên Control Plane (Tạo/Sửa/Xóa VPC, EC2, IAM Role, Security Group, S3 Bucket).</td>
+<td>Các thao tác trên Data Plane (Đọc/Ghi từng object trong S3: <code>GetObject</code>, <code>PutObject</code>; gọi <code>lambda:InvokeFunction</code>).</td>
+</tr>
+<tr>
+<td><strong>Chi phí</strong></td>
+<td><strong>Không tính phí</strong> khi xem 90 ngày gần nhất trong Event History; bản sao đầu tiên của management event ghi ra S3 qua trail không tính phí event (vẫn trả tiền lưu S3).</td>
+<td><strong>Có tính phí</strong> theo số event (khoảng $0.10/100,000 event, giá minh họa); bucket nhiều request có thể tốn nhanh.</td>
+</tr>
+<tr>
+<td><strong>Mặc định</strong></td>
+<td>Event History luôn có sẵn, <strong>theo từng Region</strong>, chỉ 90 ngày. Muốn giữ lâu hơn hoặc gom nhiều Region/account, phải tạo trail (hoặc CloudTrail Lake).</td>
+<td>Mặc định <strong>bị tắt</strong>; bạn phải tạo trail/event data store, chọn lọc bucket/prefix/function cần kiểm toán.</td>
+</tr>
+</tbody></table>
+</div>
+<blockquote>
+<p>[!IMPORTANT]
+<strong>CloudWatch không thay CloudTrail.</strong> CloudWatch cho biết hệ thống <em>chạy thế nào</em> (log ứng dụng, metric); CloudTrail cho biết <em>ai gọi API AWS nào</em>. Event History cũng không chứa mọi thứ: không có data event, không có log ứng dụng, chỉ 90 ngày và chỉ Region đang xem.</p>
+</blockquote>
+<hr>
+<h2 id="phần-4--quản-lý-bí-mật-secrets-manager-vs-ssm-parameter-store-50-phút"><a class="anchor" href="#phần-4--quản-lý-bí-mật-secrets-manager-vs-ssm-parameter-store-50-phút">Phần 4 — Quản lý Bí mật: Secrets Manager vs SSM Parameter Store (50 phút)</a></h2>
+<p><strong>Nguyên tắc số 1 của Bảo mật Ứng dụng:</strong> Tuyệt đối không bao giờ lưu cứng thông tin nhạy cảm (Database Password, API Token của cổng thanh toán, Private Key) trong file code, Dockerfile hay cấu hình Git repo!</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Cây quyết định lựa chọn Quản lý Bí mật:
+                                   Bạn cần lưu trữ thông tin gì?
+                                                 │
+                 ┌───────────────────────────────┴──────────────────────────────┐
+                 ▼                                                              ▼
+        Cấu hình ứng dụng thông thường?                              Bí mật nhạy cảm (Mật khẩu DB,
+        - URL của microservice khác                                  Khóa API Stripe, Private Key)?
+        - Cờ tính năng (Feature Flags)                                          │
+        - Chuỗi kết nối phi nhạy cảm                                            │
+                 │                                                              │
+                 ▼                                                              ▼
+   SSM Parameter Store (Standard)                                Cần tính năng Tự động Xoay vòng
+   - Không tính phí lưu trữ (tier Standard)                     (Automatic Credential Rotation)?
+   - Tối đa 10,000 parameters                                                   │
+                                                        ┌───────────────────────┴───────────────────────┐
+                                                        ▼                                               ▼
+                                                 Có cần Rotation?                               Chỉ cần lưu an toàn
+                                                 - RDS Database Passwords                       và giải mã runtime?
+                                                 - Khóa dịch vụ tài chính                               │
+                                                        │                                               ▼
+                                                        ▼                                 SSM Parameter Store (SecureString)
+                                               AWS Secrets Manager                        - Mã hóa bằng AWS KMS
+                                               - Managed rotation hoặc Lambda rotation    - Rẻ hơn (Standard không phí lưu)
+                                               - ~$0.40/secret/tháng (minh họa)           - Không tự động xoay vòng</code></pre></div>
+<p><strong>Parameter Store <code>SecureString</code> không phải Secrets Manager rẻ hơn.</strong> Nó mã hóa bằng KMS, nhưng không có rotation tự động, không có nhãn version <code>AWSCURRENT</code>/<code>AWSPREVIOUS</code> cho chuyển tiếp an toàn khi rotation, không có replication đa Region. Secrets Manager còn có managed rotation cho RDS (ví dụ <code>--manage-master-user-password</code> ở Bài 07).</p>
+<p><strong>Mã hóa chưa đủ để bảo vệ secret.</strong> Secret mã hóa tốt vẫn lộ nếu: role app có <code>secretsmanager:*</code> trên <code>*</code>, app in secret ra log, secret nằm trong biến môi trường hiển thị ở console, hoặc ai đó có quyền decrypt key. Bảo vệ thật là <strong>least privilege trên cả secret và key</strong>, không log giá trị, và audit bằng CloudTrail.</p>
+<h3 id="lấy-bí-mật-tại-thời-điểm-chạy-runtime-retrieval-và-lưu-đệm-caching"><a class="anchor" href="#lấy-bí-mật-tại-thời-điểm-chạy-runtime-retrieval-và-lưu-đệm-caching">Lấy Bí mật tại Thời điểm Chạy (Runtime Retrieval) và Lưu đệm (Caching)</a></h3>
+<ul>
+<li><strong>Sai lầm phổ biến:</strong> Đọc secret một lần khi build Docker image rồi nhúng cứng vào image. Điều này làm mất đi khả năng xoay vòng mật khẩu mà không cần rebuild container.</li>
+<li><strong>Mô hình chuẩn:</strong><ol>
+<li>Ứng dụng khởi động, gọi AWS Secrets Manager API để lấy thông tin xác thực mới nhất qua IAM Role.</li>
+<li>Lưu thông tin đó vào bộ nhớ RAM của ứng dụng kèm thời gian sống (<strong>TTL Cache, ví dụ 1 giờ</strong>).</li>
+<li>Khi Database Password được xoay vòng, sau 1 giờ cache hết hạn, ứng dụng sẽ tự động truy vấn lại secret mới mà không cần phải khởi động lại server.</li>
+</ol>
+</li>
+</ul>
+<hr>
+<h2 id="phần-5--aws-key-management-service-kms-mã-hóa-phong-bì-và-quyền-giải-mã-50-phút"><a class="anchor" href="#phần-5--aws-key-management-service-kms-mã-hóa-phong-bì-và-quyền-giải-mã-50-phút">Phần 5 — AWS Key Management Service (KMS): Mã hóa Phong bì và Quyền Giải mã (50 phút)</a></h2>
+<p>AWS KMS là dịch vụ quản lý khóa mật mã học tập trung đạt tiêu chuẩn FIPS 140-3 Cryptographic Module.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Quy trình Mã hóa Phong bì (Envelope Encryption):
+┌────────────────────────────────────────────────────────────────────────┐
+│ 1. Tạo Khóa Dữ liệu (GenerateDataKey):                                 │
+│    Ứng dụng ──kms:GenerateDataKey──&gt; AWS KMS (Customer Managed Key)    │
+│    Ứng dụng &lt;──Nhận 2 khóa─────────── AWS KMS                          │
+│                ├─ Plaintext Data Key (Dùng để mã hóa dữ liệu)          │
+│                └─ Encrypted Data Key (Đã được khóa gốc KMS khóa lại)   │
+├────────────────────────────────────────────────────────────────────────┤
+│ 2. Mã hóa Dữ liệu (Tại tầng ứng dụng):                                 │
+│    Dữ liệu thô + Plaintext Data Key ──Thuật toán AES-256──&gt; Dữ liệu mã hóa│
+│    (XÓA NGAY LẬP TỨC Plaintext Data Key KHỎI BỘ NHỚ RAM!)              │
+├────────────────────────────────────────────────────────────────────────┤
+│ 3. Lưu trữ:                                                            │
+│    Lưu Dữ liệu mã hóa kèm theo Encrypted Data Key xuống ổ đĩa/Database. │
+└────────────────────────────────────────────────────────────────────────┘</code></pre></div>
+<h3 id="tại-sao-phải-dùng-mã-hóa-phong-bì-envelope-encryption"><a class="anchor" href="#tại-sao-phải-dùng-mã-hóa-phong-bì-envelope-encryption">Tại sao phải dùng Mã hóa Phong bì (Envelope Encryption)?</a></h3>
+<ul>
+<li>Khóa KMS gốc (<strong>KMS Key / CMK</strong>) <strong>không bao giờ rời khỏi phần cứng HSM bảo mật của AWS</strong>. Bạn không thể tải khóa gốc về máy.</li>
+<li>KMS API giới hạn kích thước dữ liệu mã hóa trực tiếp tối đa là <strong>4 KB</strong>.</li>
+<li>Để mã hóa các file lớn (như file hóa đơn 100 MB hoặc ổ đĩa EBS hàng Terabytes), KMS sử dụng Envelope Encryption: KMS sinh ra một <strong>Data Key</strong> ngẫu nhiên. Data Key này được dùng để mã hóa file cục bộ cực nhanh bằng thuật toán đối xứng AES-GCM-256. Sau khi mã hóa xong, Data Key bản rõ bị tiêu hủy khỏi RAM, chỉ còn Data Key đã bị mã hóa được lưu kèm với dữ liệu.</li>
+</ul>
+<h3 id="phân-cấp-quyền-kms-key-policy-vs-iam-policy"><a class="anchor" href="#phân-cấp-quyền-kms-key-policy-vs-iam-policy">Phân cấp Quyền: KMS Key Policy vs IAM Policy</a></h3>
+<p>Để một IAM Principal (User hoặc Role) có thể giải mã dữ liệu (<code>kms:Decrypt</code>), phải thỏa mãn nguyên tắc đồng thuận kép:</p>
+<ol>
+<li><strong>IAM Policy:</strong> IAM Role của ứng dụng phải được cấp quyền <code>kms:Decrypt</code> trên tài nguyên ARN của khóa.</li>
+<li><strong>KMS Key Policy (bắt buộc):</strong> Key policy là nguồn quyền chính của key. Nó phải <strong>hoặc</strong> cấp quyền trực tiếp cho principal, <strong>hoặc</strong> có statement cho principal <code>arn:aws:iam::&lt;account&gt;:root</code> để &quot;tin IAM của account&quot; (default key policy có statement này). Chỉ khi có statement tin IAM, IAM policy mới có tác dụng. Nếu key policy không cấp trực tiếp và cũng không tin IAM, thì dù IAM Policy có <code>AdministratorAccess</code>, lệnh giải mã vẫn bị <strong><code>AccessDenied</code></strong>.</li>
+<li><strong>Grant</strong> là cách thứ ba để cấp quyền dùng key, thường do dịch vụ AWS (EBS, RDS) tạo tự động.</li>
+</ol>
+<h3 id="ngữ-cảnh-mã-hóa-encryption-context"><a class="anchor" href="#ngữ-cảnh-mã-hóa-encryption-context">Ngữ cảnh Mã hóa (Encryption Context)</a></h3>
+<p>Encryption Context là một tập hợp các cặp key-value bổ sung (ví dụ: <code>{&quot;order_id&quot;: &quot;ORD-1001&quot;, &quot;department&quot;: &quot;finance&quot;}</code>) được truyền vào khi mã hóa:</p>
+<ul>
+<li>Encryption Context không được lưu trữ bí mật mà được lưu dưới dạng dữ liệu xác thực bổ sung (<strong>AAD - Additional Authenticated Data</strong>). Nó xuất hiện <strong>dạng rõ</strong> trong CloudTrail, nên không đặt dữ liệu nhạy cảm vào đó.</li>
+<li><strong>Tính năng bảo vệ toàn vẹn:</strong> Khi giải mã, client bắt buộc phải cung cấp chính xác từng cặp key-value của Encryption Context như lúc mã hóa. Nếu kẻ tấn công đánh cắp được bản mã của đơn hàng này và cố gắng gán vào đơn hàng khác, quá trình giải mã sẽ thất bại với <code>InvalidCiphertextException</code>.</li>
+<li>Key policy/IAM có thể dùng điều kiện <code>kms:EncryptionContext:&lt;key&gt;</code> để chỉ cho decrypt dữ liệu của một tenant/đơn vị.</li>
+</ul>
+<h3 id="xóa-key-và-secret"><a class="anchor" href="#xóa-key-và-secret">Xóa key và secret</a></h3>
+<ul>
+<li><strong>Key KMS</strong> không xóa ngay được: <code>ScheduleKeyDeletion</code> với khoảng chờ 7–30 ngày, có thể hủy trong thời gian đó. Sau khi xóa, mọi dữ liệu mã hóa bằng key (kể cả backup) không giải mã được nữa. Nếu không chắc, <code>DisableKey</code> trước để xem có gì hỏng.</li>
+<li><strong>Secret</strong> mặc định có recovery window 7–30 ngày; trong thời gian đó không tạo được secret mới cùng tên. Chỉ dùng <code>--force-delete-without-recovery</code> cho fixture lab.</li>
+</ul>
+<hr>
+<h2 id="phần-6--giới-thiệu-bài-thực-hành-lab-10"><a class="anchor" href="#phần-6--giới-thiệu-bài-thực-hành-lab-10">Phần 6 — Giới thiệu bài thực hành (Lab 10)</a></h2>
+<p>Trong bài thực hành đính kèm, bạn sẽ trực tiếp triển khai:</p>
+<ol>
+<li>Tạo <strong>Customer Managed Key</strong> riêng cho lab; giải thích statement &quot;tin IAM của account&quot; trong key policy.</li>
+<li>Tạo secret giả (mật khẩu sinh ngẫu nhiên, không bao giờ in ra) mã hóa bằng key đó, và một parameter cấu hình thường.</li>
+<li>Deploy một Lambda &quot;order API&quot; làm fixture: structured JSON log có correlation ID, metric latency/error qua EMF, cache secret có TTL, inject lỗi có kiểm soát.</li>
+<li>Logs Insights (p95 latency, số lỗi, hành trình một correlation ID), alarm và dashboard; tùy chọn email SNS tới chính bạn.</li>
+<li>Negative case: principal khác có quyền đọc secret nhưng thiếu <code>kms:Decrypt</code>; decrypt sai encryption context.</li>
+<li>Đổi secret khi app đang cache và quan sát độ trễ cập nhật.</li>
+<li>Truy vết bằng CloudTrail: ai đọc secret (kể cả lần bị từ chối), ai đổi parameter.</li>
+<li>Cleanup: xóa secret, lên lịch xóa key, kiểm tra inventory.</li>
+</ol>
+<p>👉 Mở bài hướng dẫn chi tiết tại: <strong><a href="../labs/10-observability-and-application-security/README.html">labs/10-observability-and-application-security/README.md</a></strong>.</p>
+<hr>
+<h2 id="phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút"><a class="anchor" href="#phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi phổ biến (25 phút)</a></h2>
+<h3 id="1-lỗi-accessdeniedexception-khi-gọi-kmsdecrypt"><a class="anchor" href="#1-lỗi-accessdeniedexception-khi-gọi-kmsdecrypt">1. Lỗi <code>AccessDeniedException</code> khi gọi <code>kms:Decrypt</code></a></h3>
+<ul>
+<li><strong>Nguyên nhân 1:</strong> IAM Role chưa được cấp quyền <code>kms:Decrypt</code> trong Identity Policy.</li>
+<li><strong>Nguyên nhân 2:</strong> Bản thân <strong>KMS Key Policy</strong> chưa khai báo ủy quyền cho tài khoản (<code>root</code>) hoặc chưa thêm ARN của Role vào danh sách Principals được phép sử dụng khóa.</li>
+<li><strong>Nguyên nhân 3:</strong> Dữ liệu được mã hóa kèm <strong>Encryption Context</strong>, nhưng khi gọi giải mã lại không truyền hoặc truyền sai cặp key-value của Encryption Context.</li>
+</ul>
+<h3 id="2-cloudwatch-alarm-liên-tục-ở-trạng-thái-insufficient_data"><a class="anchor" href="#2-cloudwatch-alarm-liên-tục-ở-trạng-thái-insufficient_data">2. CloudWatch Alarm liên tục ở trạng thái <code>INSUFFICIENT_DATA</code></a></h3>
+<ul>
+<li><strong>Nguyên nhân:</strong> Metric chưa có đủ điểm dữ liệu trong số chu kỳ đánh giá (<code>EvaluationPeriods</code>), hoặc metric chỉ sinh ra khi có lỗi (Error metric) nên trong điều kiện bình thường không có điểm dữ liệu nào được gửi lên.</li>
+<li><strong>Cách khắc phục:</strong> Cấu hình tham số <code>TreatMissingData</code> chuyển sang <code>notBreaching</code> để Alarm duy trì trạng thái <code>OK</code> khi không có lỗi.</li>
+</ul>
+<h3 id="3-đã-đổi-mật-khẩu-trong-secrets-manager-nhưng-ứng-dụng-vẫn-dùng-mật-khẩu-cũ"><a class="anchor" href="#3-đã-đổi-mật-khẩu-trong-secrets-manager-nhưng-ứng-dụng-vẫn-dùng-mật-khẩu-cũ">3. Đã đổi mật khẩu trong Secrets Manager nhưng ứng dụng vẫn dùng mật khẩu cũ</a></h3>
+<ul>
+<li><strong>Nguyên nhân:</strong> Ứng dụng đang lưu đệm (cache) giá trị secret trong RAM quá lâu mà không có cơ chế vô hiệu hóa cache (Cache Invalidation) khi secret thay đổi.</li>
+<li><strong>Cách khắc phục:</strong> Thiết lập TTL cache ngắn hơn (ví dụ 5–15 phút), hoặc cài đặt cơ chế bắt sự kiện EventBridge khi Secrets Manager xoay vòng thành công để gửi tín hiệu xóa cache nội bộ của ứng dụng.</li>
+</ul>
+<hr>
+<h2 id="câu-hỏi-tự-kiểm-tra"><a class="anchor" href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></h2>
+<ol>
+<li>Phân tích sự khác biệt về mặt vai trò, dạng dữ liệu và mục đích sử dụng giữa ba trụ cột Khả năng quan sát: Logs, Metrics và Traces?</li>
+<li>Tại sao việc đặt thời hạn lưu trữ (Retention Period) cho các CloudWatch Log Groups lại là một quy tắc quản trị chi phí bắt buộc trong doanh nghiệp?</li>
+<li>So sánh AWS Secrets Manager và Systems Manager Parameter Store. Khi nào bạn bắt buộc phải chi trả thêm chi phí để sử dụng Secrets Manager?</li>
+<li>Trình bày cơ chế hoạt động của Mã hóa Phong bì (Envelope Encryption) trong AWS KMS? Tại sao AWS lại áp dụng cơ chế này thay vì dùng trực tiếp khóa gốc để mã hóa dữ liệu lớn?</li>
+<li>Nếu một kỹ sư có quyền <code>AdministratorAccess</code> đầy đủ trong IAM Policy nhưng trong KMS Key Policy không hề đề cập đến họ, kỹ sư này có thể giải mã được dữ liệu được bảo vệ bởi khóa KMS đó không? Tại sao?</li>
+</ol>
+<hr>
+<h2 id="tài-liệu-tham-khảo-chính-thức"><a class="anchor" href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></h2>
+<ul>
+<li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/" target="_blank" rel="noopener">Amazon CloudWatch User Guide</a></li>
+<li><a href="https://docs.aws.amazon.com/awscloudtrail/latest/userguide/" target="_blank" rel="noopener">AWS CloudTrail User Guide</a></li>
+<li><a href="https://docs.aws.amazon.com/secretsmanager/latest/userguide/" target="_blank" rel="noopener">AWS Secrets Manager User Guide</a></li>
+<li><a href="https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html" target="_blank" rel="noopener">AWS Systems Manager Parameter Store</a></li>
+<li><a href="https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html" target="_blank" rel="noopener">AWS Key Management Service Concepts &amp; Envelope Encryption</a></li>
+</ul>
+<h2 id="trạng-thái-kiểm-chứng"><a class="anchor" href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></h2>
+<ul>
+<li><strong>Đối chiếu tài liệu (2026-10-31):</strong> envelope encryption, encryption context và <code>InvalidCiphertextException</code>; key policy và statement tin IAM của account; <code>kms:ViaService</code>; Event History 90 ngày theo Region, chỉ management event; scheduled key deletion 7–30 ngày; recovery window của secret; Embedded Metric Format; hướng dẫn chuyển sang OpenTelemetry cho tracing.</li>
+<li><strong>Chưa chạy thử trên AWS:</strong> lệnh trong lab chưa được thực thi trên account thật; output là minh họa.</li>
+<li><strong>Chi phí:</strong> buổi lab dưới $0.10 (key, secret, metric, alarm tính theo thời gian tồn tại). Key ở trạng thái chờ xóa thêm 7 ngày sau lab (xem bảng trong lab).</li>
+</ul>
+<hr>
+<h2 id="đáp-án-gợi-ý"><a class="anchor" href="#đáp-án-gợi-ý">Đáp án gợi ý</a></h2>
+<details>
+<summary>Mở để xem đáp án</summary>
+
+<ol>
+<li>Ba trụ cột:<ul>
+<li><strong>Logs:</strong> Chuỗi sự kiện chi tiết dạng text/JSON kèm dấu thời gian. Trả lời &quot;Điều gì cụ thể đã xảy ra tại thời điểm đó?&quot;.</li>
+<li><strong>Metrics:</strong> Số liệu định lượng được tổng hợp theo thời gian (CPU, Latency, Error count). Trả lời &quot;Hệ thống đang hoạt động có khỏe mạnh không và xu hướng ra sao?&quot;.</li>
+<li><strong>Traces:</strong> Theo dõi hành trình của một request đi xuyên qua toàn bộ các ranh giới dịch vụ phân tán. Trả lời &quot;Điểm nghẽn độ trễ nằm ở microservice nào?&quot;.</li>
+</ul>
+</li>
+<li>Mặc định CloudWatch Log Groups không bao giờ hết hạn (<code>Never Expire</code>). Theo thời gian, hàng triệu dòng log debug, log truy cập tích tụ hàng trăm Gigabytes dữ liệu, gây ra chi phí lưu trữ phát sinh liên tục hàng tháng. Đặt Retention (ví dụ 14 ngày) giúp tự động dọn dẹp log rác, duy trì ngân sách tối ưu.</li>
+<li>So sánh:<ul>
+<li><strong>Parameter Store:</strong> Phù hợp cho cấu hình hệ thống, biến môi trường và secret tĩnh với chi phí cực rẻ (hoặc miễn phí với Standard tier).</li>
+<li><strong>Secrets Manager:</strong> Bắt buộc phải dùng khi bạn cần tính năng <strong>Tự động xoay vòng mật khẩu (Automatic Rotation)</strong> cho Database (tự động đổi password trên cả RDS và Secrets Manager định kỳ mà không làm gián đoạn ứng dụng), hoặc cần chia sẻ secret an toàn xuyên nhiều tài khoản AWS (Cross-account secret sharing).</li>
+</ul>
+</li>
+<li>Envelope Encryption sinh ra một Data Key dùng một lần để mã hóa dữ liệu cục bộ, sau đó khóa gốc KMS chỉ mã hóa lại chính Data Key đó.<ul>
+<li>Lý do:<ul>
+<li>Khóa gốc KMS không bao giờ rời khỏi chip bảo mật của AWS và chỉ nhận mã hóa tối đa 4 KB dữ liệu.</li>
+<li>Mã hóa trực tiếp dữ liệu lớn qua mạng sẽ làm nghẽn băng thông và gây độ trễ mạng khủng khiếp.</li>
+<li>Envelope Encryption cho phép mã hóa dữ liệu hàng GB/TB ngay tại RAM máy chủ bằng thuật toán phần cứng AES siêu tốc.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>Tùy key policy.</strong> Key policy là cơ chế kiểm soát chính của KMS.<ul>
+<li>Nếu key policy có statement cho <code>arn:aws:iam::&lt;account&gt;:root</code> (như default key policy), key &quot;tin IAM&quot;: khi đó IAM policy <code>AdministratorAccess</code> <strong>có</strong> tác dụng và kỹ sư giải mã được, dù tên họ không xuất hiện trong key policy.</li>
+<li>Nếu key policy <strong>không</strong> có statement đó và cũng không cấp quyền trực tiếp cho họ (hoặc có <code>Deny</code> khớp với họ), thì mọi lệnh <code>kms:Decrypt</code> bị <code>AccessDenied</code>, bất kể IAM cấp gì.</li>
+<li>Bài học: &quot;không đề cập trong key policy&quot; chưa đủ để kết luận; phải đọc toàn bộ key policy, IAM policy và grant.</li>
+</ul>
+</li>
+</ol>
+</details>
+
+
+<footer>Sinh tự động từ <code>notes/10-observability-and-application-security.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

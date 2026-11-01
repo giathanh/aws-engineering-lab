@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab 05 — Máy chủ và cân bằng tải: Auto Scaling Group trong private subnet sau Application Load Balancer</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="../../notes/01-foundations.html">01. Lý thuyết</a><a href="../01-foundations/README.html">01. Lab</a><a href="../../notes/02-identity-and-access.html">02. Lý thuyết</a><a href="../02-identity-and-access/README.html">02. Lab</a><a href="../../notes/03-cost-management.html">03. Lý thuyết</a><a href="../03-cost-management/README.html">03. Lab</a><a href="../../notes/04-networking.html">04. Lý thuyết</a><a href="../04-networking/README.html">04. Lab</a><a href="../../notes/05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="README.html" class="active">05. Lab</a><a href="../../notes/06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../06-storage-and-content-delivery/README.html">06. Lab</a><a href="../../notes/07-databases-and-cache.html">07. Lý thuyết</a><a href="../07-databases-and-cache/README.html">07. Lab</a><a href="../../notes/08-containers.html">08. Lý thuyết</a><a href="../08-containers/README.html">08. Lab</a><a href="../../notes/09-serverless.html">09. Lý thuyết</a><a href="../09-serverless/README.html">09. Lab</a><a href="../../notes/10-observability-and-application-security.html">10. Lý thuyết</a><a href="../10-observability-and-application-security/README.html">10. Lab</a><a href="../../notes/11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../11-messaging-and-workflows/README.html">11. Lab</a><a href="../../notes/12-iac-and-cicd.html">12. Lý thuyết</a><a href="../12-iac-and-cicd/README.html">12. Lab</a><a href="../../notes/13-reliability-and-performance.html">13. Lý thuyết</a><a href="../13-reliability-and-performance/README.html">13. Lab</a><a href="../../notes/14-architecture-and-governance.html">14. Lý thuyết</a><a href="../14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></li><li><a href="#quy-ước-placeholder">Quy ước placeholder</a></li><li><a href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></li><li><a href="#sơ-đồ-kiến-trúc-lab-05">Sơ đồ kiến trúc Lab 05</a></li><li><a href="#bước-0--tạo-mạng-lab">Bước 0 — Tạo mạng lab</a></li><li><a href="#bước-1--tạo-iam-role-và-instance-profile-cho-ec2">Bước 1 — Tạo IAM Role và Instance Profile cho EC2</a></li><li><a href="#bước-2--chuẩn-bị-user-data-cho-order-api">Bước 2 — Chuẩn bị User Data cho Order API</a></li><li><a href="#bước-3--security-groups-và-launch-template">Bước 3 — Security Groups và Launch Template</a></li><li><a href="#bước-4--target-group-alb-và-negative-test-503">Bước 4 — Target Group, ALB và negative test 503</a></li><li><a href="#bước-5--tạo-auto-scaling-group">Bước 5 — Tạo Auto Scaling Group</a></li><li><a href="#bước-6--kiểm-chứng-phân-phối-request-qua-alb">Bước 6 — Kiểm chứng phân phối request qua ALB</a></li><li><a href="#bước-7--vào-instance-bằng-session-manager">Bước 7 — Vào instance bằng Session Manager</a></li><li><a href="#bước-8--giả-lập-sự-cố-và-đo-thời-gian-tự-phục-hồi">Bước 8 — Giả lập sự cố và đo thời gian tự phục hồi</a></li><li><a href="#bước-9-tùy-chọn--target-tracking-scaling">Bước 9 (tùy chọn) — Target tracking scaling</a></li><li><a href="#bước-10--dọn-dẹp-teardown">Bước 10 — Dọn dẹp (Teardown)</a></li><li><a href="#checklist-hoàn-thành">Checklist hoàn thành</a></li><li><a href="#troubleshooting-nhanh">Troubleshooting nhanh</a></li><li><a href="#tiếp-theo">Tiếp theo</a></li></ol></aside>
+<main>
+<h1 id="lab-05--máy-chủ-và-cân-bằng-tải-auto-scaling-group-trong-private-subnet-sau-application-load-balancer"><a class="anchor" href="#lab-05--máy-chủ-và-cân-bằng-tải-auto-scaling-group-trong-private-subnet-sau-application-load-balancer">Lab 05 — Máy chủ và cân bằng tải: Auto Scaling Group trong private subnet sau Application Load Balancer</a></h1>
+<blockquote>
+<p><strong>Lý thuyết:</strong> <a href="../../notes/05-compute-and-load-balancing.html">notes/05-compute-and-load-balancing.md</a>. Đọc phần 1–5 trước khi thực hiện lab.
+<strong>Thời lượng:</strong> khoảng 90–120 phút (cộng 20–30 phút nếu làm phần scaling tùy chọn).
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Mọi output và thời gian đo là <strong>minh họa</strong>, thông tin định danh dùng placeholder. Lab chưa được chạy thử trên account thật.</p>
+</blockquote>
+<hr>
+<h2 id="lab-này-làm-gì-và-không-làm-gì"><a class="anchor" href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>✅ Có</th>
+<th>❌ Không</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tự tạo mạng lab riêng (2 public + 2 private subnet, 1 NAT Gateway)</td>
+<td>Dùng Default VPC hoặc tài nguyên của lab khác</td>
+</tr>
+<tr>
+<td>Tạo IAM Role + Instance Profile cho SSM</td>
+<td>Mở port 22, tạo SSH key pair</td>
+</tr>
+<tr>
+<td>Launch Template: AL2023, <code>t4g.nano</code>, IMDSv2, app chạy bằng systemd</td>
+<td>Gán public IP cho instance ứng dụng</td>
+</tr>
+<tr>
+<td>ALB internet-facing trên 2 AZ, ASG trong 2 private subnet, health check ELB</td>
+<td>Dùng instance lớn hoặc <code>max</code> capacity lớn hơn 3</td>
+</tr>
+<tr>
+<td>Negative test <code>503</code>; giả lập sự cố và <strong>đo</strong> thời gian tự phục hồi</td>
+<td>Để NAT/ALB chạy qua đêm</td>
+</tr>
+<tr>
+<td>Tùy chọn: target tracking scaling với tải CPU có giới hạn thời gian</td>
+<td>Load test từ bên ngoài với lưu lượng lớn</td>
+</tr>
+<tr>
+<td>Cleanup theo dependency + kiểm tra EBS, EIP, public IPv4 còn sót</td>
+<td></td>
+</tr>
+</tbody></table>
+</div>
+<hr>
+<h2 id="quy-ước-placeholder"><a class="anchor" href="#quy-ước-placeholder">Quy ước placeholder</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Biến</th>
+<th>Ý nghĩa</th>
+<th>Ví dụ minh họa</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>aws-lab</code></td>
+<td>Named profile CLI đã cấu hình ở Lab 01</td>
+<td><code>aws-lab</code></td>
+</tr>
+<tr>
+<td><code>REGION</code></td>
+<td>Region học tập</td>
+<td><code>ap-southeast-1</code></td>
+</tr>
+<tr>
+<td><code>AZ_A</code>, <code>AZ_B</code></td>
+<td>Hai AZ đầu tiên khả dụng (lấy tự động)</td>
+<td><code>ap-southeast-1a</code>, <code>ap-southeast-1b</code></td>
+</tr>
+<tr>
+<td><code>VPC_ID</code>, <code>PUB_SUB_*</code>, <code>PRI_SUB_*</code>, <code>NAT_ID</code>, ...</td>
+<td>ID tài nguyên lab tạo, lưu trong biến shell</td>
+<td><code>vpc-0123456789abcdef0</code></td>
+</tr>
+<tr>
+<td><code>TG_ARN</code>, <code>ALB_ARN</code>, <code>ALB_DNS</code></td>
+<td>Target group, ALB và DNS name</td>
+<td><code>lab05-alb-123.ap-southeast-1.elb.amazonaws.com</code></td>
+</tr>
+</tbody></table>
+</div>
+<p>Tên cố định: <code>lab05-*</code> cho tài nguyên mạng/ELB/ASG, <code>LabEC2SSMRole</code>/<code>LabEC2SSMProfile</code> cho IAM, <code>LabOrderApiTemplate</code> cho launch template. Mọi tài nguyên hỗ trợ tag đều mang <code>Project=aws-lab-05</code>.</p>
+<hr>
+<h2 id="điều-kiện-đầu-vào"><a class="anchor" href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></h2>
+<ul>
+<li><input type="checkbox"> Đã hoàn thành <a href="../01-foundations/README.html">Lab 01</a> đến <a href="../04-networking/README.html">Lab 04</a>. Lab này <strong>không</strong> dùng lại VPC của Lab 04 (đã xóa ở cuối Lab 04) mà tự tạo mạng theo cùng mô hình.</li>
+<li><input type="checkbox"> Đã cài <a href="https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html" target="_blank" rel="noopener">Session Manager plugin</a> cho AWS CLI (<code>session-manager-plugin --version</code>). Nếu không cài được, dùng Session Manager trên console.</li>
+<li><input type="checkbox"> Quyền cần thiết (không cần <code>AdministratorAccess</code>):<ul>
+<li><strong>IAM:</strong> <code>iam:CreateRole</code>, <code>iam:AttachRolePolicy</code>, <code>iam:DetachRolePolicy</code>, <code>iam:DeleteRole</code>, <code>iam:CreateInstanceProfile</code>, <code>iam:AddRoleToInstanceProfile</code>, <code>iam:RemoveRoleFromInstanceProfile</code>, <code>iam:DeleteInstanceProfile</code>, <code>iam:GetInstanceProfile</code>, <code>iam:TagRole</code>, <strong><code>iam:PassRole</code> trên <code>LabEC2SSMRole</code></strong> (bắt buộc để gắn instance profile vào launch template/ASG), và <code>iam:CreateServiceLinkedRole</code> nếu đây là lần đầu account dùng Auto Scaling/ELB.</li>
+<li><strong>EC2/VPC:</strong> các quyền mạng như Lab 04, thêm <code>ec2:AllocateAddress</code>, <code>ec2:ReleaseAddress</code>, <code>ec2:CreateNatGateway</code>, <code>ec2:DeleteNatGateway</code>, <code>ec2:CreateLaunchTemplate</code>, <code>ec2:DeleteLaunchTemplate</code>, <code>ec2:RunInstances</code> (ASG kiểm tra quyền này của người tạo ASG), <code>ec2:Describe*</code>.</li>
+<li><strong>ELB:</strong> <code>elasticloadbalancing:CreateLoadBalancer</code>, <code>CreateTargetGroup</code>, <code>CreateListener</code>, <code>ModifyTargetGroupAttributes</code>, <code>AddTags</code>, <code>DeleteLoadBalancer</code>, <code>DeleteTargetGroup</code>, <code>Describe*</code>.</li>
+<li><strong>Auto Scaling:</strong> <code>autoscaling:CreateAutoScalingGroup</code>, <code>UpdateAutoScalingGroup</code>, <code>DeleteAutoScalingGroup</code>, <code>PutScalingPolicy</code>, <code>Describe*</code>.</li>
+<li><strong>SSM:</strong> <code>ssm:GetParameter</code> (AMI ID), <code>ssm:StartSession</code>, <code>ssm:TerminateSession</code>, <code>ssm:DescribeInstanceInformation</code>.</li>
+</ul>
+</li>
+<li><input type="checkbox"> Quota: account mới có thể bị giới hạn vCPU On-Demand thấp. Lab dùng tối đa 3 × <code>t4g.nano</code> (6 vCPU).</li>
+<li><input type="checkbox"> Không sử dụng tài khoản production.</li>
+</ul>
+<h3 id="chi-phí-ước-tính-giá-minh-họa-tra-lại-cho-region-của-bạn"><a class="anchor" href="#chi-phí-ước-tính-giá-minh-họa-tra-lại-cho-region-của-bạn">Chi phí ước tính (giá minh họa, tra lại cho Region của bạn)</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tài nguyên</th>
+<th>Số lượng</th>
+<th>Đơn giá minh họa</th>
+<th>Mỗi giờ</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>NAT Gateway (giờ)</td>
+<td>1</td>
+<td>~$0.059/giờ</td>
+<td>~$0.059</td>
+</tr>
+<tr>
+<td>Public IPv4 (EIP của NAT + 2 IP của ALB)</td>
+<td>3</td>
+<td>~$0.005/giờ/IP</td>
+<td>~$0.015</td>
+</tr>
+<tr>
+<td>ALB (giờ + ~1 LCU)</td>
+<td>1</td>
+<td>~$0.0252 + ~$0.008</td>
+<td>~$0.033</td>
+</tr>
+<tr>
+<td>EC2 <code>t4g.nano</code></td>
+<td>2 (tối đa 3)</td>
+<td>~$0.0053/giờ</td>
+<td>~$0.011</td>
+</tr>
+<tr>
+<td>EBS gp3 8 GB</td>
+<td>2</td>
+<td>~$0.096/GB-tháng</td>
+<td>&lt; $0.001</td>
+</tr>
+<tr>
+<td>NAT data processing</td>
+<td>vài chục MB</td>
+<td>~$0.059/GB</td>
+<td>&lt; $0.01</td>
+</tr>
+<tr>
+<td><strong>Tổng</strong></td>
+<td></td>
+<td></td>
+<td><strong>~$0.12/giờ</strong></td>
+</tr>
+</tbody></table>
+</div>
+<ul>
+<li>Làm lab 2 giờ: khoảng <strong>$0.25</strong>.</li>
+<li><strong>Quên xóa 1 tháng: khoảng $85–90</strong>, trong đó NAT + ALB chiếm hơn 80%.</li>
+<li><strong>Điều kiện dừng:</strong> nếu sau 3 giờ chưa xong, chạy cleanup (Bước 10) rồi làm lại sau. Tạo lại toàn bộ chỉ mất khoảng 15 phút.</li>
+</ul>
+<hr>
+<h2 id="sơ-đồ-kiến-trúc-lab-05"><a class="anchor" href="#sơ-đồ-kiến-trúc-lab-05">Sơ đồ kiến trúc Lab 05</a></h2>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>                      Internet / máy của bạn (curl)
+                                 │ HTTP :80
+                                 ▼
+┌──────────────────────────── VPC lab05-vpc 10.50.0.0/16 ─────────────────────────────┐
+│                         [ Internet Gateway lab05-igw ]                              │
+│                                       │                                             │
+│  Public RT: 0.0.0.0/0 → IGW           │                                             │
+│  ┌───────── Public Subnet A ──────────┴──┐   ┌───────── Public Subnet B ─────────┐  │
+│  │ 10.50.1.0/24 (&lt;AZ_A&gt;)                 │   │ 10.50.2.0/24 (&lt;AZ_B&gt;)             │  │
+│  │  [ALB node]   [NAT Gateway + EIP]     │   │  [ALB node]                       │  │
+│  └───────────────────┬─────────▲─────────┘   └──────────────┬────────────────────┘  │
+│        lab05-alb-sg: │ :80     │ outbound 443 (SSM)         │                       │
+│        từ 0.0.0.0/0  │         │                            │                       │
+│                      ▼ :8080   │                            ▼ :8080                 │
+│  Private RT: 0.0.0.0/0 → NAT   │                                                    │
+│  ┌───────── Private Subnet A ──┴─────────┐   ┌───────── Private Subnet B ────────┐  │
+│  │ 10.50.10.0/24 (&lt;AZ_A&gt;)                │   │ 10.50.20.0/24 (&lt;AZ_B&gt;)            │  │
+│  │  EC2 #1 (không public IP)             │   │  EC2 #2 (không public IP)         │  │
+│  └───────────────────────────────────────┘   └───────────────────────────────────┘  │
+│        lab05-app-sg: :8080 chỉ từ lab05-alb-sg; không có inbound nào khác            │
+│                                                                                     │
+│   Target Group lab05-tg (HTTP :8080, health check GET /health mỗi 10 giây)           │
+│   Auto Scaling Group lab05-asg: min 1 / desired 2 / max 3, HealthCheckType = ELB     │
+└─────────────────────────────────────────────────────────────────────────────────────┘</code></pre></div>
+<p><strong>Vì sao cần NAT Gateway?</strong> Instance trong private subnet cần outbound HTTPS tới SSM endpoints. Private subnet chỉ có local route thì SSM agent không kết nối được (xem Bài 04, Phần 3). Lab dùng <strong>một</strong> NAT (zonal, đặt ở AZ A) để tiết kiệm. Nếu AZ A gặp sự cố, instance ở AZ B cũng mất outbound; production sẽ đặt mỗi AZ một NAT.</p>
+<p><strong>Phương án thay thế:</strong> interface endpoints <code>ssm</code> + <code>ssmmessages</code> ở 2 AZ thay cho NAT. Instance khi đó hoàn toàn không ra được internet (an toàn hơn), nhưng chi phí theo giờ của 4 endpoint (2 service × 2 AZ) tương đương hoặc cao hơn 1 NAT. Ứng dụng của lab không cần cài package từ internet nên phương án nào cũng chạy được.</p>
+<hr>
+<h2 id="bước-0--tạo-mạng-lab"><a class="anchor" href="#bước-0--tạo-mạng-lab">Bước 0 — Tạo mạng lab</a></h2>
+<p>Các lệnh dưới đây lặp lại mô hình Lab 04, thêm NAT Gateway. Đọc lại Lab 04 nếu cần giải thích từng lệnh.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export REGION=&quot;ap-southeast-1&quot;   # đổi thành Region của bạn
+export TAG=&quot;{Key=Project,Value=aws-lab-05}&quot;
+export LAB_DIR=$(mktemp -d)
+ec2() { aws ec2 &quot;$@&quot; --region &quot;${REGION}&quot; --profile aws-lab; }
+
+read -r AZ_A AZ_B &lt; &lt;(ec2 describe-availability-zones \
+  --filters Name=zone-type,Values=availability-zone Name=state,Values=available \
+  --query 'AvailabilityZones[0:2].ZoneName' --output text)
+echo &quot;AZ_A=${AZ_A} AZ_B=${AZ_B}&quot;
+
+# VPC + DNS
+VPC_ID=$(ec2 create-vpc --cidr-block 10.50.0.0/16 \
+  --tag-specifications &quot;ResourceType=vpc,Tags=[{Key=Name,Value=lab05-vpc},${TAG}]&quot; \
+  --query 'Vpc.VpcId' --output text)
+ec2 modify-vpc-attribute --vpc-id &quot;${VPC_ID}&quot; --enable-dns-support '{&quot;Value&quot;: true}'
+ec2 modify-vpc-attribute --vpc-id &quot;${VPC_ID}&quot; --enable-dns-hostnames '{&quot;Value&quot;: true}'
+
+# Internet Gateway
+IGW_ID=$(ec2 create-internet-gateway \
+  --tag-specifications &quot;ResourceType=internet-gateway,Tags=[{Key=Name,Value=lab05-igw},${TAG}]&quot; \
+  --query 'InternetGateway.InternetGatewayId' --output text)
+ec2 attach-internet-gateway --vpc-id &quot;${VPC_ID}&quot; --internet-gateway-id &quot;${IGW_ID}&quot;
+
+# Subnets
+mksub() { ec2 create-subnet --vpc-id &quot;${VPC_ID}&quot; --cidr-block &quot;$1&quot; --availability-zone &quot;$2&quot; \
+  --tag-specifications &quot;ResourceType=subnet,Tags=[{Key=Name,Value=$3},${TAG}]&quot; \
+  --query 'Subnet.SubnetId' --output text; }
+PUB_SUB_A=$(mksub 10.50.1.0/24  &quot;${AZ_A}&quot; lab05-public-a)
+PUB_SUB_B=$(mksub 10.50.2.0/24  &quot;${AZ_B}&quot; lab05-public-b)
+PRI_SUB_A=$(mksub 10.50.10.0/24 &quot;${AZ_A}&quot; lab05-private-a)
+PRI_SUB_B=$(mksub 10.50.20.0/24 &quot;${AZ_B}&quot; lab05-private-b)
+
+# Public route table
+PUB_RT_ID=$(ec2 create-route-table --vpc-id &quot;${VPC_ID}&quot; \
+  --tag-specifications &quot;ResourceType=route-table,Tags=[{Key=Name,Value=lab05-public-rt},${TAG}]&quot; \
+  --query 'RouteTable.RouteTableId' --output text)
+ec2 create-route --route-table-id &quot;${PUB_RT_ID}&quot; --destination-cidr-block 0.0.0.0/0 --gateway-id &quot;${IGW_ID}&quot; &gt; /dev/null
+ec2 associate-route-table --subnet-id &quot;${PUB_SUB_A}&quot; --route-table-id &quot;${PUB_RT_ID}&quot; &gt; /dev/null
+ec2 associate-route-table --subnet-id &quot;${PUB_SUB_B}&quot; --route-table-id &quot;${PUB_RT_ID}&quot; &gt; /dev/null
+
+echo &quot;VPC=${VPC_ID} PUB=${PUB_SUB_A},${PUB_SUB_B} PRI=${PRI_SUB_A},${PRI_SUB_B}&quot;</code></pre></div>
+<p>Public subnet <strong>không</strong> bật <code>map-public-ip-on-launch</code>: chỉ ALB và NAT nằm ở đây, và chúng tự quản lý IP của mình.</p>
+<p>Tạo NAT Gateway (bắt đầu tính phí từ đây) và private route table:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>EIP_ALLOC_ID=$(ec2 allocate-address --domain vpc \
+  --tag-specifications &quot;ResourceType=elastic-ip,Tags=[{Key=Name,Value=lab05-nat-eip},${TAG}]&quot; \
+  --query AllocationId --output text)
+
+NAT_ID=$(ec2 create-nat-gateway --subnet-id &quot;${PUB_SUB_A}&quot; --allocation-id &quot;${EIP_ALLOC_ID}&quot; \
+  --tag-specifications &quot;ResourceType=natgateway,Tags=[{Key=Name,Value=lab05-nat},${TAG}]&quot; \
+  --query 'NatGateway.NatGatewayId' --output text)
+echo &quot;Đang chờ NAT ${NAT_ID} chuyển sang available (1–3 phút)...&quot;
+ec2 wait nat-gateway-available --nat-gateway-ids &quot;${NAT_ID}&quot;
+
+PRI_RT_ID=$(ec2 create-route-table --vpc-id &quot;${VPC_ID}&quot; \
+  --tag-specifications &quot;ResourceType=route-table,Tags=[{Key=Name,Value=lab05-private-rt},${TAG}]&quot; \
+  --query 'RouteTable.RouteTableId' --output text)
+ec2 create-route --route-table-id &quot;${PRI_RT_ID}&quot; --destination-cidr-block 0.0.0.0/0 --nat-gateway-id &quot;${NAT_ID}&quot; &gt; /dev/null
+ec2 associate-route-table --subnet-id &quot;${PRI_SUB_A}&quot; --route-table-id &quot;${PRI_RT_ID}&quot; &gt; /dev/null
+ec2 associate-route-table --subnet-id &quot;${PRI_SUB_B}&quot; --route-table-id &quot;${PRI_RT_ID}&quot; &gt; /dev/null</code></pre></div>
+<p>Xác minh route của private RT:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>ec2 describe-route-tables --route-table-ids &quot;${PRI_RT_ID}&quot; \
+  --query 'RouteTables[0].Routes[].[DestinationCidrBlock,GatewayId||NatGatewayId,State]' --output text</code></pre></div>
+<p>Kết quả mong đợi:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>10.50.0.0/16   local          active
+0.0.0.0/0      nat-0abc...    active</code></pre></div>
+<hr>
+<h2 id="bước-1--tạo-iam-role-và-instance-profile-cho-ec2"><a class="anchor" href="#bước-1--tạo-iam-role-và-instance-profile-cho-ec2">Bước 1 — Tạo IAM Role và Instance Profile cho EC2</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat &lt;&lt;'EOF' &gt; &quot;${LAB_DIR}/ec2-trust-policy.json&quot;
+{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Principal&quot;: { &quot;Service&quot;: &quot;ec2.amazonaws.com&quot; },
+      &quot;Action&quot;: &quot;sts:AssumeRole&quot;
+    }
+  ]
+}
+EOF
+
+aws iam create-role --role-name LabEC2SSMRole \
+  --assume-role-policy-document &quot;file://${LAB_DIR}/ec2-trust-policy.json&quot; \
+  --tags Key=Project,Value=aws-lab-05 --profile aws-lab &gt; /dev/null
+
+aws iam attach-role-policy --role-name LabEC2SSMRole \
+  --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore --profile aws-lab
+
+aws iam create-instance-profile --instance-profile-name LabEC2SSMProfile --profile aws-lab &gt; /dev/null
+aws iam add-role-to-instance-profile --instance-profile-name LabEC2SSMProfile \
+  --role-name LabEC2SSMRole --profile aws-lab
+
+# IAM là eventually consistent: chờ profile tồn tại và thêm một chút để EC2 &quot;thấy&quot; nó
+aws iam wait instance-profile-exists --instance-profile-name LabEC2SSMProfile --profile aws-lab
+sleep 15</code></pre></div>
+<p>Trust policy cho phép <strong>dịch vụ EC2</strong> assume role; instance profile là &quot;vỏ bọc&quot; để gắn role vào instance. App trên instance lấy temporary credentials của role qua IMDSv2 (xem lý thuyết Phần 1). Nếu bỏ qua <code>sleep</code>, lần launch đầu tiên có thể lỗi <code>Invalid IamInstanceProfile</code>.</p>
+<hr>
+<h2 id="bước-2--chuẩn-bị-user-data-cho-order-api"><a class="anchor" href="#bước-2--chuẩn-bị-user-data-cho-order-api">Bước 2 — Chuẩn bị User Data cho Order API</a></h2>
+<p>User data tạo một HTTP server Python nhỏ trên cổng <code>8080</code> và đăng ký nó thành <strong>systemd service</strong> <code>order-api</code>:</p>
+<ul>
+<li><code>GET /health</code> → <code>{&quot;status&quot;: &quot;healthy&quot;}</code> cho ALB health check.</li>
+<li><code>GET /order</code> → phiên bản, instance ID và AZ (lấy qua IMDSv2), để thấy request đi tới máy nào.</li>
+<li>Mỗi request được ghi log vào journald (<code>journalctl -u order-api</code>).</li>
+</ul>
+<p>Script <strong>không</strong> chạy <code>dnf update</code>: AL2023 có sẵn <code>python3</code>, và việc cập nhật package lúc boot trên <code>t4g.nano</code> có thể lâu hơn health check grace period, làm ASG giết instance trước khi app kịp lên (xem câu hỏi 7 trong lý thuyết).</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat &lt;&lt;'USERDATA' &gt; &quot;${LAB_DIR}/user-data.sh&quot;
+#!/bin/bash
+set -euo pipefail
+mkdir -p /opt/order-api
+
+cat &gt; /opt/order-api/server.py &lt;&lt;'PYEOF'
+import json
+import urllib.request
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+VERSION = &quot;v1&quot;
+IMDS = &quot;http://169.254.169.254/latest&quot;
+
+
+def metadata(path):
+    try:
+        token_req = urllib.request.Request(
+            f&quot;{IMDS}/api/token&quot;, method=&quot;PUT&quot;,
+            headers={&quot;X-aws-ec2-metadata-token-ttl-seconds&quot;: &quot;300&quot;})
+        token = urllib.request.urlopen(token_req, timeout=2).read().decode()
+        req = urllib.request.Request(
+            f&quot;{IMDS}/meta-data/{path}&quot;,
+            headers={&quot;X-aws-ec2-metadata-token&quot;: token})
+        return urllib.request.urlopen(req, timeout=2).read().decode()
+    except Exception:
+        return &quot;unknown&quot;
+
+
+INSTANCE_ID = metadata(&quot;instance-id&quot;)
+AZ = metadata(&quot;placement/availability-zone&quot;)
+
+
+class Handler(BaseHTTPRequestHandler):
+    def _json(self, code, body):
+        data = (json.dumps(body) + &quot;\n&quot;).encode()
+        self.send_response(code)
+        self.send_header(&quot;Content-Type&quot;, &quot;application/json&quot;)
+        self.send_header(&quot;Content-Length&quot;, str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def do_GET(self):
+        if self.path == &quot;/health&quot;:
+            self._json(200, {&quot;status&quot;: &quot;healthy&quot;})
+        elif self.path == &quot;/order&quot;:
+            self._json(200, {&quot;service&quot;: &quot;order-api&quot;, &quot;version&quot;: VERSION,
+                             &quot;instance_id&quot;: INSTANCE_ID, &quot;az&quot;: AZ})
+        else:
+            self._json(404, {&quot;error&quot;: &quot;not found&quot;})
+
+
+ThreadingHTTPServer((&quot;0.0.0.0&quot;, 8080), Handler).serve_forever()
+PYEOF
+
+cat &gt; /etc/systemd/system/order-api.service &lt;&lt;'EOF'
+[Unit]
+Description=Order API (lab 05)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/order-api/server.py
+Restart=on-failure
+DynamicUser=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable --now order-api
+USERDATA
+
+USER_DATA_BASE64=$(base64 &lt; &quot;${LAB_DIR}/user-data.sh&quot; | tr -d '\n')</code></pre></div>
+<p>Ghi chú thiết kế:</p>
+<ul>
+<li>Bind <code>0.0.0.0</code> (không phải <code>127.0.0.1</code>) để ALB kết nối được từ ngoài instance.</li>
+<li><code>DynamicUser=yes</code>: service chạy bằng user tạm không có đặc quyền, không phải root.</li>
+<li><code>Restart=on-failure</code>: systemd tự khởi động lại nếu process crash, nhưng <strong>không</strong> khởi động lại khi bạn chủ động <code>systemctl stop</code> (dùng ở Bước 8).</li>
+<li><code>enable</code> giúp service tự chạy lại sau reboot, điều mà <code>python3 server.py &amp;</code> không làm được.</li>
+<li><code>Version</code> trong launch template (Bước 3) là phiên bản cấu hình hạ tầng; <code>VERSION</code> trong code là phiên bản ứng dụng. Khi deploy bản mới, bạn tạo launch template version mới với user data mới.</li>
+</ul>
+<hr>
+<h2 id="bước-3--security-groups-và-launch-template"><a class="anchor" href="#bước-3--security-groups-và-launch-template">Bước 3 — Security Groups và Launch Template</a></h2>
+<h3 id="security-groups"><a class="anchor" href="#security-groups">Security Groups</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>SG_ALB_ID=$(ec2 create-security-group --group-name lab05-alb-sg \
+  --description &quot;ALB: HTTP 80 tu internet&quot; --vpc-id &quot;${VPC_ID}&quot; \
+  --tag-specifications &quot;ResourceType=security-group,Tags=[{Key=Name,Value=lab05-alb-sg},${TAG}]&quot; \
+  --query GroupId --output text)
+ec2 authorize-security-group-ingress --group-id &quot;${SG_ALB_ID}&quot; \
+  --protocol tcp --port 80 --cidr 0.0.0.0/0 &gt; /dev/null
+
+SG_APP_ID=$(ec2 create-security-group --group-name lab05-app-sg \
+  --description &quot;App: 8080 chi tu ALB&quot; --vpc-id &quot;${VPC_ID}&quot; \
+  --tag-specifications &quot;ResourceType=security-group,Tags=[{Key=Name,Value=lab05-app-sg},${TAG}]&quot; \
+  --query GroupId --output text)
+ec2 authorize-security-group-ingress --group-id &quot;${SG_APP_ID}&quot; \
+  --protocol tcp --port 8080 --source-group &quot;${SG_ALB_ID}&quot; &gt; /dev/null</code></pre></div>
+<p><code>lab05-app-sg</code> không có rule inbound nào khác: không port 22, không 0.0.0.0/0. Outbound mặc định cho phép tất cả, đủ để agent ra NAT tới SSM.</p>
+<h3 id="launch-template"><a class="anchor" href="#launch-template">Launch Template</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>AMI_ID=$(aws ssm get-parameter \
+  --name /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64 \
+  --region &quot;${REGION}&quot; --profile aws-lab --query 'Parameter.Value' --output text)
+echo &quot;AMI_ID=${AMI_ID}&quot;
+
+cat &lt;&lt;EOF &gt; &quot;${LAB_DIR}/launch-template.json&quot;
+{
+  &quot;ImageId&quot;: &quot;${AMI_ID}&quot;,
+  &quot;InstanceType&quot;: &quot;t4g.nano&quot;,
+  &quot;IamInstanceProfile&quot;: { &quot;Name&quot;: &quot;LabEC2SSMProfile&quot; },
+  &quot;SecurityGroupIds&quot;: [&quot;${SG_APP_ID}&quot;],
+  &quot;UserData&quot;: &quot;${USER_DATA_BASE64}&quot;,
+  &quot;MetadataOptions&quot;: { &quot;HttpTokens&quot;: &quot;required&quot;, &quot;HttpEndpoint&quot;: &quot;enabled&quot; },
+  &quot;TagSpecifications&quot;: [
+    { &quot;ResourceType&quot;: &quot;instance&quot;,
+      &quot;Tags&quot;: [{ &quot;Key&quot;: &quot;Name&quot;, &quot;Value&quot;: &quot;lab05-order-api&quot; }, { &quot;Key&quot;: &quot;Project&quot;, &quot;Value&quot;: &quot;aws-lab-05&quot; }] },
+    { &quot;ResourceType&quot;: &quot;volume&quot;,
+      &quot;Tags&quot;: [{ &quot;Key&quot;: &quot;Name&quot;, &quot;Value&quot;: &quot;lab05-order-api&quot; }, { &quot;Key&quot;: &quot;Project&quot;, &quot;Value&quot;: &quot;aws-lab-05&quot; }] }
+  ]
+}
+EOF
+
+ec2 create-launch-template --launch-template-name LabOrderApiTemplate \
+  --version-description &quot;v1-order-api&quot; \
+  --launch-template-data &quot;file://${LAB_DIR}/launch-template.json&quot; \
+  --tag-specifications &quot;ResourceType=launch-template,Tags=[${TAG}]&quot; \
+  --query 'LaunchTemplate.[LaunchTemplateId,LatestVersionNumber]' --output text</code></pre></div>
+<p>Kết quả mong đợi: <code>lt-0abc...  1</code>.</p>
+<ul>
+<li><code>t4g.nano</code> là Graviton (arm64), nên AMI cũng phải là bản <code>arm64</code>. Lệch kiến trúc sẽ làm launch thất bại.</li>
+<li><code>HttpTokens: required</code> buộc dùng IMDSv2.</li>
+<li>Launch template không chứa subnet. ASG sẽ chọn subnet từ <code>--vpc-zone-identifier</code>, và vì private subnet không tự gán public IP nên instance không có public IP.</li>
+<li>Root volume của AMI có <code>DeleteOnTermination=true</code>, nên tự xóa khi instance terminate.</li>
+</ul>
+<hr>
+<h2 id="bước-4--target-group-alb-và-negative-test-503"><a class="anchor" href="#bước-4--target-group-alb-và-negative-test-503">Bước 4 — Target Group, ALB và negative test 503</a></h2>
+<h3 id="target-group"><a class="anchor" href="#target-group">Target Group</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>TG_ARN=$(aws elbv2 create-target-group --name lab05-tg \
+  --protocol HTTP --port 8080 --vpc-id &quot;${VPC_ID}&quot; --target-type instance \
+  --health-check-protocol HTTP --health-check-path /health \
+  --health-check-interval-seconds 10 --health-check-timeout-seconds 5 \
+  --healthy-threshold-count 2 --unhealthy-threshold-count 2 \
+  --tags &quot;Key=Project,Value=aws-lab-05&quot; \
+  --region &quot;${REGION}&quot; --profile aws-lab \
+  --query 'TargetGroups[0].TargetGroupArn' --output text)
+
+# Rút deregistration delay từ 300 xuống 30 giây cho lab (production nên đo theo thời gian request dài nhất)
+aws elbv2 modify-target-group-attributes --target-group-arn &quot;${TG_ARN}&quot; \
+  --attributes Key=deregistration_delay.timeout_seconds,Value=30 \
+  --region &quot;${REGION}&quot; --profile aws-lab &gt; /dev/null</code></pre></div>
+<p>Với interval 10 giây và threshold 2: target cần khoảng 20 giây để chuyển <code>healthy</code> hoặc <code>unhealthy</code>.</p>
+<h3 id="application-load-balancer"><a class="anchor" href="#application-load-balancer">Application Load Balancer</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>ALB_ARN=$(aws elbv2 create-load-balancer --name lab05-alb \
+  --type application --scheme internet-facing --ip-address-type ipv4 \
+  --subnets &quot;${PUB_SUB_A}&quot; &quot;${PUB_SUB_B}&quot; --security-groups &quot;${SG_ALB_ID}&quot; \
+  --tags &quot;Key=Project,Value=aws-lab-05&quot; \
+  --region &quot;${REGION}&quot; --profile aws-lab \
+  --query 'LoadBalancers[0].LoadBalancerArn' --output text)
+
+echo &quot;Đang chờ ALB active (2–4 phút)...&quot;
+aws elbv2 wait load-balancer-available --load-balancer-arns &quot;${ALB_ARN}&quot; --region &quot;${REGION}&quot; --profile aws-lab
+
+aws elbv2 create-listener --load-balancer-arn &quot;${ALB_ARN}&quot; \
+  --protocol HTTP --port 80 \
+  --default-actions Type=forward,TargetGroupArn=&quot;${TG_ARN}&quot; \
+  --region &quot;${REGION}&quot; --profile aws-lab &gt; /dev/null
+
+ALB_DNS=$(aws elbv2 describe-load-balancers --load-balancer-arns &quot;${ALB_ARN}&quot; \
+  --region &quot;${REGION}&quot; --profile aws-lab --query 'LoadBalancers[0].DNSName' --output text)
+echo &quot;ALB_DNS=${ALB_DNS}&quot;</code></pre></div>
+<h3 id="negative-test-alb-chưa-có-target"><a class="anchor" href="#negative-test-alb-chưa-có-target">Negative test: ALB chưa có target</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>sleep 30   # chờ DNS của ALB phân giải được
+curl -s -o /dev/null -w &quot;%{http_code}\n&quot; &quot;http://${ALB_DNS}/order&quot;</code></pre></div>
+<p>Kết quả mong đợi: <code>503</code>. Target group chưa có target nào được đăng ký. Đây là ý nghĩa thực sự của 503 trên ALB (xem bảng mã lỗi trong lý thuyết). Nếu <code>curl</code> báo không phân giải được tên, chờ thêm 1–2 phút rồi thử lại.</p>
+<hr>
+<h2 id="bước-5--tạo-auto-scaling-group"><a class="anchor" href="#bước-5--tạo-auto-scaling-group">Bước 5 — Tạo Auto Scaling Group</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws autoscaling create-auto-scaling-group \
+  --auto-scaling-group-name lab05-asg \
+  --launch-template &quot;LaunchTemplateName=LabOrderApiTemplate,Version=1&quot; \
+  --min-size 1 --desired-capacity 2 --max-size 3 \
+  --vpc-zone-identifier &quot;${PRI_SUB_A},${PRI_SUB_B}&quot; \
+  --target-group-arns &quot;${TG_ARN}&quot; \
+  --health-check-type ELB --health-check-grace-period 90 \
+  --tags &quot;Key=Project,Value=aws-lab-05,PropagateAtLaunch=false&quot; \
+  --region &quot;${REGION}&quot; --profile aws-lab</code></pre></div>
+<ul>
+<li><code>--vpc-zone-identifier</code> là <strong>2 private subnet</strong>; ASG tự chia đều instance giữa 2 AZ.</li>
+<li><code>--health-check-grace-period 90</code>: thời gian boot + chạy user data + app start với script này thường dưới 60 giây. Bạn sẽ đo con số thực ở Bước 8.</li>
+</ul>
+<p>Theo dõi target health cho đến khi cả 2 target <code>healthy</code> (thường 2–3 phút):</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>for i in $(seq 1 24); do
+  STATES=$(aws elbv2 describe-target-health --target-group-arn &quot;${TG_ARN}&quot; \
+    --region &quot;${REGION}&quot; --profile aws-lab \
+    --query 'TargetHealthDescriptions[].[Target.Id,TargetHealth.State]' --output text | tr '\n' ' ')
+  echo &quot;$(date +%T) ${STATES}&quot;
+  [ &quot;$(echo &quot;${STATES}&quot; | grep -o healthy | wc -l)&quot; -ge 2 ] &amp;&amp; ! echo &quot;${STATES}&quot; | grep -q unhealthy &amp;&amp; break
+  sleep 10
+done</code></pre></div>
+<p>Output minh họa:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>10:02:11
+10:02:21 i-0aaa... initial i-0bbb... initial
+10:03:31 i-0aaa... healthy i-0bbb... initial
+10:03:41 i-0aaa... healthy i-0bbb... healthy</code></pre></div>
+<p>Xác nhận instance <strong>không có public IP</strong> và nằm ở 2 AZ:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>ec2 describe-instances \
+  --filters Name=tag:Name,Values=lab05-order-api Name=instance-state-name,Values=running \
+  --query 'Reservations[].Instances[].[InstanceId,Placement.AvailabilityZone,PrivateIpAddress,PublicIpAddress]' \
+  --output table</code></pre></div>
+<p>Kết quả mong đợi: cột cuối là <code>None</code>, hai AZ khác nhau.</p>
+<hr>
+<h2 id="bước-6--kiểm-chứng-phân-phối-request-qua-alb"><a class="anchor" href="#bước-6--kiểm-chứng-phân-phối-request-qua-alb">Bước 6 — Kiểm chứng phân phối request qua ALB</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>for i in $(seq 1 8); do curl -s &quot;http://${ALB_DNS}/order&quot;; done</code></pre></div>
+<p>Output minh họa:</p>
+<div class="code"><span class="lang">json</span><button type="button">Copy</button><pre><code>{&quot;service&quot;: &quot;order-api&quot;, &quot;version&quot;: &quot;v1&quot;, &quot;instance_id&quot;: &quot;i-0aaa...&quot;, &quot;az&quot;: &quot;ap-southeast-1a&quot;}
+{&quot;service&quot;: &quot;order-api&quot;, &quot;version&quot;: &quot;v1&quot;, &quot;instance_id&quot;: &quot;i-0bbb...&quot;, &quot;az&quot;: &quot;ap-southeast-1b&quot;}
+{&quot;service&quot;: &quot;order-api&quot;, &quot;version&quot;: &quot;v1&quot;, &quot;instance_id&quot;: &quot;i-0bbb...&quot;, &quot;az&quot;: &quot;ap-southeast-1b&quot;}
+{&quot;service&quot;: &quot;order-api&quot;, &quot;version&quot;: &quot;v1&quot;, &quot;instance_id&quot;: &quot;i-0aaa...&quot;, &quot;az&quot;: &quot;ap-southeast-1a&quot;}
+...</code></pre></div>
+<p>✅ <strong>Xác nhận:</strong> cả hai instance ở hai AZ đều nhận request. Thứ tự <strong>không nhất thiết luân phiên đều</strong>: DNS của ALB trả về nhiều IP (mỗi AZ một node), mỗi node lại cân bằng tải riêng, nên chỉ cần thấy cả hai instance ID xuất hiện.</p>
+<p>Thử truy cập thẳng instance, bỏ qua ALB (negative test): instance không có public IP nên không có địa chỉ nào để gọi từ internet. <code>lab05-app-sg</code> chỉ nhận 8080 từ <code>lab05-alb-sg</code>, nên ngay cả máy khác trong VPC (không mang SG của ALB) cũng không gọi được.</p>
+<hr>
+<h2 id="bước-7--vào-instance-bằng-session-manager"><a class="anchor" href="#bước-7--vào-instance-bằng-session-manager">Bước 7 — Vào instance bằng Session Manager</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>INSTANCE_ID=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names lab05-asg \
+  --region &quot;${REGION}&quot; --profile aws-lab \
+  --query 'AutoScalingGroups[0].Instances[0].InstanceId' --output text)
+echo &quot;INSTANCE_ID=${INSTANCE_ID}&quot;
+
+# Kiểm tra instance đã &quot;Online&quot; với SSM (có thể mất 1–3 phút sau khi boot)
+aws ssm describe-instance-information --region &quot;${REGION}&quot; --profile aws-lab \
+  --filters &quot;Key=InstanceIds,Values=${INSTANCE_ID}&quot; \
+  --query 'InstanceInformationList[].[InstanceId,PingStatus]' --output text</code></pre></div>
+<p>Kết quả mong đợi: <code>i-0aaa...  Online</code>. Nếu rỗng, xem Troubleshooting.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ssm start-session --target &quot;${INSTANCE_ID}&quot; --region &quot;${REGION}&quot; --profile aws-lab</code></pre></div>
+<p><em>(Hoặc trên console: EC2 → Instances → chọn instance → <strong>Connect</strong> → tab <strong>Session Manager</strong> → <strong>Connect</strong>.)</em></p>
+<p>Trong session, kiểm tra:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>sudo tail -n 5 /var/log/cloud-init-output.log   # user data chạy xong, không lỗi
+systemctl status order-api --no-pager           # active (running)
+curl -s localhost:8080/health                   # {&quot;status&quot;: &quot;healthy&quot;}
+sudo journalctl -u order-api -n 5 --no-pager    # log request từ ALB health check (10.50.1.x / 10.50.2.x)</code></pre></div>
+<p>Giữ session mở cho Bước 8.</p>
+<hr>
+<h2 id="bước-8--giả-lập-sự-cố-và-đo-thời-gian-tự-phục-hồi"><a class="anchor" href="#bước-8--giả-lập-sự-cố-và-đo-thời-gian-tự-phục-hồi">Bước 8 — Giả lập sự cố và đo thời gian tự phục hồi</a></h2>
+<p><strong>Trên máy của bạn</strong>, mở terminal thứ hai. Terminal mới chưa có biến, nên chạy <code>echo &quot;export REGION=${REGION} TG_ARN=${TG_ARN}&quot;</code> ở terminal đầu, rồi dán kết quả vào terminal thứ hai. Sau đó bắt đầu theo dõi target health:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>for i in $(seq 1 30); do
+  echo &quot;$(date +%T) $(aws elbv2 describe-target-health --target-group-arn &quot;${TG_ARN}&quot; \
+    --region &quot;${REGION}&quot; --profile aws-lab \
+    --query 'TargetHealthDescriptions[].[Target.Id,TargetHealth.State]' --output text | tr '\n' ' ')&quot;
+  sleep 10
+done</code></pre></div>
+<p><strong>Trong session SSM</strong> (Bước 7), dừng ứng dụng:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>date +%T
+sudo systemctl stop order-api
+exit</code></pre></div>
+<p>Quan sát terminal theo dõi. Diễn biến minh họa:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>10:10:00 i-0aaa... healthy   i-0bbb... healthy       ← dừng service lúc ~10:10:02
+10:10:20 i-0aaa... unhealthy i-0bbb... healthy       ← ~20 giây = interval × threshold
+10:10:40 i-0aaa... draining  i-0bbb... healthy       ← ASG terminate, ALB drain 30 giây
+10:11:30 i-0ccc... initial   i-0bbb... healthy       ← instance mới đăng ký
+10:12:30 i-0ccc... healthy   i-0bbb... healthy       ← phục hồi hoàn toàn</code></pre></div>
+<p>Trong lúc đó, <code>curl</code> qua ALB vẫn trả về <code>200</code> từ instance còn lại. Đó là ý nghĩa của việc chạy ≥ 2 instance ở 2 AZ.</p>
+<p>Xem lịch sử hành động của ASG:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws autoscaling describe-scaling-activities --auto-scaling-group-name lab05-asg --max-items 3 \
+  --region &quot;${REGION}&quot; --profile aws-lab \
+  --query 'Activities[].[StartTime,StatusCode,Description]' --output text</code></pre></div>
+<p>Kết quả mong đợi: một dòng &quot;Terminating EC2 instance ... (failed ELB health check)&quot; và một dòng &quot;Launching a new EC2 instance ...&quot;.</p>
+<p><strong>Ghi lại số đo của bạn:</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Mốc</th>
+<th>Thời điểm</th>
+<th>Khoảng cách</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Dừng service</td>
+<td></td>
+<td>0</td>
+</tr>
+<tr>
+<td>Target <code>unhealthy</code></td>
+<td></td>
+<td>(kỳ vọng ~20–30 giây)</td>
+</tr>
+<tr>
+<td>ASG bắt đầu terminate</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Instance mới <code>healthy</code></td>
+<td></td>
+<td>(kỳ vọng ~2–3 phút)</td>
+</tr>
+</tbody></table>
+</div>
+<p><strong>Câu hỏi:</strong> Nếu ASG dùng health check <code>EC2</code> (mặc định) thay vì <code>ELB</code>, điều gì xảy ra với instance bị dừng service? <em>(Đáp án: ALB vẫn ngừng gửi traffic tới nó, nhưng ASG thấy máy vẫn &quot;running&quot; nên không thay. Nhóm chạy thiếu một máy mãi mãi.)</em></p>
+<hr>
+<h2 id="bước-9-tùy-chọn--target-tracking-scaling"><a class="anchor" href="#bước-9-tùy-chọn--target-tracking-scaling">Bước 9 (tùy chọn) — Target tracking scaling</a></h2>
+<p>Gắn policy giữ CPU trung bình của nhóm quanh 40%:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws autoscaling put-scaling-policy --auto-scaling-group-name lab05-asg \
+  --policy-name lab05-cpu40 --policy-type TargetTrackingScaling \
+  --target-tracking-configuration '{&quot;PredefinedMetricSpecification&quot;:{&quot;PredefinedMetricType&quot;:&quot;ASGAverageCPUUtilization&quot;},&quot;TargetValue&quot;:40.0}' \
+  --region &quot;${REGION}&quot; --profile aws-lab --query 'Alarms[].AlarmName' --output text</code></pre></div>
+<p>Kết quả mong đợi: tên 2 CloudWatch alarm (<code>TargetTracking-lab05-asg-AlarmHigh-...</code> và <code>...AlarmLow-...</code>) do AWS tự tạo.</p>
+<p>Tạo tải CPU <strong>có giới hạn 10 phút</strong> trên một instance (mở session SSM như Bước 7):</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>timeout 600 sh -c 'yes &gt; /dev/null &amp; yes &gt; /dev/null &amp; wait' &amp;
+exit</code></pre></div>
+<p><code>t4g.nano</code> có 2 vCPU, nên 2 process <code>yes</code> đẩy instance đó lên ~100%, làm trung bình nhóm vượt 40%. Theo dõi:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names lab05-asg \
+  --region &quot;${REGION}&quot; --profile aws-lab \
+  --query 'AutoScalingGroups[0].[DesiredCapacity,length(Instances)]' --output text</code></pre></div>
+<ul>
+<li>Kỳ vọng: sau khoảng 5–15 phút, <code>DesiredCapacity</code> tăng lên <code>3</code> và <strong>dừng ở 3</strong> vì <code>max-size 3</code>. Với basic monitoring (metric EC2 mỗi 5 phút), alarm phản ứng chậm. Đây là hành vi đúng, không phải lỗi.</li>
+<li>Sau khi tải hết (10 phút), nhóm sẽ scale-in về 2 nhưng chậm hơn scale-out (có chủ đích, để tránh dao động).</li>
+<li>Nếu không thấy scale: kiểm tra alarm trong CloudWatch có chuyển sang <code>ALARM</code> không, instance mới có đang trong warmup không, và nhóm đã chạm <code>max</code> chưa.</li>
+</ul>
+<p>Policy và alarm sẽ tự xóa khi xóa ASG ở Bước 10.</p>
+<hr>
+<h2 id="bước-10--dọn-dẹp-teardown"><a class="anchor" href="#bước-10--dọn-dẹp-teardown">Bước 10 — Dọn dẹp (Teardown)</a></h2>
+<p>Thứ tự dọn: ASG → (chờ instance terminate) → ALB → Target Group → Launch Template → NAT → EIP → Security Groups → mạng → IAM.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code># 1. Xóa ASG (force: terminate luôn instance) và chờ instance terminate xong
+aws autoscaling delete-auto-scaling-group --auto-scaling-group-name lab05-asg --force-delete \
+  --region &quot;${REGION}&quot; --profile aws-lab
+for i in $(seq 1 30); do
+  LEFT=$(ec2 describe-instances --filters Name=tag:Project,Values=aws-lab-05 \
+    Name=instance-state-name,Values=pending,running,shutting-down,stopping,stopped \
+    --query 'Reservations[].Instances[].InstanceId' --output text)
+  [ -z &quot;${LEFT}&quot; ] &amp;&amp; { echo &quot;Tất cả instance đã terminated&quot;; break; }
+  echo &quot;$(date +%T) còn: ${LEFT}&quot;; sleep 10
+done
+
+# 2. Xóa ALB (listener xóa theo), chờ xóa xong, rồi xóa Target Group
+aws elbv2 delete-load-balancer --load-balancer-arn &quot;${ALB_ARN}&quot; --region &quot;${REGION}&quot; --profile aws-lab
+aws elbv2 wait load-balancers-deleted --load-balancer-arns &quot;${ALB_ARN}&quot; --region &quot;${REGION}&quot; --profile aws-lab
+aws elbv2 delete-target-group --target-group-arn &quot;${TG_ARN}&quot; --region &quot;${REGION}&quot; --profile aws-lab
+
+# 3. Launch Template
+ec2 delete-launch-template --launch-template-name LabOrderApiTemplate &gt; /dev/null
+
+# 4. NAT Gateway (chờ deleted), rồi release EIP
+ec2 delete-nat-gateway --nat-gateway-id &quot;${NAT_ID}&quot; &gt; /dev/null
+ec2 wait nat-gateway-deleted --nat-gateway-ids &quot;${NAT_ID}&quot;
+ec2 release-address --allocation-id &quot;${EIP_ALLOC_ID}&quot;
+
+# 5. Security Groups: ENI của ALB có thể còn tồn tại vài phút sau khi ALB bị xóa, nên thử lại
+for sg in &quot;${SG_APP_ID}&quot; &quot;${SG_ALB_ID}&quot;; do
+  for i in $(seq 1 20); do
+    ec2 delete-security-group --group-id &quot;${sg}&quot; 2&gt;/dev/null &amp;&amp; { echo &quot;deleted ${sg}&quot;; break; }
+    echo &quot;chờ ENI giải phóng ${sg}...&quot;; sleep 15
+  done
+done
+
+# 6. Mạng
+for sub in &quot;${PUB_SUB_A}&quot; &quot;${PUB_SUB_B}&quot; &quot;${PRI_SUB_A}&quot; &quot;${PRI_SUB_B}&quot;; do ec2 delete-subnet --subnet-id &quot;${sub}&quot;; done
+ec2 delete-route-table --route-table-id &quot;${PUB_RT_ID}&quot;
+ec2 delete-route-table --route-table-id &quot;${PRI_RT_ID}&quot;
+ec2 detach-internet-gateway --internet-gateway-id &quot;${IGW_ID}&quot; --vpc-id &quot;${VPC_ID}&quot;
+ec2 delete-internet-gateway --internet-gateway-id &quot;${IGW_ID}&quot;
+ec2 delete-vpc --vpc-id &quot;${VPC_ID}&quot;
+
+# 7. IAM (gỡ role khỏi profile, xóa profile, gỡ policy, xóa role)
+aws iam remove-role-from-instance-profile --instance-profile-name LabEC2SSMProfile --role-name LabEC2SSMRole --profile aws-lab
+aws iam delete-instance-profile --instance-profile-name LabEC2SSMProfile --profile aws-lab
+aws iam detach-role-policy --role-name LabEC2SSMRole \
+  --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore --profile aws-lab
+aws iam delete-role --role-name LabEC2SSMRole --profile aws-lab
+
+# 8. File tạm
+rm -rf &quot;${LAB_DIR}&quot;</code></pre></div>
+<h3 id="kiểm-tra-inventory-sau-cleanup"><a class="anchor" href="#kiểm-tra-inventory-sau-cleanup">Kiểm tra inventory sau cleanup</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>echo &quot;== Instance còn sống&quot;;   ec2 describe-instances --filters Name=tag:Project,Values=aws-lab-05 Name=instance-state-name,Values=pending,running,stopping,stopped --query 'Reservations[].Instances[].InstanceId' --output text
+echo &quot;== EBS còn sót&quot;;         ec2 describe-volumes --filters Name=tag:Project,Values=aws-lab-05 --query 'Volumes[].[VolumeId,State]' --output text
+echo &quot;== EIP&quot;;                 ec2 describe-addresses --filters Name=tag:Project,Values=aws-lab-05 --query 'Addresses[].AllocationId' --output text
+echo &quot;== NAT chưa deleted&quot;;    ec2 describe-nat-gateways --filter Name=tag:Project,Values=aws-lab-05 --query 'NatGateways[?State!=`deleted`].NatGatewayId' --output text
+echo &quot;== VPC&quot;;                 ec2 describe-vpcs --filters Name=tag:Project,Values=aws-lab-05 --query 'Vpcs[].VpcId' --output text
+echo &quot;== ALB&quot;;                 aws elbv2 describe-load-balancers --names lab05-alb --region &quot;${REGION}&quot; --profile aws-lab 2&gt;&amp;1 | grep -o LoadBalancerNotFound
+echo &quot;== Snapshot&quot;;            ec2 describe-snapshots --owner-ids self --filters Name=tag:Project,Values=aws-lab-05 --query 'Snapshots[].SnapshotId' --output text</code></pre></div>
+<p>Kết quả mong đợi: mọi mục rỗng, riêng ALB in <code>LoadBalancerNotFound</code>. Lab không tạo snapshot hay log group, nhưng vẫn kiểm tra cho chắc. Lưu ý dữ liệu billing có độ trễ, nên inventory qua API mới là bằng chứng cleanup, không phải Cost Explorer.</p>
+<h3 id="nếu-lab-dừng-giữa-chừng-hoặc-mất-shell"><a class="anchor" href="#nếu-lab-dừng-giữa-chừng-hoặc-mất-shell">Nếu lab dừng giữa chừng hoặc mất shell</a></h3>
+<p>Khôi phục biến theo tên/tag, rồi chạy lại các lệnh cleanup ở trên. Lệnh nào báo <code>NotFound</code>/<code>NoSuchEntity</code> nghĩa là tài nguyên đó chưa tạo hoặc đã xóa: bỏ qua và chạy tiếp.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export REGION=&quot;ap-southeast-1&quot;
+export LAB_DIR=$(mktemp -d)
+ec2() { aws ec2 &quot;$@&quot; --region &quot;${REGION}&quot; --profile aws-lab; }
+q() { ec2 &quot;$@&quot; --output text; }
+sub() { q describe-subnets --filters Name=vpc-id,Values=&quot;${VPC_ID}&quot; Name=tag:Name,Values=&quot;$1&quot; --query 'Subnets[0].SubnetId'; }
+rt()  { q describe-route-tables --filters Name=vpc-id,Values=&quot;${VPC_ID}&quot; Name=tag:Name,Values=&quot;$1&quot; --query 'RouteTables[0].RouteTableId'; }
+sg()  { q describe-security-groups --filters Name=vpc-id,Values=&quot;${VPC_ID}&quot; Name=group-name,Values=&quot;$1&quot; --query 'SecurityGroups[0].GroupId'; }
+
+VPC_ID=$(q describe-vpcs --filters Name=tag:Project,Values=aws-lab-05 --query 'Vpcs[0].VpcId')
+IGW_ID=$(q describe-internet-gateways --filters Name=attachment.vpc-id,Values=&quot;${VPC_ID}&quot; --query 'InternetGateways[0].InternetGatewayId')
+PUB_SUB_A=$(sub lab05-public-a);  PUB_SUB_B=$(sub lab05-public-b)
+PRI_SUB_A=$(sub lab05-private-a); PRI_SUB_B=$(sub lab05-private-b)
+PUB_RT_ID=$(rt lab05-public-rt);  PRI_RT_ID=$(rt lab05-private-rt)
+SG_ALB_ID=$(sg lab05-alb-sg);     SG_APP_ID=$(sg lab05-app-sg)
+NAT_ID=$(q describe-nat-gateways --filter Name=tag:Project,Values=aws-lab-05 --query 'NatGateways[?State!=`deleted`]|[0].NatGatewayId')
+EIP_ALLOC_ID=$(q describe-addresses --filters Name=tag:Project,Values=aws-lab-05 --query 'Addresses[0].AllocationId')
+ALB_ARN=$(aws elbv2 describe-load-balancers --names lab05-alb --region &quot;${REGION}&quot; --profile aws-lab --query 'LoadBalancers[0].LoadBalancerArn' --output text 2&gt;/dev/null)
+TG_ARN=$(aws elbv2 describe-target-groups --names lab05-tg --region &quot;${REGION}&quot; --profile aws-lab --query 'TargetGroups[0].TargetGroupArn' --output text 2&gt;/dev/null)
+
+echo &quot;VPC=${VPC_ID} NAT=${NAT_ID} EIP=${EIP_ALLOC_ID}&quot;
+echo &quot;ALB=${ALB_ARN}&quot;
+echo &quot;TG=${TG_ARN}&quot;</code></pre></div>
+<p>Ưu tiên xóa <strong>NAT Gateway và ALB</strong> trước nếu không đủ thời gian dọn hết, vì đó là hai khoản tốn tiền nhất. VPC, subnet, SG, IAM role không tính phí.</p>
+<hr>
+<h2 id="checklist-hoàn-thành"><a class="anchor" href="#checklist-hoàn-thành">Checklist hoàn thành</a></h2>
+<ul>
+<li><input type="checkbox"> Có bảng ước tính chi phí và điều kiện dừng trước khi bắt đầu.</li>
+<li><input type="checkbox"> Private route table trỏ <code>0.0.0.0/0 → nat-...</code>; giải thích được vì sao SSM cần đường này.</li>
+<li><input type="checkbox"> IAM Role + Instance Profile với <code>AmazonSSMManagedInstanceCore</code>; biết vì sao cần <code>iam:PassRole</code>.</li>
+<li><input type="checkbox"> Launch template: AL2023 arm64, <code>t4g.nano</code>, IMDSv2 required, app là systemd service.</li>
+<li><input type="checkbox"> Gọi ALB khi chưa có target nhận <code>503</code>.</li>
+<li><input type="checkbox"> Hai instance <code>healthy</code> ở hai AZ, <strong>không có public IP</strong>.</li>
+<li><input type="checkbox"> <code>curl /order</code> qua ALB thấy cả hai instance ID.</li>
+<li><input type="checkbox"> Vào được instance bằng Session Manager mà không mở port 22.</li>
+<li><input type="checkbox"> Đo được thời gian <code>unhealthy</code> và thời gian ASG thay instance; giải thích được vai trò của <code>HealthCheckType=ELB</code>.</li>
+<li><input type="checkbox"> (Tùy chọn) Quan sát scale-out dừng ở <code>max-size</code>.</li>
+<li><input type="checkbox"> Cleanup xong; inventory theo tag <code>Project=aws-lab-05</code> rỗng (instance, EBS, EIP, NAT, VPC, ALB).</li>
+</ul>
+<hr>
+<h2 id="troubleshooting-nhanh"><a class="anchor" href="#troubleshooting-nhanh">Troubleshooting nhanh</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Triệu chứng</th>
+<th>Nguyên nhân khả dĩ</th>
+<th>Bằng chứng / Khắc phục</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>create-auto-scaling-group</code> báo lỗi về <code>iam:PassRole</code> hoặc <code>Invalid IamInstanceProfile</code></td>
+<td>Thiếu quyền PassRole, hoặc IAM chưa propagate</td>
+<td>Xin <code>iam:PassRole</code> giới hạn trên <code>LabEC2SSMRole</code>; chờ 15–30 giây rồi tạo lại</td>
+</tr>
+<tr>
+<td>ASG không tạo được instance</td>
+<td>Quota vCPU, AMI sai kiến trúc, instance type không có ở AZ</td>
+<td><code>aws autoscaling describe-scaling-activities --auto-scaling-group-name lab05-asg</code> xem <code>StatusMessage</code></td>
+</tr>
+<tr>
+<td>Target mãi <code>unhealthy</code> với <code>Target.Timeout</code></td>
+<td>SG app không cho 8080 từ SG ALB, hoặc app không chạy</td>
+<td>Kiểm tra rule của <code>lab05-app-sg</code>; vào SSM chạy <code>curl localhost:8080/health</code>, <code>systemctl status order-api</code></td>
+</tr>
+<tr>
+<td>Target <code>unhealthy</code> với <code>Target.ResponseCodeMismatch</code></td>
+<td><code>/health</code> trả mã khác 200</td>
+<td>Kiểm tra code, <code>journalctl -u order-api</code></td>
+</tr>
+<tr>
+<td>Instance bị thay liên tục, không bao giờ <code>healthy</code></td>
+<td>App khởi động lâu hơn grace period, hoặc user data lỗi</td>
+<td><code>aws ec2 get-console-output --instance-id &lt;id&gt; --latest</code>; tạm tăng grace period: <code>aws autoscaling update-auto-scaling-group --auto-scaling-group-name lab05-asg --health-check-grace-period 300</code></td>
+</tr>
+<tr>
+<td>ALB trả <code>503</code> sau khi đã tạo ASG</td>
+<td>Chưa có target nào được đăng ký (ASG chưa launch xong hoặc launch lỗi)</td>
+<td><code>describe-target-health</code> rỗng → xem scaling activities</td>
+</tr>
+<tr>
+<td>ALB trả <code>502</code>/<code>504</code></td>
+<td>Target có đăng ký nhưng app không trả lời (502: từ chối kết nối; 504: SG chặn hoặc treo)</td>
+<td>Xem lý thuyết Phần 7; <code>describe-target-health</code> để xem <code>Reason</code></td>
+</tr>
+<tr>
+<td><code>describe-instance-information</code> rỗng, SSM không vào được</td>
+<td>Thiếu đường ra NAT, thiếu role, agent chưa đăng ký xong</td>
+<td>Kiểm tra private RT có route tới NAT và NAT <code>available</code>; instance có profile <code>LabEC2SSMProfile</code>; chờ 1–3 phút sau boot</td>
+</tr>
+<tr>
+<td><code>SessionManagerPlugin is not found</code></td>
+<td>Chưa cài plugin trên máy cục bộ</td>
+<td>Cài plugin hoặc dùng console</td>
+</tr>
+<tr>
+<td>Xóa SG báo <code>DependencyViolation</code></td>
+<td>ENI của ALB/instance chưa giải phóng</td>
+<td>Vòng lặp retry ở bước cleanup; nếu vẫn lỗi, <code>ec2 describe-network-interfaces --filters Name=group-id,Values=&lt;sg&gt;</code></td>
+</tr>
+<tr>
+<td>Xóa VPC báo <code>DependencyViolation</code></td>
+<td>NAT chưa <code>deleted</code>, hoặc còn ENI/subnet</td>
+<td><code>ec2 describe-network-interfaces --filters Name=vpc-id,Values=${VPC_ID}</code></td>
+</tr>
+</tbody></table>
+</div>
+<h2 id="tiếp-theo"><a class="anchor" href="#tiếp-theo">Tiếp theo</a></h2>
+<p>Bạn đã triển khai một dịch vụ có cân bằng tải, tự phục hồi và quản trị không cần SSH. Bài tiếp theo (Bài 06) chuyển sang lưu trữ đối tượng và phân phối nội dung: <strong>Amazon S3, CloudFront, Route 53 và AWS Certificate Manager (ACM)</strong>.</p>
+
+<footer>Sinh tự động từ <code>labs/05-compute-and-load-balancing/README.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

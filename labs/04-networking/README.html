@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab 04 — Mạng trong AWS: Thiết kế VPC đa AZ, Phân vùng Subnet và Xâu chuỗi Security Group</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="../../notes/01-foundations.html">01. Lý thuyết</a><a href="../01-foundations/README.html">01. Lab</a><a href="../../notes/02-identity-and-access.html">02. Lý thuyết</a><a href="../02-identity-and-access/README.html">02. Lab</a><a href="../../notes/03-cost-management.html">03. Lý thuyết</a><a href="../03-cost-management/README.html">03. Lab</a><a href="../../notes/04-networking.html">04. Lý thuyết</a><a href="README.html" class="active">04. Lab</a><a href="../../notes/05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../05-compute-and-load-balancing/README.html">05. Lab</a><a href="../../notes/06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../06-storage-and-content-delivery/README.html">06. Lab</a><a href="../../notes/07-databases-and-cache.html">07. Lý thuyết</a><a href="../07-databases-and-cache/README.html">07. Lab</a><a href="../../notes/08-containers.html">08. Lý thuyết</a><a href="../08-containers/README.html">08. Lab</a><a href="../../notes/09-serverless.html">09. Lý thuyết</a><a href="../09-serverless/README.html">09. Lab</a><a href="../../notes/10-observability-and-application-security.html">10. Lý thuyết</a><a href="../10-observability-and-application-security/README.html">10. Lab</a><a href="../../notes/11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../11-messaging-and-workflows/README.html">11. Lab</a><a href="../../notes/12-iac-and-cicd.html">12. Lý thuyết</a><a href="../12-iac-and-cicd/README.html">12. Lab</a><a href="../../notes/13-reliability-and-performance.html">13. Lý thuyết</a><a href="../13-reliability-and-performance/README.html">13. Lab</a><a href="../../notes/14-architecture-and-governance.html">14. Lý thuyết</a><a href="../14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></li><li><a href="#quy-ước-placeholder">Quy ước placeholder</a></li><li><a href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></li><li><a href="#sơ-đồ-kiến-trúc-mạng-lab-04">Sơ đồ kiến trúc mạng Lab 04</a></li><li><a href="#bước-1--khởi-tạo-vpc">Bước 1 — Khởi tạo VPC</a></li><li><a href="#bước-2--tạo-và-gắn-internet-gateway">Bước 2 — Tạo và gắn Internet Gateway</a></li><li><a href="#bước-3--tạo-4-subnets-trên-2-az">Bước 3 — Tạo 4 Subnets trên 2 AZ</a></li><li><a href="#bước-4--negative-test-cidr-không-hợp-lệ-miễn-phí">Bước 4 — Negative test: CIDR không hợp lệ (miễn phí)</a></li><li><a href="#bước-5--cấu-hình-public-route-table">Bước 5 — Cấu hình Public Route Table</a></li><li><a href="#bước-6--cấu-hình-private-route-table">Bước 6 — Cấu hình Private Route Table</a></li><li><a href="#bước-7--thiết-lập-security-group-chaining">Bước 7 — Thiết lập Security Group Chaining</a></li><li><a href="#bước-8--kiểm-chứng-cấu-hình">Bước 8 — Kiểm chứng cấu hình</a></li><li><a href="#bước-9-tùy-chọn-tính-phí-vài-cent--kiểm-chứng-bằng-traffic-thật">Bước 9 (tùy chọn, tính phí vài cent) — Kiểm chứng bằng traffic thật</a></li><li><a href="#bước-10--dọn-dẹp-teardown">Bước 10 — Dọn dẹp (Teardown)</a></li><li><a href="#checklist-hoàn-thành">Checklist hoàn thành</a></li><li><a href="#troubleshooting-nhanh">Troubleshooting nhanh</a></li><li><a href="#tiếp-theo">Tiếp theo</a></li></ol></aside>
+<main>
+<h1 id="lab-04--mạng-trong-aws-thiết-kế-vpc-đa-az-phân-vùng-subnet-và-xâu-chuỗi-security-group"><a class="anchor" href="#lab-04--mạng-trong-aws-thiết-kế-vpc-đa-az-phân-vùng-subnet-và-xâu-chuỗi-security-group">Lab 04 — Mạng trong AWS: Thiết kế VPC đa AZ, Phân vùng Subnet và Xâu chuỗi Security Group</a></h1>
+<blockquote>
+<p><strong>Lý thuyết:</strong> <a href="../../notes/04-networking.html">notes/04-networking.md</a>. Đọc phần 1–5 trước khi thực hiện lab.
+<strong>Thời lượng:</strong> khoảng 60–90 phút (cộng 30–40 phút nếu làm nhánh tùy chọn).
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Mọi output là <strong>minh họa</strong>, thông tin định danh dùng placeholder. Lab chưa được chạy thử trên account thật.</p>
+</blockquote>
+<hr>
+<h2 id="lab-này-làm-gì-và-không-làm-gì"><a class="anchor" href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>✅ Có</th>
+<th>❌ Không</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Thiết kế và triển khai một Custom VPC riêng (<code>10.0.0.0/16</code>)</td>
+<td>Chỉnh sửa Default VPC của account</td>
+</tr>
+<tr>
+<td>Chia 4 subnet trên 2 AZ (2 public, 2 private)</td>
+<td>Tạo NAT Gateway (chỉ phân tích trên sơ đồ; Lab 05 mới tạo)</td>
+</tr>
+<tr>
+<td>Tạo Internet Gateway và Route Tables</td>
+<td>Mở cổng cho database hoặc mở mọi cổng ra <code>0.0.0.0/0</code></td>
+</tr>
+<tr>
+<td>Thiết lập Security Group Chaining</td>
+<td>SSH vào instance hoặc tạo key pair</td>
+</tr>
+<tr>
+<td>Negative test miễn phí: subnet sai CIDR, xóa VPC khi còn dependency</td>
+<td>Để lại tài nguyên mồ côi</td>
+</tr>
+<tr>
+<td>Nhánh tùy chọn: EC2 tạm để kiểm chứng route, SG stateful, NACL stateless</td>
+<td></td>
+</tr>
+</tbody></table>
+</div>
+<hr>
+<h2 id="quy-ước-placeholder"><a class="anchor" href="#quy-ước-placeholder">Quy ước placeholder</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Placeholder / biến</th>
+<th>Ý nghĩa</th>
+<th>Ví dụ minh họa</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>aws-lab</code></td>
+<td>Tên named profile CLI đã cấu hình ở Lab 01</td>
+<td><code>aws-lab</code></td>
+</tr>
+<tr>
+<td><code>REGION</code></td>
+<td>Region học tập của bạn</td>
+<td><code>ap-southeast-1</code></td>
+</tr>
+<tr>
+<td><code>AZ_A</code>, <code>AZ_B</code></td>
+<td>Hai AZ đầu tiên khả dụng (lấy tự động)</td>
+<td><code>ap-southeast-1a</code>, <code>ap-southeast-1b</code></td>
+</tr>
+<tr>
+<td><code>VPC_ID</code>, <code>IGW_ID</code>, ...</td>
+<td>ID tài nguyên do lab tạo, lưu trong biến shell</td>
+<td><code>vpc-0123456789abcdef0</code></td>
+</tr>
+</tbody></table>
+</div>
+<p>Mọi tài nguyên gắn tag <code>Project=aws-lab-04</code>. Nếu mất shell, xem mục <a href="#khôi-phục-biến-khi-mất-shell">Khôi phục biến khi mất shell</a>.</p>
+<hr>
+<h2 id="điều-kiện-đầu-vào"><a class="anchor" href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></h2>
+<ul>
+<li><input type="checkbox"> Đã hoàn thành <a href="../01-foundations/README.html">Lab 01</a> đến <a href="../03-cost-management/README.html">Lab 03</a>.</li>
+<li><input type="checkbox"> Quyền EC2/VPC (giới hạn trong VPC lab nếu có thể):<ul>
+<li>Lab chính: <code>ec2:CreateVpc</code>, <code>ec2:ModifyVpcAttribute</code>, <code>ec2:DeleteVpc</code>, <code>ec2:CreateSubnet</code>, <code>ec2:ModifySubnetAttribute</code>, <code>ec2:DeleteSubnet</code>, <code>ec2:CreateInternetGateway</code>, <code>ec2:AttachInternetGateway</code>, <code>ec2:DetachInternetGateway</code>, <code>ec2:DeleteInternetGateway</code>, <code>ec2:CreateRouteTable</code>, <code>ec2:CreateRoute</code>, <code>ec2:DeleteRoute</code>, <code>ec2:AssociateRouteTable</code>, <code>ec2:DeleteRouteTable</code>, <code>ec2:CreateSecurityGroup</code>, <code>ec2:AuthorizeSecurityGroupIngress</code>, <code>ec2:DeleteSecurityGroup</code>, <code>ec2:CreateTags</code>, <code>ec2:Describe*</code>.</li>
+<li>Nhánh tùy chọn: thêm <code>ec2:RunInstances</code>, <code>ec2:TerminateInstances</code>, <code>ec2:RevokeSecurityGroupEgress</code>, <code>ec2:AuthorizeSecurityGroupEgress</code>, <code>ec2:CreateNetworkAcl</code>, <code>ec2:CreateNetworkAclEntry</code>, <code>ec2:ReplaceNetworkAclAssociation</code>, <code>ec2:DeleteNetworkAcl</code>, <code>ssm:GetParameter</code> (lấy AMI ID).</li>
+</ul>
+</li>
+<li><input type="checkbox"> Có <code>curl</code> trên máy cục bộ (cho nhánh tùy chọn).</li>
+<li><input type="checkbox"> Không sử dụng tài khoản production.</li>
+</ul>
+<h3 id="chi-phí-ước-tính"><a class="anchor" href="#chi-phí-ước-tính">Chi phí ước tính</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Phần</th>
+<th>Chi phí</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>VPC, subnet, route table, IGW, Security Group, NACL</td>
+<td>Không tính phí</td>
+</tr>
+<tr>
+<td>Nhánh tùy chọn: 1x <code>t4g.nano</code> + 1 public IPv4 + EBS 8 GB, khoảng 30–60 phút</td>
+<td>Dưới $0.02 (giá minh họa)</td>
+</tr>
+</tbody></table>
+</div>
+<p>Điều kiện dừng: nếu nhánh tùy chọn kéo dài quá 2 giờ, terminate instance trước rồi mới debug tiếp.</p>
+<hr>
+<h2 id="sơ-đồ-kiến-trúc-mạng-lab-04"><a class="anchor" href="#sơ-đồ-kiến-trúc-mạng-lab-04">Sơ đồ kiến trúc mạng Lab 04</a></h2>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Region: &lt;REGION&gt;
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ Lab VPC: 10.0.0.0/16                         [ Internet Gateway: lab-igw ]   │
+│                                                         │                    │
+│  Public Route Table (lab-public-rt): 10.0.0.0/16 → local, 0.0.0.0/0 → igw    │
+│        ├──────────────────────────────┐                                      │
+│   Zone A: &lt;AZ_A&gt;                 Zone B: &lt;AZ_B&gt;                              │
+│   ┌──────────────────────────┐   ┌──────────────────────────┐                │
+│   │ Public Subnet A          │   │ Public Subnet B          │                │
+│   │ 10.0.1.0/24              │   │ 10.0.2.0/24              │                │
+│   └──────────────────────────┘   └──────────────────────────┘                │
+│                                                                              │
+│  Private Route Table (lab-private-rt): chỉ 10.0.0.0/16 → local               │
+│        ├──────────────────────────────┐                                      │
+│   ┌──────────────────────────┐   ┌──────────────────────────┐                │
+│   │ Private Subnet A         │   │ Private Subnet B         │                │
+│   │ 10.0.10.0/24             │   │ 10.0.20.0/24             │                │
+│   └──────────────────────────┘   └──────────────────────────┘                │
+│                                                                              │
+│  Security Groups (cấp VPC, gắn vào ENI chứ không gắn vào subnet):            │
+│   lab-web-sg: inbound TCP 80 từ 0.0.0.0/0                                    │
+│   lab-app-sg: inbound TCP 8080 chỉ từ source = lab-web-sg                    │
+└──────────────────────────────────────────────────────────────────────────────┘</code></pre></div>
+<p><strong>Đường outbound của private subnet (chỉ phân tích, không tạo trong lab này):</strong></p>
+<ul>
+<li>Qua NAT Gateway: private RT <code>0.0.0.0/0 → nat-...</code> (NAT nằm ở public subnet) → IGW → internet. Tính phí theo giờ + GB + public IPv4.</li>
+<li>Qua VPC endpoint: S3/DynamoDB dùng gateway endpoint (miễn phí, thêm route prefix list); dịch vụ khác như SSM dùng interface endpoint (tính phí theo giờ/AZ). Traffic không ra internet.</li>
+</ul>
+<hr>
+<h2 id="bước-1--khởi-tạo-vpc"><a class="anchor" href="#bước-1--khởi-tạo-vpc">Bước 1 — Khởi tạo VPC</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export REGION=&quot;ap-southeast-1&quot;   # đổi thành Region của bạn
+export TAG=&quot;{Key=Project,Value=aws-lab-04}&quot;
+
+# Lấy 2 AZ đầu tiên đang khả dụng (bỏ qua Local Zones / Wavelength)
+read -r AZ_A AZ_B &lt; &lt;(aws ec2 describe-availability-zones \
+  --region &quot;${REGION}&quot; --profile aws-lab \
+  --filters Name=zone-type,Values=availability-zone Name=state,Values=available \
+  --query 'AvailabilityZones[0:2].ZoneName' --output text)
+export AZ_A AZ_B
+echo &quot;AZ_A=${AZ_A} AZ_B=${AZ_B}&quot;
+
+VPC_ID=$(aws ec2 create-vpc \
+  --cidr-block 10.0.0.0/16 \
+  --tag-specifications &quot;ResourceType=vpc,Tags=[{Key=Name,Value=lab-vpc},${TAG}]&quot; \
+  --region &quot;${REGION}&quot; --profile aws-lab \
+  --query 'Vpc.VpcId' --output text)
+echo &quot;VPC_ID=${VPC_ID}&quot;</code></pre></div>
+<p>Bật DNS support và DNS hostnames (mỗi lệnh chỉ đổi được một thuộc tính):</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ec2 modify-vpc-attribute --vpc-id &quot;${VPC_ID}&quot; --enable-dns-support '{&quot;Value&quot;: true}' --region &quot;${REGION}&quot; --profile aws-lab
+aws ec2 modify-vpc-attribute --vpc-id &quot;${VPC_ID}&quot; --enable-dns-hostnames '{&quot;Value&quot;: true}' --region &quot;${REGION}&quot; --profile aws-lab</code></pre></div>
+<blockquote>
+<p>[!NOTE]
+Khi tạo VPC, AWS tự tạo kèm <strong>main route table</strong>, <strong>default NACL</strong> (cho phép tất cả) và <strong>default security group</strong>. Lab không dùng chúng nhưng chúng sẽ tự xóa cùng VPC.</p>
+</blockquote>
+<hr>
+<h2 id="bước-2--tạo-và-gắn-internet-gateway"><a class="anchor" href="#bước-2--tạo-và-gắn-internet-gateway">Bước 2 — Tạo và gắn Internet Gateway</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>IGW_ID=$(aws ec2 create-internet-gateway \
+  --tag-specifications &quot;ResourceType=internet-gateway,Tags=[{Key=Name,Value=lab-igw},${TAG}]&quot; \
+  --region &quot;${REGION}&quot; --profile aws-lab \
+  --query 'InternetGateway.InternetGatewayId' --output text)
+echo &quot;IGW_ID=${IGW_ID}&quot;
+
+aws ec2 attach-internet-gateway \
+  --vpc-id &quot;${VPC_ID}&quot; --internet-gateway-id &quot;${IGW_ID}&quot; \
+  --region &quot;${REGION}&quot; --profile aws-lab</code></pre></div>
+<hr>
+<h2 id="bước-3--tạo-4-subnets-trên-2-az"><a class="anchor" href="#bước-3--tạo-4-subnets-trên-2-az">Bước 3 — Tạo 4 Subnets trên 2 AZ</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>create_subnet() {   # $1=cidr $2=az $3=name
+  aws ec2 create-subnet \
+    --vpc-id &quot;${VPC_ID}&quot; --cidr-block &quot;$1&quot; --availability-zone &quot;$2&quot; \
+    --tag-specifications &quot;ResourceType=subnet,Tags=[{Key=Name,Value=$3},${TAG}]&quot; \
+    --region &quot;${REGION}&quot; --profile aws-lab \
+    --query 'Subnet.SubnetId' --output text
+}
+
+PUB_SUB_A=$(create_subnet 10.0.1.0/24  &quot;${AZ_A}&quot; lab-public-subnet-a)
+PUB_SUB_B=$(create_subnet 10.0.2.0/24  &quot;${AZ_B}&quot; lab-public-subnet-b)
+PRI_SUB_A=$(create_subnet 10.0.10.0/24 &quot;${AZ_A}&quot; lab-private-subnet-a)
+PRI_SUB_B=$(create_subnet 10.0.20.0/24 &quot;${AZ_B}&quot; lab-private-subnet-b)
+
+echo &quot;Public:  ${PUB_SUB_A} (${AZ_A}), ${PUB_SUB_B} (${AZ_B})&quot;
+echo &quot;Private: ${PRI_SUB_A} (${AZ_A}), ${PRI_SUB_B} (${AZ_B})&quot;</code></pre></div>
+<p>Cho public subnet tự gán public IPv4 khi launch instance. Lưu ý mỗi public IPv4 đều tính phí (xem Bài 03):</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ec2 modify-subnet-attribute --subnet-id &quot;${PUB_SUB_A}&quot; --map-public-ip-on-launch --region &quot;${REGION}&quot; --profile aws-lab
+aws ec2 modify-subnet-attribute --subnet-id &quot;${PUB_SUB_B}&quot; --map-public-ip-on-launch --region &quot;${REGION}&quot; --profile aws-lab</code></pre></div>
+<p>Xác minh mỗi subnet có 251 IP khả dụng:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ec2 describe-subnets --filters Name=vpc-id,Values=&quot;${VPC_ID}&quot; \
+  --region &quot;${REGION}&quot; --profile aws-lab \
+  --query 'Subnets[].[Tags[?Key==`Name`]|[0].Value,CidrBlock,AvailabilityZone,AvailableIpAddressCount]' \
+  --output table</code></pre></div>
+<p>Kết quả mong đợi: 4 dòng, cột cuối đều là <code>251</code>.</p>
+<hr>
+<h2 id="bước-4--negative-test-cidr-không-hợp-lệ-miễn-phí"><a class="anchor" href="#bước-4--negative-test-cidr-không-hợp-lệ-miễn-phí">Bước 4 — Negative test: CIDR không hợp lệ (miễn phí)</a></h2>
+<p><strong>Mục đích:</strong> quan sát các quy tắc CIDR của AWS qua lỗi thật. Các lệnh dưới đây <strong>phải thất bại</strong>.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code># 1. Subnet nhỏ hơn /28
+aws ec2 create-subnet --vpc-id &quot;${VPC_ID}&quot; --cidr-block 10.0.100.0/29 \
+  --availability-zone &quot;${AZ_A}&quot; --region &quot;${REGION}&quot; --profile aws-lab
+
+# 2. Subnet nằm ngoài dải CIDR của VPC
+aws ec2 create-subnet --vpc-id &quot;${VPC_ID}&quot; --cidr-block 10.1.0.0/24 \
+  --availability-zone &quot;${AZ_A}&quot; --region &quot;${REGION}&quot; --profile aws-lab
+
+# 3. Subnet chồng lấn subnet đã có
+aws ec2 create-subnet --vpc-id &quot;${VPC_ID}&quot; --cidr-block 10.0.1.0/25 \
+  --availability-zone &quot;${AZ_A}&quot; --region &quot;${REGION}&quot; --profile aws-lab</code></pre></div>
+<p>Kết quả mong đợi (nội dung thông báo có thể khác đôi chút):</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>1. An error occurred (InvalidSubnet.Range) ... The CIDR '10.0.100.0/29' is invalid.
+2. An error occurred (InvalidSubnet.Range) ... The CIDR '10.1.0.0/24' is invalid.
+3. An error occurred (InvalidSubnet.Conflict) ... The CIDR '10.0.1.0/25' conflicts with another subnet</code></pre></div>
+<p>Nếu lệnh nào <strong>thành công</strong> (ngoài dự kiến), ghi lại subnet ID và xóa ngay bằng <code>aws ec2 delete-subnet</code>.</p>
+<hr>
+<h2 id="bước-5--cấu-hình-public-route-table"><a class="anchor" href="#bước-5--cấu-hình-public-route-table">Bước 5 — Cấu hình Public Route Table</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>PUB_RT_ID=$(aws ec2 create-route-table \
+  --vpc-id &quot;${VPC_ID}&quot; \
+  --tag-specifications &quot;ResourceType=route-table,Tags=[{Key=Name,Value=lab-public-rt},${TAG}]&quot; \
+  --region &quot;${REGION}&quot; --profile aws-lab \
+  --query 'RouteTable.RouteTableId' --output text)
+
+aws ec2 create-route \
+  --route-table-id &quot;${PUB_RT_ID}&quot; \
+  --destination-cidr-block 0.0.0.0/0 \
+  --gateway-id &quot;${IGW_ID}&quot; \
+  --region &quot;${REGION}&quot; --profile aws-lab
+
+aws ec2 associate-route-table --subnet-id &quot;${PUB_SUB_A}&quot; --route-table-id &quot;${PUB_RT_ID}&quot; --region &quot;${REGION}&quot; --profile aws-lab
+aws ec2 associate-route-table --subnet-id &quot;${PUB_SUB_B}&quot; --route-table-id &quot;${PUB_RT_ID}&quot; --region &quot;${REGION}&quot; --profile aws-lab</code></pre></div>
+<p><code>create-route</code> trả về <code>{&quot;Return&quot;: true}</code>. Mỗi <code>associate-route-table</code> trả về một <code>AssociationId</code>.</p>
+<hr>
+<h2 id="bước-6--cấu-hình-private-route-table"><a class="anchor" href="#bước-6--cấu-hình-private-route-table">Bước 6 — Cấu hình Private Route Table</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>PRI_RT_ID=$(aws ec2 create-route-table \
+  --vpc-id &quot;${VPC_ID}&quot; \
+  --tag-specifications &quot;ResourceType=route-table,Tags=[{Key=Name,Value=lab-private-rt},${TAG}]&quot; \
+  --region &quot;${REGION}&quot; --profile aws-lab \
+  --query 'RouteTable.RouteTableId' --output text)
+
+aws ec2 associate-route-table --subnet-id &quot;${PRI_SUB_A}&quot; --route-table-id &quot;${PRI_RT_ID}&quot; --region &quot;${REGION}&quot; --profile aws-lab
+aws ec2 associate-route-table --subnet-id &quot;${PRI_SUB_B}&quot; --route-table-id &quot;${PRI_RT_ID}&quot; --region &quot;${REGION}&quot; --profile aws-lab</code></pre></div>
+<p>Private RT chỉ có local route. Nếu bỏ qua bước này, private subnet sẽ dùng main route table (cũng chỉ có local route). Tạo RT riêng giúp ý đồ thiết kế rõ ràng và sau này dễ thêm route tới NAT.</p>
+<hr>
+<h2 id="bước-7--thiết-lập-security-group-chaining"><a class="anchor" href="#bước-7--thiết-lập-security-group-chaining">Bước 7 — Thiết lập Security Group Chaining</a></h2>
+<h3 id="1-web-security-group-lab-web-sg"><a class="anchor" href="#1-web-security-group-lab-web-sg">1. Web Security Group (<code>lab-web-sg</code>)</a></h3>
+<p>Dành cho tầng tiếp nhận (Load Balancer hoặc web server): inbound cổng 80 từ mọi nơi.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>SG_WEB_ID=$(aws ec2 create-security-group \
+  --group-name &quot;lab-web-sg&quot; \
+  --description &quot;Security group cho Web Tier / ALB&quot; \
+  --vpc-id &quot;${VPC_ID}&quot; \
+  --tag-specifications &quot;ResourceType=security-group,Tags=[{Key=Name,Value=lab-web-sg},${TAG}]&quot; \
+  --region &quot;${REGION}&quot; --profile aws-lab \
+  --query 'GroupId' --output text)
+
+aws ec2 authorize-security-group-ingress \
+  --group-id &quot;${SG_WEB_ID}&quot; --protocol tcp --port 80 --cidr 0.0.0.0/0 \
+  --region &quot;${REGION}&quot; --profile aws-lab</code></pre></div>
+<h3 id="2-app-security-group-lab-app-sg"><a class="anchor" href="#2-app-security-group-lab-app-sg">2. App Security Group (<code>lab-app-sg</code>)</a></h3>
+<p>Dành cho tầng Order Service: <strong>chỉ</strong> nhận cổng 8080 nếu nguồn là ENI mang <code>lab-web-sg</code>.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>SG_APP_ID=$(aws ec2 create-security-group \
+  --group-name &quot;lab-app-sg&quot; \
+  --description &quot;Security group cho App Tier noi bo&quot; \
+  --vpc-id &quot;${VPC_ID}&quot; \
+  --tag-specifications &quot;ResourceType=security-group,Tags=[{Key=Name,Value=lab-app-sg},${TAG}]&quot; \
+  --region &quot;${REGION}&quot; --profile aws-lab \
+  --query 'GroupId' --output text)
+
+aws ec2 authorize-security-group-ingress \
+  --group-id &quot;${SG_APP_ID}&quot; --protocol tcp --port 8080 --source-group &quot;${SG_WEB_ID}&quot; \
+  --region &quot;${REGION}&quot; --profile aws-lab</code></pre></div>
+<hr>
+<h2 id="bước-8--kiểm-chứng-cấu-hình"><a class="anchor" href="#bước-8--kiểm-chứng-cấu-hình">Bước 8 — Kiểm chứng cấu hình</a></h2>
+<h3 id="route-tables"><a class="anchor" href="#route-tables">Route tables</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>for rt in &quot;${PUB_RT_ID}&quot; &quot;${PRI_RT_ID}&quot;; do
+  echo &quot;== ${rt}&quot;
+  aws ec2 describe-route-tables --route-table-ids &quot;${rt}&quot; \
+    --region &quot;${REGION}&quot; --profile aws-lab \
+    --query 'RouteTables[0].Routes[].[DestinationCidrBlock,GatewayId,State]' --output text
+done</code></pre></div>
+<p>Kết quả mong đợi:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>== rtb-public...
+10.0.0.0/16   local          active
+0.0.0.0/0     igw-0abc...    active
+== rtb-private...
+10.0.0.0/16   local          active</code></pre></div>
+<h3 id="security-group-chaining"><a class="anchor" href="#security-group-chaining">Security group chaining</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ec2 describe-security-groups --group-ids &quot;${SG_APP_ID}&quot; \
+  --region &quot;${REGION}&quot; --profile aws-lab \
+  --query 'SecurityGroups[0].IpPermissions[].{Port:FromPort,SourceSG:UserIdGroupPairs[0].GroupId,Cidr:IpRanges}' \
+  --output json</code></pre></div>
+<p>Kết quả mong đợi: <code>Port: 8080</code>, <code>SourceSG</code> bằng <code>${SG_WEB_ID}</code>, <code>Cidr: []</code>. Rule không chứa dải IP nào, nên client nào không mang <code>lab-web-sg</code> (kể cả client trong cùng VPC) đều không vào được 8080. Đây mới là <strong>kiểm tra cấu hình</strong>; nhánh tùy chọn bên dưới mới kiểm chứng bằng traffic thật.</p>
+<h3 id="negative-test-xóa-vpc-khi-còn-dependency"><a class="anchor" href="#negative-test-xóa-vpc-khi-còn-dependency">Negative test: xóa VPC khi còn dependency</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ec2 delete-vpc --vpc-id &quot;${VPC_ID}&quot; --region &quot;${REGION}&quot; --profile aws-lab</code></pre></div>
+<p>Kết quả mong đợi:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>An error occurred (DependencyViolation) when calling the DeleteVpc operation: The vpc 'vpc-...' has dependencies and cannot be deleted.</code></pre></div>
+<p>✅ AWS không cho xóa VPC khi còn subnet, IGW, SG... Đây là lý do cleanup phải đi theo thứ tự.</p>
+<hr>
+<h2 id="bước-9-tùy-chọn-tính-phí-vài-cent--kiểm-chứng-bằng-traffic-thật"><a class="anchor" href="#bước-9-tùy-chọn-tính-phí-vài-cent--kiểm-chứng-bằng-traffic-thật">Bước 9 (tùy chọn, tính phí vài cent) — Kiểm chứng bằng traffic thật</a></h2>
+<p><strong>Mục đích:</strong> chạy một web server tạm trong public subnet A, rồi lần lượt thay đổi route, SG và NACL để thấy tác động thật lên kết nối.</p>
+<h3 id="91-launch-instance-tạm"><a class="anchor" href="#91-launch-instance-tạm">9.1. Launch instance tạm</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>AMI_ID=$(aws ssm get-parameter \
+  --name /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64 \
+  --region &quot;${REGION}&quot; --profile aws-lab --query 'Parameter.Value' --output text)
+
+export LAB_DIR=$(mktemp -d)
+cat &lt;&lt;'EOF' &gt; &quot;${LAB_DIR}/web.sh&quot;
+#!/bin/bash
+mkdir -p /srv/web &amp;&amp; echo &quot;hello from lab-04&quot; &gt; /srv/web/index.html
+cd /srv/web &amp;&amp; nohup python3 -m http.server 80 &gt; /var/log/lab-web.log 2&gt;&amp;1 &amp;
+EOF
+
+TEST_INSTANCE_ID=$(aws ec2 run-instances \
+  --image-id &quot;${AMI_ID}&quot; --instance-type t4g.nano --count 1 \
+  --subnet-id &quot;${PUB_SUB_A}&quot; --security-group-ids &quot;${SG_WEB_ID}&quot; \
+  --user-data &quot;file://${LAB_DIR}/web.sh&quot; \
+  --metadata-options HttpTokens=required \
+  --tag-specifications &quot;ResourceType=instance,Tags=[{Key=Name,Value=lab04-test-web},${TAG}]&quot; \
+  --region &quot;${REGION}&quot; --profile aws-lab \
+  --query 'Instances[0].InstanceId' --output text)
+
+aws ec2 wait instance-running --instance-ids &quot;${TEST_INSTANCE_ID}&quot; --region &quot;${REGION}&quot; --profile aws-lab
+TEST_IP=$(aws ec2 describe-instances --instance-ids &quot;${TEST_INSTANCE_ID}&quot; \
+  --region &quot;${REGION}&quot; --profile aws-lab \
+  --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
+echo &quot;TEST_IP=${TEST_IP}&quot;
+
+sleep 60   # chờ user data khởi động web server
+curl -m 5 &quot;http://${TEST_IP}/&quot;</code></pre></div>
+<p>Kết quả mong đợi: <code>hello from lab-04</code>. Nếu <code>curl</code> báo <code>Connection refused</code>, chờ thêm 30 giây rồi thử lại.</p>
+<h3 id="92-route-quyết-định-publicprivate"><a class="anchor" href="#92-route-quyết-định-publicprivate">9.2. Route quyết định public/private</a></h3>
+<p>Xóa route tới IGW khỏi public RT. Subnet A lúc này trở thành &quot;private&quot; dù instance vẫn có public IP:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ec2 delete-route --route-table-id &quot;${PUB_RT_ID}&quot; --destination-cidr-block 0.0.0.0/0 \
+  --region &quot;${REGION}&quot; --profile aws-lab
+curl -m 5 &quot;http://${TEST_IP}/&quot;; echo &quot;exit=$?&quot;</code></pre></div>
+<p>Kết quả mong đợi: <code>curl: (28) Connection timed out ...</code>, <code>exit=28</code>.</p>
+<p>Khôi phục route:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ec2 create-route --route-table-id &quot;${PUB_RT_ID}&quot; --destination-cidr-block 0.0.0.0/0 \
+  --gateway-id &quot;${IGW_ID}&quot; --region &quot;${REGION}&quot; --profile aws-lab
+curl -m 5 &quot;http://${TEST_IP}/&quot;</code></pre></div>
+<p>Kết quả mong đợi: <code>hello from lab-04</code> trở lại.</p>
+<h3 id="93-security-group-là-stateful"><a class="anchor" href="#93-security-group-là-stateful">9.3. Security Group là stateful</a></h3>
+<p>Xóa <strong>toàn bộ</strong> outbound rule của <code>lab-web-sg</code>:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ec2 revoke-security-group-egress --group-id &quot;${SG_WEB_ID}&quot; \
+  --ip-permissions '[{&quot;IpProtocol&quot;:&quot;-1&quot;,&quot;IpRanges&quot;:[{&quot;CidrIp&quot;:&quot;0.0.0.0/0&quot;}]}]' \
+  --region &quot;${REGION}&quot; --profile aws-lab
+curl -m 5 &quot;http://${TEST_IP}/&quot;</code></pre></div>
+<p>Kết quả mong đợi: <strong>vẫn</strong> nhận được <code>hello from lab-04</code>. SG tự cho phép response của kết nối inbound đã được chấp nhận, không cần outbound rule.</p>
+<p>Khôi phục outbound mặc định:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ec2 authorize-security-group-egress --group-id &quot;${SG_WEB_ID}&quot; \
+  --ip-permissions '[{&quot;IpProtocol&quot;:&quot;-1&quot;,&quot;IpRanges&quot;:[{&quot;CidrIp&quot;:&quot;0.0.0.0/0&quot;}]}]' \
+  --region &quot;${REGION}&quot; --profile aws-lab</code></pre></div>
+<h3 id="94-nacl-là-stateless"><a class="anchor" href="#94-nacl-là-stateless">9.4. NACL là stateless</a></h3>
+<p>Tạo custom NACL chỉ có inbound port 80, <strong>không có outbound rule nào</strong>:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>NACL_ID=$(aws ec2 create-network-acl --vpc-id &quot;${VPC_ID}&quot; \
+  --tag-specifications &quot;ResourceType=network-acl,Tags=[{Key=Name,Value=lab-test-nacl},${TAG}]&quot; \
+  --region &quot;${REGION}&quot; --profile aws-lab \
+  --query 'NetworkAcl.NetworkAclId' --output text)
+
+aws ec2 create-network-acl-entry --network-acl-id &quot;${NACL_ID}&quot; \
+  --ingress --rule-number 100 --protocol tcp --port-range From=80,To=80 \
+  --cidr-block 0.0.0.0/0 --rule-action allow \
+  --region &quot;${REGION}&quot; --profile aws-lab
+
+# Lấy association hiện tại của subnet A (đang trỏ tới default NACL)
+ASSOC_ID=$(aws ec2 describe-network-acls \
+  --filters Name=association.subnet-id,Values=&quot;${PUB_SUB_A}&quot; \
+  --region &quot;${REGION}&quot; --profile aws-lab \
+  --query &quot;NetworkAcls[0].Associations[?SubnetId=='${PUB_SUB_A}'].NetworkAclAssociationId&quot; --output text)
+DEFAULT_NACL_ID=$(aws ec2 describe-network-acls \
+  --filters Name=vpc-id,Values=&quot;${VPC_ID}&quot; Name=default,Values=true \
+  --region &quot;${REGION}&quot; --profile aws-lab \
+  --query 'NetworkAcls[0].NetworkAclId' --output text)
+
+# Gắn subnet A vào custom NACL
+ASSOC_ID=$(aws ec2 replace-network-acl-association \
+  --association-id &quot;${ASSOC_ID}&quot; --network-acl-id &quot;${NACL_ID}&quot; \
+  --region &quot;${REGION}&quot; --profile aws-lab --query NewAssociationId --output text)
+
+curl -m 5 &quot;http://${TEST_IP}/&quot;; echo &quot;exit=$?&quot;</code></pre></div>
+<p>Kết quả mong đợi: timeout, <code>exit=28</code>. Request vào được (inbound 80 cho phép), nhưng response gửi tới <strong>ephemeral port</strong> của máy bạn bị NACL outbound chặn.</p>
+<p>Thêm outbound cho dải ephemeral:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ec2 create-network-acl-entry --network-acl-id &quot;${NACL_ID}&quot; \
+  --egress --rule-number 100 --protocol tcp --port-range From=1024,To=65535 \
+  --cidr-block 0.0.0.0/0 --rule-action allow \
+  --region &quot;${REGION}&quot; --profile aws-lab
+curl -m 5 &quot;http://${TEST_IP}/&quot;</code></pre></div>
+<p>Kết quả mong đợi: <code>hello from lab-04</code>.</p>
+<p>Trả subnet A về default NACL:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ec2 replace-network-acl-association \
+  --association-id &quot;${ASSOC_ID}&quot; --network-acl-id &quot;${DEFAULT_NACL_ID}&quot; \
+  --region &quot;${REGION}&quot; --profile aws-lab</code></pre></div>
+<h3 id="95-kết-thúc-nhánh-tùy-chọn"><a class="anchor" href="#95-kết-thúc-nhánh-tùy-chọn">9.5. Kết thúc nhánh tùy chọn</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ec2 terminate-instances --instance-ids &quot;${TEST_INSTANCE_ID}&quot; --region &quot;${REGION}&quot; --profile aws-lab
+aws ec2 wait instance-terminated --instance-ids &quot;${TEST_INSTANCE_ID}&quot; --region &quot;${REGION}&quot; --profile aws-lab
+aws ec2 delete-network-acl --network-acl-id &quot;${NACL_ID}&quot; --region &quot;${REGION}&quot; --profile aws-lab
+rm -rf &quot;${LAB_DIR}&quot;</code></pre></div>
+<p>Root volume có <code>DeleteOnTermination=true</code> nên tự xóa theo instance; public IPv4 tự auto-assign cũng được giải phóng.</p>
+<hr>
+<h2 id="bước-10--dọn-dẹp-teardown"><a class="anchor" href="#bước-10--dọn-dẹp-teardown">Bước 10 — Dọn dẹp (Teardown)</a></h2>
+<p>Nếu đã làm Bước 9, đảm bảo 9.5 đã chạy xong (instance <code>terminated</code>, NACL đã xóa). Sau đó xóa theo thứ tự phụ thuộc:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code># 1. Security Groups (lab-app-sg tham chiếu lab-web-sg nên xóa trước)
+aws ec2 delete-security-group --group-id &quot;${SG_APP_ID}&quot; --region &quot;${REGION}&quot; --profile aws-lab
+aws ec2 delete-security-group --group-id &quot;${SG_WEB_ID}&quot; --region &quot;${REGION}&quot; --profile aws-lab
+
+# 2. Subnets (association với route table/NACL tự mất theo)
+for sub in &quot;${PUB_SUB_A}&quot; &quot;${PUB_SUB_B}&quot; &quot;${PRI_SUB_A}&quot; &quot;${PRI_SUB_B}&quot;; do
+  aws ec2 delete-subnet --subnet-id &quot;${sub}&quot; --region &quot;${REGION}&quot; --profile aws-lab
+done
+
+# 3. Custom Route Tables
+aws ec2 delete-route-table --route-table-id &quot;${PUB_RT_ID}&quot; --region &quot;${REGION}&quot; --profile aws-lab
+aws ec2 delete-route-table --route-table-id &quot;${PRI_RT_ID}&quot; --region &quot;${REGION}&quot; --profile aws-lab
+
+# 4. Detach và xóa Internet Gateway
+aws ec2 detach-internet-gateway --internet-gateway-id &quot;${IGW_ID}&quot; --vpc-id &quot;${VPC_ID}&quot; --region &quot;${REGION}&quot; --profile aws-lab
+aws ec2 delete-internet-gateway --internet-gateway-id &quot;${IGW_ID}&quot; --region &quot;${REGION}&quot; --profile aws-lab
+
+# 5. VPC (main route table, default NACL, default SG tự xóa theo)
+aws ec2 delete-vpc --vpc-id &quot;${VPC_ID}&quot; --region &quot;${REGION}&quot; --profile aws-lab</code></pre></div>
+<p>Xác minh inventory:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ec2 describe-vpcs --filters Name=tag:Project,Values=aws-lab-04 \
+  --region &quot;${REGION}&quot; --profile aws-lab --query 'Vpcs[].VpcId' --output text
+# Mong đợi: rỗng
+
+aws ec2 describe-instances --filters Name=tag:Project,Values=aws-lab-04 \
+  Name=instance-state-name,Values=pending,running,stopping,stopped \
+  --region &quot;${REGION}&quot; --profile aws-lab --query 'Reservations[].Instances[].InstanceId' --output text
+# Mong đợi: rỗng</code></pre></div>
+<blockquote>
+<p>Bài 05 tự tạo mạng riêng, nên không cần giữ lại VPC này.</p>
+</blockquote>
+<h3 id="khôi-phục-biến-khi-mất-shell"><a class="anchor" href="#khôi-phục-biến-khi-mất-shell">Khôi phục biến khi mất shell</a></h3>
+<p>Nếu lab dừng giữa chừng và biến đã mất, tìm lại tài nguyên theo tag rồi chạy các lệnh cleanup ở trên (bỏ qua lệnh nào báo <code>NotFound</code>):</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export REGION=&quot;ap-southeast-1&quot;
+ec2q() { aws ec2 &quot;$@&quot; --region &quot;${REGION}&quot; --profile aws-lab --output text; }
+byname() { ec2q describe-subnets --filters Name=vpc-id,Values=&quot;${VPC_ID}&quot; Name=tag:Name,Values=&quot;$1&quot; --query 'Subnets[0].SubnetId'; }
+
+VPC_ID=$(ec2q describe-vpcs --filters Name=tag:Project,Values=aws-lab-04 --query 'Vpcs[0].VpcId')
+IGW_ID=$(ec2q describe-internet-gateways --filters Name=attachment.vpc-id,Values=&quot;${VPC_ID}&quot; --query 'InternetGateways[0].InternetGatewayId')
+PUB_SUB_A=$(byname lab-public-subnet-a);  PUB_SUB_B=$(byname lab-public-subnet-b)
+PRI_SUB_A=$(byname lab-private-subnet-a); PRI_SUB_B=$(byname lab-private-subnet-b)
+PUB_RT_ID=$(ec2q describe-route-tables --filters Name=vpc-id,Values=&quot;${VPC_ID}&quot; Name=tag:Name,Values=lab-public-rt --query 'RouteTables[0].RouteTableId')
+PRI_RT_ID=$(ec2q describe-route-tables --filters Name=vpc-id,Values=&quot;${VPC_ID}&quot; Name=tag:Name,Values=lab-private-rt --query 'RouteTables[0].RouteTableId')
+SG_WEB_ID=$(ec2q describe-security-groups --filters Name=vpc-id,Values=&quot;${VPC_ID}&quot; Name=group-name,Values=lab-web-sg --query 'SecurityGroups[0].GroupId')
+SG_APP_ID=$(ec2q describe-security-groups --filters Name=vpc-id,Values=&quot;${VPC_ID}&quot; Name=group-name,Values=lab-app-sg --query 'SecurityGroups[0].GroupId')
+TEST_INSTANCE_ID=$(ec2q describe-instances --filters Name=tag:Name,Values=lab04-test-web Name=instance-state-name,Values=pending,running,stopping,stopped --query 'Reservations[0].Instances[0].InstanceId')
+NACL_ID=$(ec2q describe-network-acls --filters Name=vpc-id,Values=&quot;${VPC_ID}&quot; Name=tag:Name,Values=lab-test-nacl --query 'NetworkAcls[0].NetworkAclId')
+
+echo &quot;VPC=${VPC_ID} IGW=${IGW_ID} INSTANCE=${TEST_INSTANCE_ID} NACL=${NACL_ID}&quot;</code></pre></div>
+<p>Giá trị <code>None</code> nghĩa là tài nguyên đó không tồn tại. Nếu <code>TEST_INSTANCE_ID</code> khác <code>None</code>, terminate và chờ trước. Nếu <code>NACL_ID</code> khác <code>None</code>, xóa NACL <strong>sau khi</strong> đã xóa subnet (subnet đang gắn NACL thì không xóa NACL được).</p>
+<hr>
+<h2 id="checklist-hoàn-thành"><a class="anchor" href="#checklist-hoàn-thành">Checklist hoàn thành</a></h2>
+<ul>
+<li><input type="checkbox"> Tạo VPC <code>10.0.0.0/16</code>, bật <code>enableDnsSupport</code> và <code>enableDnsHostnames</code>.</li>
+<li><input type="checkbox"> Tạo và gắn Internet Gateway.</li>
+<li><input type="checkbox"> 4 subnet trên 2 AZ, mỗi subnet có <code>AvailableIpAddressCount = 251</code>.</li>
+<li><input type="checkbox"> Gặp <code>InvalidSubnet.Range</code> / <code>InvalidSubnet.Conflict</code> ở negative test CIDR.</li>
+<li><input type="checkbox"> Public RT có <code>0.0.0.0/0 → igw</code>; private RT chỉ có <code>local</code>.</li>
+<li><input type="checkbox"> <code>lab-app-sg</code> nhận 8080 chỉ từ <code>lab-web-sg</code>.</li>
+<li><input type="checkbox"> Gặp <code>DependencyViolation</code> khi xóa VPC sớm và giải thích được vì sao.</li>
+<li><input type="checkbox"> (Tùy chọn) Quan sát timeout khi xóa route IGW; SG vẫn trả response khi không có outbound; NACL chặn response khi thiếu ephemeral port.</li>
+<li><input type="checkbox"> Xóa sạch tài nguyên, inventory theo tag <code>Project=aws-lab-04</code> rỗng.</li>
+</ul>
+<hr>
+<h2 id="troubleshooting-nhanh"><a class="anchor" href="#troubleshooting-nhanh">Troubleshooting nhanh</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Triệu chứng</th>
+<th>Nguyên nhân khả dĩ</th>
+<th>Khắc phục</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>InvalidVpcID.NotFound</code></td>
+<td>Biến <code>VPC_ID</code> rỗng hoặc sai Region</td>
+<td><code>echo &quot;${VPC_ID} ${REGION}&quot;</code>; khôi phục biến theo mục trên</td>
+</tr>
+<tr>
+<td><code>AZ_A</code>/<code>AZ_B</code> rỗng</td>
+<td>Region chưa enable hoặc thiếu quyền <code>ec2:DescribeAvailabilityZones</code></td>
+<td>Kiểm tra <code>REGION</code>; chạy lại lệnh lấy AZ</td>
+</tr>
+<tr>
+<td><code>curl</code> timeout ngay ở 9.1</td>
+<td>Web server chưa chạy, route/SG sai</td>
+<td>Kiểm tra route public RT, rule port 80 của <code>lab-web-sg</code>; chờ thêm rồi thử lại</td>
+</tr>
+<tr>
+<td><code>curl</code> báo <code>Connection refused</code></td>
+<td>Đã tới instance nhưng web server chưa lắng nghe</td>
+<td>Chờ user data chạy xong (30–90 giây)</td>
+</tr>
+<tr>
+<td><code>DependencyViolation</code> khi xóa SG</td>
+<td>SG còn được tham chiếu hoặc còn gắn với ENI (instance chưa terminate xong)</td>
+<td>Xóa <code>lab-app-sg</code> trước; <code>aws ec2 wait instance-terminated</code> trước khi xóa <code>lab-web-sg</code></td>
+</tr>
+<tr>
+<td><code>DependencyViolation</code> khi xóa VPC</td>
+<td>Còn subnet, IGW, SG hoặc ENI</td>
+<td><code>aws ec2 describe-network-interfaces --filters Name=vpc-id,Values=${VPC_ID}</code> để tìm phần còn sót</td>
+</tr>
+<tr>
+<td>Không xóa được NACL</td>
+<td>Subnet vẫn đang gắn NACL</td>
+<td>Trả subnet về default NACL (9.4) hoặc xóa subnet trước</td>
+</tr>
+</tbody></table>
+</div>
+<h2 id="tiếp-theo"><a class="anchor" href="#tiếp-theo">Tiếp theo</a></h2>
+<p>Bạn đã nắm nền móng mạng của AWS. Bài tiếp theo đưa máy chủ và dịch vụ lên chạy: <strong>EC2, EBS, Application Load Balancer, Auto Scaling Group và quản trị an toàn bằng Systems Manager (SSM)</strong>.</p>
+
+<footer>Sinh tự động từ <code>labs/04-networking/README.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

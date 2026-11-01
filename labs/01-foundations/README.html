@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab 01 — Nền tảng AWS: CLI, identity, Region và AZ (chỉ đọc)</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="../../notes/01-foundations.html">01. Lý thuyết</a><a href="README.html" class="active">01. Lab</a><a href="../../notes/02-identity-and-access.html">02. Lý thuyết</a><a href="../02-identity-and-access/README.html">02. Lab</a><a href="../../notes/03-cost-management.html">03. Lý thuyết</a><a href="../03-cost-management/README.html">03. Lab</a><a href="../../notes/04-networking.html">04. Lý thuyết</a><a href="../04-networking/README.html">04. Lab</a><a href="../../notes/05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../05-compute-and-load-balancing/README.html">05. Lab</a><a href="../../notes/06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../06-storage-and-content-delivery/README.html">06. Lab</a><a href="../../notes/07-databases-and-cache.html">07. Lý thuyết</a><a href="../07-databases-and-cache/README.html">07. Lab</a><a href="../../notes/08-containers.html">08. Lý thuyết</a><a href="../08-containers/README.html">08. Lab</a><a href="../../notes/09-serverless.html">09. Lý thuyết</a><a href="../09-serverless/README.html">09. Lab</a><a href="../../notes/10-observability-and-application-security.html">10. Lý thuyết</a><a href="../10-observability-and-application-security/README.html">10. Lab</a><a href="../../notes/11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../11-messaging-and-workflows/README.html">11. Lab</a><a href="../../notes/12-iac-and-cicd.html">12. Lý thuyết</a><a href="../12-iac-and-cicd/README.html">12. Lab</a><a href="../../notes/13-reliability-and-performance.html">13. Lý thuyết</a><a href="../13-reliability-and-performance/README.html">13. Lab</a><a href="../../notes/14-architecture-and-governance.html">14. Lý thuyết</a><a href="../14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></li><li><a href="#quy-ước-placeholder">Quy ước placeholder</a></li><li><a href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></li><li><a href="#bước-1--kiểm-tra-cli-v2-và-cách-tra-help">Bước 1 — Kiểm tra CLI v2 và cách tra help</a></li><li><a href="#bước-2--tạo-profile-aws-lab-và-đăng-nhập">Bước 2 — Tạo profile aws-lab và đăng nhập</a></li><li><a href="#bước-3--kiểm-tra-identity">Bước 3 — Kiểm tra identity</a></li><li><a href="#bước-4--kiểm-tra-cấu-hình-hiệu-lực">Bước 4 — Kiểm tra cấu hình hiệu lực</a></li><li><a href="#bước-5--liệt-kê-region">Bước 5 — Liệt kê Region</a></li><li><a href="#bước-6--liệt-kê-az-trong-region-đã-chọn">Bước 6 — Liệt kê AZ trong Region đã chọn</a></li><li><a href="#bước-7--cùng-truy-vấn-với-region-khác">Bước 7 — Cùng truy vấn với Region khác</a></li><li><a href="#bước-8--thực-hành-output-và-query">Bước 8 — Thực hành output và query</a></li><li><a href="#bước-9--kết-thúc-phiên-và-ghi-lại-kết-quả">Bước 9 — Kết thúc phiên và ghi lại kết quả</a></li><li><a href="#checklist-hoàn-thành">Checklist hoàn thành</a></li><li><a href="#troubleshooting-nhanh">Troubleshooting nhanh</a></li><li><a href="#tiếp-theo">Tiếp theo</a></li></ol></aside>
+<main>
+<h1 id="lab-01--nền-tảng-aws-cli-identity-region-và-az-chỉ-đọc"><a class="anchor" href="#lab-01--nền-tảng-aws-cli-identity-region-và-az-chỉ-đọc">Lab 01 — Nền tảng AWS: CLI, identity, Region và AZ (chỉ đọc)</a></h1>
+<blockquote>
+<p><strong>Lý thuyết:</strong> <a href="../../notes/01-foundations.html">notes/01-foundations.md</a>. Nên đọc phần 1–5 trước khi làm lab.
+<strong>Thời lượng:</strong> khoảng 45 phút (chưa tính thời gian chờ cấp quyền).
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. <strong>Chưa kiểm thử trên account thật.</strong> Mọi output bên dưới là <strong>minh họa</strong>, định danh đã được thay bằng placeholder.</p>
+</blockquote>
+<h2 id="lab-này-làm-gì-và-không-làm-gì"><a class="anchor" href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>✅ Có</th>
+<th>❌ Không</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Đọc thông tin identity, Region, AZ</td>
+<td>Tạo EC2, S3, VPC hay bất kỳ tài nguyên dịch vụ nào</td>
+</tr>
+<tr>
+<td>Tạo/sửa <strong>profile cục bộ</strong> trong <code>~/.aws/config</code></td>
+<td>Bật (opt-in) Region mới</td>
+</tr>
+<tr>
+<td>Đăng nhập/đăng xuất phiên</td>
+<td>Dùng root access key hoặc tạo long-lived access key</td>
+</tr>
+<tr>
+<td></td>
+<td>Xin <code>AdministratorAccess</code></td>
+</tr>
+</tbody></table>
+</div>
+<h2 id="quy-ước-placeholder"><a class="anchor" href="#quy-ước-placeholder">Quy ước placeholder</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Placeholder</th>
+<th>Ý nghĩa</th>
+<th>Ví dụ minh họa</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>aws-lab</code></td>
+<td>Tên profile dùng trong lab</td>
+<td>(giữ nguyên)</td>
+</tr>
+<tr>
+<td><code>&lt;REGION&gt;</code></td>
+<td>Region học tập bạn đã chọn</td>
+<td><code>ap-southeast-1</code></td>
+</tr>
+<tr>
+<td><code>&lt;REGION_2&gt;</code></td>
+<td>Một Region khác <strong>đã enable</strong> sẵn</td>
+<td><code>us-west-2</code></td>
+</tr>
+<tr>
+<td><code>&lt;ACCOUNT_ID&gt;</code></td>
+<td>Account ID 12 số</td>
+<td><code>111122223333</code></td>
+</tr>
+<tr>
+<td><code>&lt;START_URL&gt;</code></td>
+<td>Start URL của IAM Identity Center</td>
+<td><code>https://my-org.awsapps.com/start</code></td>
+</tr>
+<tr>
+<td><code>&lt;SSO_REGION&gt;</code></td>
+<td>Region đặt IAM Identity Center</td>
+<td><code>us-east-1</code></td>
+</tr>
+<tr>
+<td><code>&lt;ROLE_NAME&gt;</code></td>
+<td>Permission set/role được gán</td>
+<td><code>LabReadOnly</code></td>
+</tr>
+</tbody></table>
+</div>
+<p><strong>Khi chia sẻ kết quả</strong> (blog, repo, chat), luôn che account ID, ARN, user ID và start URL. Ví dụ: <code>arn:aws:sts::&lt;ACCOUNT_ID&gt;:assumed-role/&lt;ROLE_NAME&gt;/&lt;user&gt;</code>.</p>
+<h2 id="điều-kiện-đầu-vào"><a class="anchor" href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></h2>
+<ul>
+<li><input type="checkbox"> Máy có internet và terminal. Hướng dẫn viết cho macOS/zsh. Với Linux/Windows, xem <a href="https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html" target="_blank" rel="noopener">trang cài đặt chính thức</a>.</li>
+<li><input type="checkbox"> AWS CLI v2 đã được cài từ nguồn chính thức (xem <a href="../../notes/01-foundations.html#phần-5--aws-cli-v2-và-cấu-hình-35-phút">lý thuyết phần 5</a>).</li>
+<li><input type="checkbox"> Có <strong>account lab/sandbox</strong> được phép dùng (không dùng production).</li>
+<li><input type="checkbox"> Có một con đường xác thực hợp lệ: nhánh A, B hoặc C ở bước 2.</li>
+<li><input type="checkbox"> Identity có quyền đọc <code>ec2:DescribeRegions</code> và <code>ec2:DescribeAvailabilityZones</code>. Lệnh <code>sts:GetCallerIdentity</code> không cần cấp quyền riêng.</li>
+</ul>
+<p>Quyền tối thiểu cần xin quản trị viên, để tham khảo (cách viết policy được học ở bài IAM):</p>
+<div class="code"><span class="lang">json</span><button type="button">Copy</button><pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Action&quot;: [&quot;ec2:DescribeRegions&quot;, &quot;ec2:DescribeAvailabilityZones&quot;],
+      &quot;Resource&quot;: &quot;*&quot;
+    }
+  ]
+}</code></pre></div>
+<hr>
+<h2 id="bước-1--kiểm-tra-cli-v2-và-cách-tra-help"><a class="anchor" href="#bước-1--kiểm-tra-cli-v2-và-cách-tra-help">Bước 1 — Kiểm tra CLI v2 và cách tra help</a></h2>
+<p><strong>Mục đích:</strong> chắc chắn đang dùng CLI v2 và biết cách tự tra cứu.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws --version
+aws help                      # nhấn q để thoát
+aws ec2 describe-regions help # help của một command cụ thể</code></pre></div>
+<p><strong>Output minh họa:</strong></p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>aws-cli/2.x.y Python/3.x.y Darwin/xx.x.x exe/...</code></pre></div>
+<p><strong>Xác minh:</strong></p>
+<ul>
+<li>Chuỗi phiên bản bắt đầu bằng <code>aws-cli/2.</code>. Nếu là <code>aws-cli/1.</code>, bạn đang dùng CLI v1; hãy gỡ bỏ hoặc sửa <code>PATH</code>.</li>
+<li>Nếu muốn dùng <code>aws login</code> (nhánh B), phiên bản cần ≥ 2.32.0.</li>
+<li>Bạn tìm được mục <code>OPTIONS</code> và <code>EXAMPLES</code> trong trang help.</li>
+</ul>
+<hr>
+<h2 id="bước-2--tạo-profile-aws-lab-và-đăng-nhập"><a class="anchor" href="#bước-2--tạo-profile-aws-lab-và-đăng-nhập">Bước 2 — Tạo profile <code>aws-lab</code> và đăng nhập</a></h2>
+<p><strong>Mục đích:</strong> có một profile riêng cho lab, xác thực bằng temporary credentials.</p>
+<p>Trước tiên, đảm bảo shell không còn biến credentials cũ:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>env | grep '^AWS_' | sed 's/=.*/=&lt;đã ẩn&gt;/'
+# Nếu thấy AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_SESSION_TOKEN không thuộc lab này:
+unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN</code></pre></div>
+<h3 id="nhánh-a--iam-identity-center-khuyến-nghị"><a class="anchor" href="#nhánh-a--iam-identity-center-khuyến-nghị">Nhánh A — IAM Identity Center (khuyến nghị)</a></h3>
+<p>Yêu cầu: <code>&lt;START_URL&gt;</code>, <code>&lt;SSO_REGION&gt;</code>, account và role đã được gán cho bạn.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws configure sso</code></pre></div>
+<p>Trả lời các câu hỏi theo thứ tự (CLI hiển thị lần lượt):</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>SSO session name (Recommended): lab-sso
+SSO start URL [None]: &lt;START_URL&gt;
+SSO region [None]: &lt;SSO_REGION&gt;
+SSO registration scopes [None]: sso:account:access
+  → Trình duyệt mở ra; đăng nhập và bấm cho phép.
+  → Chọn account (bỏ qua nếu chỉ có một), rồi chọn role (bỏ qua nếu chỉ có một).
+Default client Region [None]: &lt;REGION&gt;
+CLI default output format (json if not specified) [None]: json
+Profile name [...]: aws-lab</code></pre></div>
+<p>Kết quả trong <code>~/.aws/config</code> (minh họa):</p>
+<div class="code"><span class="lang">ini</span><button type="button">Copy</button><pre><code>[profile aws-lab]
+sso_session = lab-sso
+sso_account_id = &lt;ACCOUNT_ID&gt;
+sso_role_name = &lt;ROLE_NAME&gt;
+region = &lt;REGION&gt;
+output = json
+
+[sso-session lab-sso]
+sso_start_url = &lt;START_URL&gt;
+sso_region = &lt;SSO_REGION&gt;
+sso_registration_scopes = sso:account:access</code></pre></div>
+<p>Những lần sau, khi phiên hết hạn:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws sso login --profile aws-lab</code></pre></div>
+<p>Ghi chú:</p>
+<ul>
+<li>Từ CLI 2.22.0, luồng mặc định là PKCE và cần trình duyệt trên cùng máy. Nếu máy không có trình duyệt (ví dụ SSH vào server), thêm <code>--use-device-code</code> cho cả <code>aws configure sso</code> và <code>aws sso login</code>.</li>
+<li><code>&lt;SSO_REGION&gt;</code> khác <code>&lt;REGION&gt;</code> là bình thường (xem <a href="../../notes/01-foundations.html#named-profile">lý thuyết</a>).</li>
+</ul>
+<h3 id="nhánh-b--chưa-có-iam-identity-center"><a class="anchor" href="#nhánh-b--chưa-có-iam-identity-center">Nhánh B — Chưa có IAM Identity Center</a></h3>
+<p><strong>Prerequisite chưa đáp ứng.</strong> Chọn một trong các cách sau:</p>
+<ol>
+<li><p>Nhờ quản trị viên cấp truy cập qua Identity Center, rồi quay lại nhánh A.</p>
+</li>
+<li><p>Tự thiết lập Identity Center theo <a href="https://docs.aws.amazon.com/singlesignon/latest/userguide/get-set-up-for-idc.html" target="_blank" rel="noopener">tài liệu chính thức</a>. Đây là bước tùy chọn, ngoài phạm vi lab này.</p>
+</li>
+<li><p>Nếu quản trị viên đã gán <code>SignInLocalDevelopmentAccess</code> cho một IAM user/role dùng cho lab (không phải root), dùng <code>aws login</code>:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws login --profile aws-lab     # mở trình duyệt; thêm --remote nếu máy không có trình duyệt
+aws configure set region &lt;REGION&gt; --profile aws-lab</code></pre></div>
+<p>Credentials tự làm mới trong suốt thời hạn phiên (tối đa 12 giờ, tùy cấu hình của identity). Sau đó cần chạy <code>aws login</code> lại.</p>
+</li>
+</ol>
+<h3 id="nhánh-c--sandbox-cấp-temporary-credentials"><a class="anchor" href="#nhánh-c--sandbox-cấp-temporary-credentials">Nhánh C — Sandbox cấp temporary credentials</a></h3>
+<p>Làm theo hướng dẫn của sandbox. Cách thường gặp là export vào <strong>phiên shell hiện tại</strong>:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export AWS_ACCESS_KEY_ID=&lt;từ sandbox&gt;
+export AWS_SECRET_ACCESS_KEY=&lt;từ sandbox&gt;
+export AWS_SESSION_TOKEN=&lt;từ sandbox&gt;     # bắt buộc với credentials tạm
+export AWS_REGION=&lt;REGION&gt;</code></pre></div>
+<ul>
+<li><strong>Không</strong> dán các giá trị này vào file trong repo, vào lịch sử lệnh dùng chung hay vào ảnh chụp màn hình.</li>
+<li>Credentials có thời hạn. Khi hết hạn, lấy bộ mới từ sandbox.</li>
+<li>Ở nhánh này, biến môi trường đã quyết định identity, nên bỏ <code>--profile aws-lab</code> khỏi các lệnh bên dưới.</li>
+</ul>
+<p><strong>Xác minh bước 2:</strong></p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws configure list-profiles   # nhánh A/B: có aws-lab
+git status                    # repo không có file .aws, credentials hay token mới</code></pre></div>
+<hr>
+<h2 id="bước-3--kiểm-tra-identity"><a class="anchor" href="#bước-3--kiểm-tra-identity">Bước 3 — Kiểm tra identity</a></h2>
+<p><strong>Mục đích:</strong> biết chính xác <em>account nào</em> và <em>identity nào</em> đang được dùng.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws sts get-caller-identity --profile aws-lab</code></pre></div>
+<p><strong>Output minh họa (đã ẩn):</strong></p>
+<div class="code"><span class="lang">json</span><button type="button">Copy</button><pre><code>{
+    &quot;UserId&quot;: &quot;AROAEXAMPLEID:&lt;user&gt;&quot;,
+    &quot;Account&quot;: &quot;&lt;ACCOUNT_ID&gt;&quot;,
+    &quot;Arn&quot;: &quot;arn:aws:sts::&lt;ACCOUNT_ID&gt;:assumed-role/AWSReservedSSO_&lt;ROLE_NAME&gt;_&lt;suffix&gt;/&lt;user&gt;&quot;
+}</code></pre></div>
+<p><strong>Xác minh:</strong></p>
+<ul>
+<li><code>Account</code> đúng là account lab (so với thông tin được cấp), <strong>không phải</strong> production.</li>
+<li><code>Arn</code> cho biết bạn đang dùng role (<code>assumed-role/...</code>) hay IAM user (<code>user/...</code>). Với nhánh A, tên role thường có tiền tố <code>AWSReservedSSO_</code>.</li>
+<li>Lệnh này thành công chỉ chứng minh <strong>xác thực</strong> thành công, chưa chứng minh bạn có quyền làm gì.</li>
+</ul>
+<hr>
+<h2 id="bước-4--kiểm-tra-cấu-hình-hiệu-lực"><a class="anchor" href="#bước-4--kiểm-tra-cấu-hình-hiệu-lực">Bước 4 — Kiểm tra cấu hình hiệu lực</a></h2>
+<p><strong>Mục đích:</strong> biết Region và credentials đến từ <strong>nguồn nào</strong>, mà không in nội dung file nhạy cảm.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws configure list --profile aws-lab
+aws configure get region --profile aws-lab
+aws configure list-profiles</code></pre></div>
+<p><strong>Output minh họa của <code>configure list</code>:</strong></p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>      Name                    Value             Type    Location
+      ----                    -----             ----    --------
+   profile                  aws-lab           manual    --profile
+access_key     ****************WXYZ              sso
+secret_key     ****************ABCD              sso
+    region           &lt;REGION&gt;          config-file    ~/.aws/config</code></pre></div>
+<p><strong>Xác minh:</strong></p>
+<ul>
+<li><p>Đọc cột <code>Type</code>/<code>Location</code> để biết nguồn. Ví dụ <code>env</code> nghĩa là giá trị đến từ biến môi trường, <code>config-file</code> nghĩa là từ <code>~/.aws/config</code>.</p>
+</li>
+<li><p>Thử ghi đè Region bằng biến môi trường rồi quan sát:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>AWS_REGION=&lt;REGION_2&gt; aws configure list --profile aws-lab   # region giờ có Type = env</code></pre></div>
+</li>
+<li><p><strong>Không</strong> chạy <code>cat ~/.aws/credentials</code>, và không chia sẻ nội dung thư mục <code>~/.aws/sso/cache</code> hay <code>~/.aws/cli/cache</code>.</p>
+</li>
+</ul>
+<hr>
+<h2 id="bước-5--liệt-kê-region"><a class="anchor" href="#bước-5--liệt-kê-region">Bước 5 — Liệt kê Region</a></h2>
+<p><strong>Mục đích:</strong> xem các Region mà account dùng được, và hiểu khái niệm opt-in.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ec2 describe-regions --profile aws-lab --output table \
+  --query 'Regions[].{Region:RegionName,OptIn:OptInStatus}'</code></pre></div>
+<p><strong>Output minh họa (rút gọn):</strong></p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>-------------------------------------------------
+|                DescribeRegions                |
++------------------------+----------------------+
+|          OptIn         |       Region         |
++------------------------+----------------------+
+|  opt-in-not-required   |  ap-southeast-1      |
+|  opt-in-not-required   |  us-east-1           |
+|  opted-in              |  &lt;region-đã-bật&gt;     |
+|  ...                   |  ...                 |
++------------------------+----------------------+</code></pre></div>
+<p>So sánh với danh sách đầy đủ (chỉ <strong>đọc</strong>, không bật Region):</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ec2 describe-regions --all-regions --profile aws-lab \
+  --filters Name=opt-in-status,Values=not-opted-in \
+  --query 'Regions[].RegionName' --output text</code></pre></div>
+<p><strong>Xác minh và giải thích:</strong></p>
+<ul>
+<li>Không có <code>--all-regions</code>, API chỉ trả về các Region <strong>đã enable</strong> cho account. Có <code>--all-regions</code>, API trả thêm các Region bị tắt.</li>
+<li><code>OptInStatus</code> có ba giá trị: <code>opt-in-not-required</code> (bật sẵn), <code>opted-in</code> (đã bật thủ công), <code>not-opted-in</code> (chưa bật).</li>
+<li>Lệnh <code>describe-regions</code> vẫn gửi tới endpoint của một Region (Region của profile), nhưng kết quả là danh sách Region ở cấp account.</li>
+<li>Số lượng Region bạn thấy có thể khác với người khác hoặc khác với tài liệu. Đó là điều bình thường.</li>
+</ul>
+<hr>
+<h2 id="bước-6--liệt-kê-az-trong-region-đã-chọn"><a class="anchor" href="#bước-6--liệt-kê-az-trong-region-đã-chọn">Bước 6 — Liệt kê AZ trong Region đã chọn</a></h2>
+<p><strong>Mục đích:</strong> đọc ZoneName, ZoneId, State, và chỉ lấy Availability Zone thật sự.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ec2 describe-availability-zones --profile aws-lab --region &lt;REGION&gt; \
+  --filters Name=zone-type,Values=availability-zone \
+  --query 'AvailabilityZones[].{Name:ZoneName,Id:ZoneId,State:State}' \
+  --output table</code></pre></div>
+<p><strong>Output minh họa:</strong></p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>--------------------------------------------------
+|            DescribeAvailabilityZones           |
++-------------+---------------------+------------+
+|     Id      |        Name         |   State    |
++-------------+---------------------+------------+
+|  apse1-az1  |  ap-southeast-1a    |  available |
+|  apse1-az2  |  ap-southeast-1b    |  available |
+|  apse1-az3  |  ap-southeast-1c    |  available |
++-------------+---------------------+------------+</code></pre></div>
+<p><em>(Ánh xạ Name ↔ Id ở trên chỉ để minh họa. Account của bạn có thể khác.)</em></p>
+<p><strong>Xác minh:</strong></p>
+<ul>
+<li>Bạn đọc được cả ba cột. Hãy ghi lại cặp <strong>Name ↔ Id</strong> của account mình.</li>
+<li>Filter <code>zone-type=availability-zone</code> loại bỏ Local Zones và Wavelength Zones (nếu account đã opt-in), vì chúng cũng được API này trả về. Thử bỏ filter và so sánh kết quả.</li>
+<li><code>--filters</code> lọc <strong>phía server</strong> (tên filter phân biệt hoa thường). <code>--query</code> chỉ chọn trường để hiển thị, thực hiện <strong>phía client</strong>.</li>
+</ul>
+<hr>
+<h2 id="bước-7--cùng-truy-vấn-với-region-khác"><a class="anchor" href="#bước-7--cùng-truy-vấn-với-region-khác">Bước 7 — Cùng truy vấn với Region khác</a></h2>
+<p><strong>Mục đích:</strong> thấy rằng mỗi Region có tập AZ riêng, và đổi Region cho <strong>một lệnh</strong> mà không sửa cấu hình chung.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ec2 describe-availability-zones --profile aws-lab --region &lt;REGION_2&gt; \
+  --filters Name=zone-type,Values=availability-zone \
+  --query 'AvailabilityZones[].[ZoneName,ZoneId]' --output text</code></pre></div>
+<p>Chọn <code>&lt;REGION_2&gt;</code> trong danh sách ở bước 5 có trạng thái <code>opt-in-not-required</code> hoặc <code>opted-in</code>.</p>
+<p><strong>Xác minh:</strong></p>
+<ul>
+<li>Tên AZ có tiền tố là Region mới, ZoneId có tiền tố khác, số AZ có thể khác.</li>
+<li><code>aws configure get region --profile aws-lab</code> vẫn trả về <code>&lt;REGION&gt;</code>, tức là <code>--region</code> chỉ ảnh hưởng một lệnh.</li>
+<li><strong>Giải thích:</strong> AZ là thành phần của Region, nên mỗi Region có AZ riêng. Hãy liên hệ với việc &quot;không thấy tài nguyên&quot; khi nhìn nhầm Region.</li>
+</ul>
+<hr>
+<h2 id="bước-8--thực-hành-output-và-query"><a class="anchor" href="#bước-8--thực-hành-output-và-query">Bước 8 — Thực hành output và query</a></h2>
+<p><strong>Mục đích:</strong> quen với các dạng output và JMESPath cơ bản.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code># Cùng dữ liệu, ba định dạng
+aws ec2 describe-availability-zones --profile aws-lab --output json  --no-cli-pager
+aws ec2 describe-availability-zones --profile aws-lab --output table --no-cli-pager
+aws ec2 describe-availability-zones --profile aws-lab --output text  --no-cli-pager
+
+# Chỉ lấy danh sách ZoneId
+aws ec2 describe-availability-zones --profile aws-lab \
+  --query 'AvailabilityZones[].ZoneId' --output text
+
+# Lọc phía client bằng JMESPath: chỉ AZ đang available
+aws ec2 describe-availability-zones --profile aws-lab \
+  --query &quot;AvailabilityZones[?State=='available'].ZoneName&quot;
+
+# Đếm số Region đã enable
+aws ec2 describe-regions --profile aws-lab --query 'length(Regions)'</code></pre></div>
+<p><strong>Xác minh:</strong></p>
+<ul>
+<li>Bạn giải thích được khi nào dùng <code>json</code> (script, <code>jq</code>), <code>table</code> (đọc bằng mắt) và <code>text</code> (kết hợp với <code>grep</code>/<code>awk</code>).</li>
+<li>Bạn phân biệt được: <code>--query &quot;AvailabilityZones[?State==&#39;available&#39;]&quot;</code> lọc <strong>sau khi</strong> đã nhận response, còn <code>--filters Name=state,Values=available</code> lọc <strong>trên server</strong>.</li>
+<li>Chú ý cách quote: dùng nháy đơn bên ngoài cho JMESPath có backtick hoặc khoảng trắng; dùng nháy kép bên ngoài khi bên trong có chuỗi <code>&#39;available&#39;</code>.</li>
+</ul>
+<hr>
+<h2 id="bước-9--kết-thúc-phiên-và-ghi-lại-kết-quả"><a class="anchor" href="#bước-9--kết-thúc-phiên-và-ghi-lại-kết-quả">Bước 9 — Kết thúc phiên và ghi lại kết quả</a></h2>
+<p><strong>Mục đích:</strong> đóng phiên đúng cách và ghi bằng chứng đã ẩn thông tin định danh.</p>
+<p>Đăng xuất theo nhánh bạn dùng:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code># Nhánh A
+aws sso logout
+
+# Nhánh B (aws login)
+aws logout --profile aws-lab
+
+# Nhánh C
+unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_REGION</code></pre></div>
+<p>Kiểm tra phiên đã đóng (nhánh A/B):</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws sts get-caller-identity --profile aws-lab   # mong đợi: lỗi token/credentials</code></pre></div>
+<h3 id="mẫu-ghi-chú-kết-quả"><a class="anchor" href="#mẫu-ghi-chú-kết-quả">Mẫu ghi chú kết quả</a></h3>
+<p>Tạo file ghi chú <strong>ngoài repo</strong>, hoặc trong repo nếu đã ẩn hết thông tin định danh:</p>
+<div class="code"><span class="lang">markdown</span><button type="button">Copy</button><pre><code>## Lab 01 — Kết quả (ngày ...)
+
+**Region học tập:** &lt;REGION&gt; — lý do: (độ trễ / dịch vụ / chi phí / không cần opt-in ...)
+
+**Sơ đồ:**
+account &lt;ACCOUNT_ID&gt; → &lt;REGION&gt; → &lt;AZ ID 1&gt;, &lt;AZ ID 2&gt;, &lt;AZ ID 3&gt;
+
+**Kiểm tra identity:** `aws sts get-caller-identity --profile aws-lab`
+→ Arn: arn:aws:sts::&lt;ACCOUNT_ID&gt;:assumed-role/&lt;ROLE_NAME&gt;/&lt;user&gt;
+
+**Bảng AZ:**
+| ZoneName | ZoneId | State |
+|---|---|---|
+| ... | ... | ... |
+
+**Một lỗi đã tự chẩn đoán:**
+- Triệu chứng:
+- Giả thuyết:
+- Lệnh kiểm tra:
+- Nguyên nhân:
+- Cách sửa:
+
+**Tài nguyên dịch vụ đã tạo:** không có (chỉ đọc + profile cục bộ).</code></pre></div>
+<hr>
+<h2 id="checklist-hoàn-thành"><a class="anchor" href="#checklist-hoàn-thành">Checklist hoàn thành</a></h2>
+<ul>
+<li><input type="checkbox"> <code>aws --version</code> hiển thị CLI v2</li>
+<li><input type="checkbox"> Profile <code>aws-lab</code> hoạt động (hoặc nhánh C đã cấu hình qua biến môi trường)</li>
+<li><input type="checkbox"> <code>get-caller-identity</code> trả về đúng account lab và role mong đợi</li>
+<li><input type="checkbox"> Giải thích được nguồn của Region và credentials qua <code>configure list</code></li>
+<li><input type="checkbox"> Liệt kê được Region và giải thích <code>OptInStatus</code></li>
+<li><input type="checkbox"> Có bảng ZoneName/ZoneId/State cho <code>&lt;REGION&gt;</code> và so sánh được với <code>&lt;REGION_2&gt;</code></li>
+<li><input type="checkbox"> Phân biệt được <code>--filters</code> (server) với <code>--query</code> (client)</li>
+<li><input type="checkbox"> Đã logout và ghi chú kết quả đã ẩn thông tin định danh</li>
+<li><input type="checkbox"> Không có credentials, token hay file cấu hình thật trong repo (<code>git status</code> sạch)</li>
+<li><input type="checkbox"> Không tạo tài nguyên dịch vụ và không bật Region nào</li>
+</ul>
+<h2 id="troubleshooting-nhanh"><a class="anchor" href="#troubleshooting-nhanh">Troubleshooting nhanh</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Triệu chứng</th>
+<th>Làm gì</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>aws: command not found</code></td>
+<td><code>which aws</code>, kiểm tra <code>PATH</code>, mở terminal mới, cài lại từ nguồn chính thức</td>
+</tr>
+<tr>
+<td><code>The config profile (aws-lab) could not be found</code></td>
+<td><code>aws configure list-profiles</code>; kiểm tra <code>AWS_PROFILE</code>, <code>AWS_CONFIG_FILE</code>; tên section phải là <code>[profile aws-lab]</code></td>
+</tr>
+<tr>
+<td><code>Unable to locate credentials</code></td>
+<td>Thiếu <code>--profile</code>, hoặc chưa login: <code>aws sso login --profile aws-lab</code></td>
+</tr>
+<tr>
+<td>Token SSO hết hạn</td>
+<td><code>aws sso login --profile aws-lab</code></td>
+</tr>
+<tr>
+<td><code>UnauthorizedOperation</code> / <code>AccessDenied</code></td>
+<td>Ghi lại tên API trong thông báo lỗi và xin đúng quyền đó (xem phần điều kiện đầu vào), không xin admin</td>
+</tr>
+<tr>
+<td><code>You must specify a region</code></td>
+<td>Thêm <code>--region &lt;REGION&gt;</code> hoặc <code>aws configure set region &lt;REGION&gt; --profile aws-lab</code></td>
+</tr>
+<tr>
+<td><code>Could not connect to the endpoint URL</code></td>
+<td>Kiểm tra lỗi chính tả mã Region, Region đã enable chưa, mạng/proxy/VPN</td>
+</tr>
+<tr>
+<td>Sai account/identity</td>
+<td><code>env | grep &#39;^AWS_&#39; | sed &#39;s/=.*/=&lt;đã ẩn&gt;/&#39;</code>, <code>unset</code> biến thừa, chạy lại bước 3–4</td>
+</tr>
+<tr>
+<td>Kẹt trong màn hình <code>less</code></td>
+<td>Nhấn <code>q</code>; thêm <code>--no-cli-pager</code> hoặc <code>export AWS_PAGER=&quot;&quot;</code></td>
+</tr>
+</tbody></table>
+</div>
+<p>Chi tiết chẩn đoán: <a href="../../notes/01-foundations.html#phần-7--troubleshooting-và-tổng-kết-25-phút">lý thuyết phần 7</a>.</p>
+<h2 id="tiếp-theo"><a class="anchor" href="#tiếp-theo">Tiếp theo</a></h2>
+<p>Bước 3 cho thấy bạn đã <strong>xác thực</strong> được. Nhưng nếu bước 6 báo <code>UnauthorizedOperation</code>, nghĩa là bạn chưa được <strong>phân quyền</strong>. Bài IAM tiếp theo sẽ giải thích policy quyết định ai được làm gì.</p>
+
+<footer>Sinh tự động từ <code>labs/01-foundations/README.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

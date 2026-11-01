@@ -1,0 +1,11 @@
+{
+  "name": "aws-engineering-lab",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:html": "node scripts/build-html.mjs"
+  },
+  "devDependencies": {
+    "marked": "^15.0.0"
+  }
+}

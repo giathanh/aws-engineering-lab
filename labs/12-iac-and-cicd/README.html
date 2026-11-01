@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab 12 — IaC và CI/CD: CloudFormation với change set, execution role, rollback có kiểm soát và GitHub Actions OIDC</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="../../notes/01-foundations.html">01. Lý thuyết</a><a href="../01-foundations/README.html">01. Lab</a><a href="../../notes/02-identity-and-access.html">02. Lý thuyết</a><a href="../02-identity-and-access/README.html">02. Lab</a><a href="../../notes/03-cost-management.html">03. Lý thuyết</a><a href="../03-cost-management/README.html">03. Lab</a><a href="../../notes/04-networking.html">04. Lý thuyết</a><a href="../04-networking/README.html">04. Lab</a><a href="../../notes/05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../05-compute-and-load-balancing/README.html">05. Lab</a><a href="../../notes/06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../06-storage-and-content-delivery/README.html">06. Lab</a><a href="../../notes/07-databases-and-cache.html">07. Lý thuyết</a><a href="../07-databases-and-cache/README.html">07. Lab</a><a href="../../notes/08-containers.html">08. Lý thuyết</a><a href="../08-containers/README.html">08. Lab</a><a href="../../notes/09-serverless.html">09. Lý thuyết</a><a href="../09-serverless/README.html">09. Lab</a><a href="../../notes/10-observability-and-application-security.html">10. Lý thuyết</a><a href="../10-observability-and-application-security/README.html">10. Lab</a><a href="../../notes/11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../11-messaging-and-workflows/README.html">11. Lab</a><a href="../../notes/12-iac-and-cicd.html">12. Lý thuyết</a><a href="README.html" class="active">12. Lab</a><a href="../../notes/13-reliability-and-performance.html">13. Lý thuyết</a><a href="../13-reliability-and-performance/README.html">13. Lab</a><a href="../../notes/14-architecture-and-governance.html">14. Lý thuyết</a><a href="../14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></li><li><a href="#quy-ước-placeholder">Quy ước placeholder</a></li><li><a href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></li><li><a href="#sơ-đồ-kiến-trúc-lab-12">Sơ đồ kiến trúc Lab 12</a></li><li><a href="#bước-0--biến-và-thư-mục-làm-việc">Bước 0 — Biến và thư mục làm việc</a></li><li><a href="#bước-1--template-cloudformation">Bước 1 — Template CloudFormation</a></li><li><a href="#bước-2--lint-và-validate">Bước 2 — Lint và validate</a></li><li><a href="#bước-3--execution-role-cho-cloudformation">Bước 3 — Execution role cho CloudFormation</a></li><li><a href="#bước-4--change-set-deploy-và-kiểm-chứng-chức-năng">Bước 4 — Change set, deploy và kiểm chứng chức năng</a></li><li><a href="#bước-5--negative-case-update-lỗi-và-rollback-có-kiểm-soát">Bước 5 — Negative case: update lỗi và rollback có kiểm soát</a></li><li><a href="#bước-6--drift-ai-đó-sửa-tay-ngoài-stack">Bước 6 — Drift: ai đó sửa tay ngoài stack</a></li><li><a href="#bước-7--oidc-cho-github-actions">Bước 7 — OIDC cho GitHub Actions</a></li><li><a href="#bước-8--dọn-dẹp">Bước 8 — Dọn dẹp</a></li><li><a href="#checklist-hoàn-thành">Checklist hoàn thành</a></li><li><a href="#troubleshooting-nhanh">Troubleshooting nhanh</a></li><li><a href="#tiếp-theo">Tiếp theo</a></li></ol></aside>
+<main>
+<h1 id="lab-12--iac-và-cicd-cloudformation-với-change-set-execution-role-rollback-có-kiểm-soát-và-github-actions-oidc"><a class="anchor" href="#lab-12--iac-và-cicd-cloudformation-với-change-set-execution-role-rollback-có-kiểm-soát-và-github-actions-oidc">Lab 12 — IaC và CI/CD: CloudFormation với change set, execution role, rollback có kiểm soát và GitHub Actions OIDC</a></h1>
+<blockquote>
+<p><strong>Lý thuyết:</strong> <a href="../../notes/12-iac-and-cicd.html">notes/12-iac-and-cicd.md</a>. Đọc phần 1–5 trước khi thực hiện lab.
+<strong>Thời lượng:</strong> khoảng 90–120 phút (thêm 30 phút nếu chạy workflow GitHub Actions thật).
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Mọi output là <strong>minh họa</strong>, thông tin định danh dùng placeholder. Lab chưa được chạy thử trên account thật.</p>
+</blockquote>
+<hr>
+<h2 id="lab-này-làm-gì-và-không-làm-gì"><a class="anchor" href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></h2>
+<p>Công cụ chính là <strong>CloudFormation</strong> (viết tay YAML để thấy rõ từng tài nguyên). CDK sinh ra CloudFormation; Terraform là lựa chọn thay thế được so sánh trong lý thuyết. Không triển khai cùng tài nguyên bằng hai công cụ.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>✅ Có</th>
+<th>❌ Không</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Template: SNS topic → SQS queue (fan-out) + DLQ + alarm, tham số hóa theo môi trường</td>
+<td>Access key dài hạn cho CI</td>
+</tr>
+<tr>
+<td>Lint (<code>cfn-lint</code>, tùy chọn) và <code>validate-template</code>; change set, đọc diff trước khi deploy</td>
+<td>Coi &quot;validate/plan pass&quot; là bằng chứng deploy đúng</td>
+</tr>
+<tr>
+<td><strong>CloudFormation execution role</strong> giới hạn quyền tài nguyên; người deploy chỉ cần quyền CloudFormation + <code>PassRole</code></td>
+<td>Deploy bằng quyền admin của người chạy</td>
+</tr>
+<tr>
+<td>Kiểm chứng chức năng sau deploy (publish SNS → message vào SQS)</td>
+<td></td>
+</tr>
+<tr>
+<td>Update lỗi có chủ đích → <code>UPDATE_ROLLBACK_COMPLETE</code>, tài nguyên cũ giữ nguyên; đọc event nguyên nhân đầu tiên</td>
+<td>Sửa tay tài nguyên do stack quản lý</td>
+</tr>
+<tr>
+<td>Drift detection sau khi sửa tay có chủ đích</td>
+<td></td>
+</tr>
+<tr>
+<td>OIDC provider + role cho GitHub Actions, trust giới hạn repo <strong>và</strong> environment</td>
+<td>Trust <code>repo:*</code> hoặc thiếu <code>aud</code></td>
+</tr>
+<tr>
+<td>Workflow GitHub Actions mẫu (nhánh có repo riêng)</td>
+<td>Commit account ID, ARN thật vào repo public</td>
+</tr>
+<tr>
+<td>Cleanup stack, role, provider (nếu lab tạo)</td>
+<td></td>
+</tr>
+</tbody></table>
+</div>
+<hr>
+<h2 id="quy-ước-placeholder"><a class="anchor" href="#quy-ước-placeholder">Quy ước placeholder</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Biến</th>
+<th>Ý nghĩa</th>
+<th>Ví dụ minh họa</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>aws-lab</code></td>
+<td>Named profile CLI đã cấu hình ở Lab 01</td>
+<td><code>aws-lab</code></td>
+</tr>
+<tr>
+<td><code>AWS_REGION</code></td>
+<td>Region học tập</td>
+<td><code>ap-southeast-1</code></td>
+</tr>
+<tr>
+<td><code>ACCOUNT_ID</code></td>
+<td>Account ID (lấy tự động)</td>
+<td><code>111122223333</code></td>
+</tr>
+<tr>
+<td><code>STACK</code></td>
+<td>Tên stack</td>
+<td><code>lab12-dev-orders</code></td>
+</tr>
+<tr>
+<td><code>&lt;GH_OWNER&gt;/&lt;GH_REPO&gt;</code></td>
+<td>Repository GitHub <strong>của bạn</strong> (nhánh tùy chọn)</td>
+<td><code>ban/aws-lab12</code></td>
+</tr>
+</tbody></table>
+</div>
+<p>Tên cố định: <code>lab12-*</code> cho tài nguyên, <code>lab12-cfn-exec</code> (execution role), <code>lab12-github-deployer</code> (role cho GitHub Actions). Stack tự gắn tag <code>Project=aws-lab-12</code> lên mọi tài nguyên hỗ trợ tag.</p>
+<hr>
+<h2 id="điều-kiện-đầu-vào"><a class="anchor" href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></h2>
+<ul>
+<li><input type="checkbox"> Đã hoàn thành <a href="../02-identity-and-access/README.html">Lab 02</a> (IAM role, trust policy) và <a href="../11-messaging-and-workflows/README.html">Lab 11</a> (SNS/SQS).</li>
+<li><input type="checkbox"> Công cụ: AWS CLI v2, <code>jq</code>. Tùy chọn: <code>pip install cfn-lint</code> trong virtualenv; tài khoản GitHub và repo riêng (private khuyến nghị) cho nhánh workflow.</li>
+<li><input type="checkbox"> Quyền cần thiết (không cần <code>AdministratorAccess</code>):<ul>
+<li><strong>IAM:</strong> <code>iam:CreateRole</code>, <code>PutRolePolicy</code>, <code>DeleteRolePolicy</code>, <code>DeleteRole</code>, <code>GetRole</code>, <code>TagRole</code>, <strong><code>iam:PassRole</code> trên <code>lab12-cfn-exec</code></strong>, <code>iam:ListOpenIDConnectProviders</code>, <code>CreateOpenIDConnectProvider</code>, <code>DeleteOpenIDConnectProvider</code>, <code>TagOpenIDConnectProvider</code>.</li>
+<li><strong>CloudFormation:</strong> <code>cloudformation:ValidateTemplate</code>, <code>CreateChangeSet</code>, <code>DescribeChangeSet</code>, <code>ExecuteChangeSet</code>, <code>DeleteChangeSet</code>, <code>DescribeStacks</code>, <code>DescribeStackEvents</code>, <code>DetectStackDrift</code>, <code>DescribeStackDriftDetectionStatus</code>, <code>DescribeStackResourceDrifts</code>, <code>DeleteStack</code> trên <code>stack/lab12-*</code>.</li>
+<li><strong>Dữ liệu kiểm chứng:</strong> <code>sns:Publish</code>, <code>sqs:ReceiveMessage</code>, <code>sqs:GetQueueAttributes</code>, <code>sqs:SetQueueAttributes</code> (cho bước drift), <code>ssm:PutParameter</code>, <code>ssm:DeleteParameter</code>.</li>
+<li>Quyền tạo SNS/SQS/CloudWatch <strong>không</strong> cần ở người chạy: execution role của CloudFormation làm việc đó.</li>
+</ul>
+</li>
+<li><input type="checkbox"> Không sử dụng tài khoản production.</li>
+</ul>
+<h3 id="chi-phí-ước-tính"><a class="anchor" href="#chi-phí-ước-tính">Chi phí ước tính</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tài nguyên</th>
+<th>Quy mô</th>
+<th>Đơn giá minh họa</th>
+<th>Chi phí</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>CloudFormation (resource type AWS::*)</td>
+<td>vài stack operation</td>
+<td>không tính phí</td>
+<td>$0</td>
+</tr>
+<tr>
+<td>SNS, SQS</td>
+<td>&lt; 50 request</td>
+<td>~$0.50/triệu publish, ~$0.40/triệu request</td>
+<td>&lt; $0.001</td>
+</tr>
+<tr>
+<td>CloudWatch alarm</td>
+<td>1</td>
+<td>~$0.10/alarm-tháng, tính theo thời gian tồn tại</td>
+<td>&lt; $0.01</td>
+</tr>
+<tr>
+<td>GitHub Actions (nhánh tùy chọn)</td>
+<td>1–3 run</td>
+<td>theo gói GitHub của bạn</td>
+<td>thường $0 với phút miễn phí</td>
+</tr>
+<tr>
+<td><strong>Tổng</strong></td>
+<td></td>
+<td></td>
+<td><strong>&lt; $0.01</strong></td>
+</tr>
+</tbody></table>
+</div>
+<hr>
+<h2 id="sơ-đồ-kiến-trúc-lab-12"><a class="anchor" href="#sơ-đồ-kiến-trúc-lab-12">Sơ đồ kiến trúc Lab 12</a></h2>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Người học (profile aws-lab)        GitHub Actions (nhánh tùy chọn)
+   │ quyền: CloudFormation +          │ OIDC token (iss=token.actions.githubusercontent.com,
+   │ iam:PassRole lab12-cfn-exec      │  aud=sts.amazonaws.com, sub=repo:&lt;owner&gt;/&lt;repo&gt;:environment:dev)
+   │                                  ▼
+   │                         STS AssumeRoleWithWebIdentity → role lab12-github-deployer
+   │                                  │ quyền: CloudFormation trên stack/lab12-* + PassRole lab12-cfn-exec
+   ▼                                  ▼
+ CloudFormation  ──assume──▶  lab12-cfn-exec (trust cloudformation.amazonaws.com)
+   │                            quyền: SNS/SQS/CloudWatch chỉ trên tên lab12-*
+   ▼
+ Stack lab12-dev-orders
+   SNS lab12-dev-order-events ──subscription──▶ SQS lab12-dev-orders ──redrive──▶ SQS lab12-dev-orders-dlq
+                                                     └─ Alarm lab12-dev-dlq-not-empty (DLQ &gt; 0)</code></pre></div>
+<hr>
+<h2 id="bước-0--biến-và-thư-mục-làm-việc"><a class="anchor" href="#bước-0--biến-và-thư-mục-làm-việc">Bước 0 — Biến và thư mục làm việc</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export AWS_PROFILE=&quot;aws-lab&quot;
+export AWS_REGION=&quot;ap-southeast-1&quot;
+export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+export STACK=&quot;lab12-dev-orders&quot;
+export LAB_DIR=$(mktemp -d) &amp;&amp; cd &quot;${LAB_DIR}&quot;</code></pre></div>
+<hr>
+<h2 id="bước-1--template-cloudformation"><a class="anchor" href="#bước-1--template-cloudformation">Bước 1 — Template CloudFormation</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat &gt; orders.yaml &lt;&lt; 'EOF'
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Lab 12 - fan-out don hang: SNS -&gt; SQS (+DLQ) va alarm'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    AllowedValues: [dev, staging, prod]
+    Default: dev
+  RetentionSeconds:
+    Type: Number
+    Description: Thoi gian giu message (giay). SQS cho phep 60 - 1209600.
+    MinValue: 60
+    MaxValue: 1209600
+    Default: 345600          # 4 ngay
+  AlarmThreshold:
+    Type: Number
+    Default: 0
+
+Resources:
+  OrderEventsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub 'lab12-${EnvironmentName}-order-events'
+
+  OrdersDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub 'lab12-${EnvironmentName}-orders-dlq'
+      MessageRetentionPeriod: 1209600
+
+  OrdersQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub 'lab12-${EnvironmentName}-orders'
+      MessageRetentionPeriod: !Ref RetentionSeconds
+      VisibilityTimeout: 30
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt OrdersDLQ.Arn
+        maxReceiveCount: 3
+
+  OrdersQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref OrdersQueue]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: sns.amazonaws.com }
+            Action: sqs:SendMessage
+            Resource: !GetAtt OrdersQueue.Arn
+            Condition:
+              ArnEquals: { 'aws:SourceArn': !Ref OrderEventsTopic }
+
+  OrdersSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref OrderEventsTopic
+      Protocol: sqs
+      Endpoint: !GetAtt OrdersQueue.Arn
+      RawMessageDelivery: true
+
+  DlqNotEmptyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'lab12-${EnvironmentName}-dlq-not-empty'
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt OrdersDLQ.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: !Ref AlarmThreshold
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+Outputs:
+  TopicArn:
+    Value: !Ref OrderEventsTopic
+  QueueUrl:
+    Value: !Ref OrdersQueue
+EOF</code></pre></div>
+<ul>
+<li><code>!Ref</code> trên <code>AWS::SQS::Queue</code> trả <strong>URL</strong>, <code>!GetAtt ... .Arn</code> trả ARN. Nhầm hai giá trị này là lỗi phổ biến trong queue policy.</li>
+<li>CloudFormation tự suy ra thứ tự tạo từ các tham chiếu (<code>!Ref</code>, <code>!GetAtt</code>): DLQ trước queue chính, topic và queue trước subscription.</li>
+<li><code>RawMessageDelivery: true</code> để message trong SQS là đúng body đã publish, không bọc trong envelope JSON của SNS.</li>
+</ul>
+<hr>
+<h2 id="bước-2--lint-và-validate"><a class="anchor" href="#bước-2--lint-và-validate">Bước 2 — Lint và validate</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code># Tùy chọn, bắt được nhiều lỗi hơn validate-template (giá trị property, tham chiếu sai):
+# python3 -m venv .venv &amp;&amp; . .venv/bin/activate &amp;&amp; pip install -q cfn-lint &amp;&amp; cfn-lint orders.yaml
+aws cloudformation validate-template --template-body file://orders.yaml --query 'Parameters[].ParameterKey'</code></pre></div>
+<p><em>Kỳ vọng:</em> <code>[&quot;EnvironmentName&quot;, &quot;RetentionSeconds&quot;, &quot;AlarmThreshold&quot;]</code>. <code>validate-template</code> chỉ kiểm tra cú pháp/cấu trúc; nó <strong>không</strong> biết <code>MessageRetentionPeriod: 4</code> là sai hay tên queue đã tồn tại. Chỉ deploy thật và kiểm chứng chức năng mới là bằng chứng.</p>
+<hr>
+<h2 id="bước-3--execution-role-cho-cloudformation"><a class="anchor" href="#bước-3--execution-role-cho-cloudformation">Bước 3 — Execution role cho CloudFormation</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat &gt; cfn-trust.json &lt;&lt; EOF
+{&quot;Version&quot;:&quot;2012-10-17&quot;,&quot;Statement&quot;:[{&quot;Effect&quot;:&quot;Allow&quot;,&quot;Principal&quot;:{&quot;Service&quot;:&quot;cloudformation.amazonaws.com&quot;},
+ &quot;Action&quot;:&quot;sts:AssumeRole&quot;,&quot;Condition&quot;:{&quot;StringEquals&quot;:{&quot;aws:SourceAccount&quot;:&quot;${ACCOUNT_ID}&quot;}}}]}
+EOF
+cat &gt; cfn-exec.json &lt;&lt; EOF
+{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    { &quot;Effect&quot;: &quot;Allow&quot;, &quot;Action&quot;: [&quot;sns:*&quot;],
+      &quot;Resource&quot;: &quot;arn:aws:sns:${AWS_REGION}:${ACCOUNT_ID}:lab12-*&quot; },
+    { &quot;Effect&quot;: &quot;Allow&quot;, &quot;Action&quot;: [&quot;sqs:*&quot;],
+      &quot;Resource&quot;: &quot;arn:aws:sqs:${AWS_REGION}:${ACCOUNT_ID}:lab12-*&quot; },
+    { &quot;Effect&quot;: &quot;Allow&quot;, &quot;Action&quot;: [&quot;cloudwatch:PutMetricAlarm&quot;, &quot;cloudwatch:DeleteAlarms&quot;, &quot;cloudwatch:DescribeAlarms&quot;,
+        &quot;cloudwatch:TagResource&quot;, &quot;cloudwatch:UntagResource&quot;, &quot;cloudwatch:ListTagsForResource&quot;],
+      &quot;Resource&quot;: &quot;arn:aws:cloudwatch:${AWS_REGION}:${ACCOUNT_ID}:alarm:lab12-*&quot; },
+    { &quot;Effect&quot;: &quot;Allow&quot;, &quot;Action&quot;: [&quot;ssm:PutParameter&quot;, &quot;ssm:DeleteParameter&quot;, &quot;ssm:GetParameters&quot;, &quot;ssm:AddTagsToResource&quot;],
+      &quot;Resource&quot;: &quot;arn:aws:ssm:${AWS_REGION}:${ACCOUNT_ID}:parameter/lab12/*&quot; }
+  ]
+}
+EOF
+aws iam create-role --role-name lab12-cfn-exec --assume-role-policy-document file://cfn-trust.json \
+  --tags Key=Project,Value=aws-lab-12 &gt;/dev/null
+aws iam put-role-policy --role-name lab12-cfn-exec --policy-name Lab12StackResources --policy-document file://cfn-exec.json
+CFN_EXEC_ARN=&quot;arn:aws:iam::${ACCOUNT_ID}:role/lab12-cfn-exec&quot;
+sleep 10</code></pre></div>
+<p>Khi tạo stack với <code>--role-arn</code>, <strong>CloudFormation dùng role này</strong> cho mọi thao tác tài nguyên. Người (hoặc pipeline) deploy chỉ cần quyền CloudFormation và <code>iam:PassRole</code> trên role này, nên không thể dùng stack để tạo tài nguyên ngoài phạm vi <code>lab12-*</code>. <code>sns:*</code>/<code>sqs:*</code> giới hạn theo tên là đủ cho lab; production nên thu hẹp action.</p>
+<hr>
+<h2 id="bước-4--change-set-deploy-và-kiểm-chứng-chức-năng"><a class="anchor" href="#bước-4--change-set-deploy-và-kiểm-chứng-chức-năng">Bước 4 — Change set, deploy và kiểm chứng chức năng</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>changeset() {  # $1 = tên change set, $2 = CREATE|UPDATE, $3 = file template, các tham số còn lại = parameters
+  local NAME=$1 TYPE=$2 FILE=$3; shift 3
+  aws cloudformation create-change-set --stack-name &quot;${STACK}&quot; --change-set-name &quot;${NAME}&quot; \
+    --change-set-type &quot;${TYPE}&quot; --template-body &quot;file://${FILE}&quot; --role-arn &quot;${CFN_EXEC_ARN}&quot; \
+    --tags Key=Project,Value=aws-lab-12 --parameters &quot;$@&quot; &gt;/dev/null
+  aws cloudformation wait change-set-create-complete --stack-name &quot;${STACK}&quot; --change-set-name &quot;${NAME}&quot;
+  aws cloudformation describe-change-set --stack-name &quot;${STACK}&quot; --change-set-name &quot;${NAME}&quot; \
+    --query 'Changes[].ResourceChange.[Action,LogicalResourceId,ResourceType,Replacement]' --output table
+}
+changeset initial CREATE orders.yaml ParameterKey=EnvironmentName,ParameterValue=dev</code></pre></div>
+<p><em>Kỳ vọng:</em> bảng 6 dòng <code>Add</code> (topic, 2 queue, queue policy, subscription, alarm). <strong>Đọc diff trước khi execute</strong>: đây là bước review thực sự, tương đương <code>terraform plan</code>.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws cloudformation execute-change-set --stack-name &quot;${STACK}&quot; --change-set-name initial
+aws cloudformation wait stack-create-complete --stack-name &quot;${STACK}&quot;
+read -r TOPIC_ARN QUEUE_URL &lt; &lt;(aws cloudformation describe-stacks --stack-name &quot;${STACK}&quot; \
+  --query &quot;Stacks[0].[Outputs[?OutputKey=='TopicArn'].OutputValue | [0], Outputs[?OutputKey=='QueueUrl'].OutputValue | [0]]&quot; --output text)
+
+# Kiểm chứng chức năng: stack &quot;CREATE_COMPLETE&quot; chưa chứng minh SNS → SQS chạy được
+aws sns publish --topic-arn &quot;${TOPIC_ARN}&quot; --message '{&quot;order_id&quot;:&quot;ORD-1201&quot;,&quot;amount&quot;:150000}' &gt;/dev/null
+aws sqs receive-message --queue-url &quot;${QUEUE_URL}&quot; --wait-time-seconds 10 --query 'Messages[0].Body' --output text</code></pre></div>
+<p><em>Kỳ vọng:</em> in <code>{&quot;order_id&quot;:&quot;ORD-1201&quot;,&quot;amount&quot;:150000}</code>. Nếu rỗng: queue policy sai <code>aws:SourceArn</code> hoặc subscription chưa tạo, dù stack báo thành công.</p>
+<hr>
+<h2 id="bước-5--negative-case-update-lỗi-và-rollback-có-kiểm-soát"><a class="anchor" href="#bước-5--negative-case-update-lỗi-và-rollback-có-kiểm-soát">Bước 5 — Negative case: update lỗi và rollback có kiểm soát</a></h2>
+<p>Tạo xung đột thật mà validate không bắt được: một parameter SSM <strong>ngoài stack</strong> đã chiếm tên mà bản update muốn tạo. Cùng bản update đổi ngưỡng alarm (một thay đổi hợp lệ) để thấy nó cũng bị hoàn tác.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ssm put-parameter --name /lab12/dev/feature-flag --type String --value &quot;tao-tay&quot; &gt;/dev/null
+
+cat &gt; ff.yaml &lt;&lt; 'EOF'
+  FeatureFlag:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub '/lab12/${EnvironmentName}/feature-flag'
+      Type: String
+      Value: 'on'
+
+EOF
+# Chèn khối FeatureFlag vào cuối phần Resources (ngay trước dòng &quot;Outputs:&quot;)
+awk 'FNR==NR { ff = ff $0 &quot;\n&quot;; next } /^Outputs:/ { printf &quot;%s&quot;, ff } { print }' ff.yaml orders.yaml &gt; orders-v2.yaml
+aws cloudformation validate-template --template-body file://orders-v2.yaml &gt;/dev/null &amp;&amp; echo &quot;validate: OK&quot;
+
+changeset add-flag UPDATE orders-v2.yaml ParameterKey=EnvironmentName,UsePreviousValue=true ParameterKey=AlarmThreshold,ParameterValue=5
+aws cloudformation execute-change-set --stack-name &quot;${STACK}&quot; --change-set-name add-flag
+aws cloudformation wait stack-update-complete --stack-name &quot;${STACK}&quot; 2&gt;/dev/null || true
+aws cloudformation describe-stacks --stack-name &quot;${STACK}&quot; --query 'Stacks[0].StackStatus' --output text</code></pre></div>
+<p><em>Kỳ vọng:</em> <code>validate: OK</code>, change set có <code>Add FeatureFlag</code> và <code>Modify DlqNotEmptyAlarm</code>; sau khi execute, trạng thái cuối là <code>UPDATE_ROLLBACK_COMPLETE</code>.</p>
+<p>Tìm <strong>event lỗi đầu tiên</strong> (event mới nhất nằm đầu danh sách, nên đảo ngược):</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws cloudformation describe-stack-events --stack-name &quot;${STACK}&quot; --output json |
+  jq -r '.StackEvents | reverse | map(select(.ResourceStatus | test(&quot;FAILED&quot;))) | .[0]
+         | &quot;\(.Timestamp)  \(.LogicalResourceId)  \(.ResourceStatus)\n  \(.ResourceStatusReason)&quot;'
+aws cloudwatch describe-alarms --alarm-names lab12-dev-dlq-not-empty --query 'MetricAlarms[0].Threshold'
+aws sns publish --topic-arn &quot;${TOPIC_ARN}&quot; --message '{&quot;order_id&quot;:&quot;ORD-1202&quot;}' &gt;/dev/null
+aws sqs receive-message --queue-url &quot;${QUEUE_URL}&quot; --wait-time-seconds 10 --query 'Messages[0].Body' --output text</code></pre></div>
+<p><em>Kỳ vọng (minh họa):</em> event đầu tiên là <code>FeatureFlag  CREATE_FAILED</code> với lý do dạng <code>/lab12/dev/feature-flag already exists</code>; các event <code>UPDATE_FAILED</code>/<code>ROLLBACK</code> sau đó chỉ là <strong>hậu quả</strong>. Ngưỡng alarm vẫn là <code>0.0</code> (thay đổi hợp lệ cũng bị hoàn tác) và SNS → SQS vẫn chạy.</p>
+<p>Rollback của CloudFormation chỉ đưa <strong>tài nguyên hạ tầng</strong> về cấu hình cũ. Nếu bản deploy đã chạy migration xóa cột, đổi dữ liệu, gửi message ra ngoài... thì rollback stack <strong>không</strong> đảo ngược những việc đó (xem lý thuyết Phần 5).</p>
+<hr>
+<h2 id="bước-6--drift-ai-đó-sửa-tay-ngoài-stack"><a class="anchor" href="#bước-6--drift-ai-đó-sửa-tay-ngoài-stack">Bước 6 — Drift: ai đó sửa tay ngoài stack</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws sqs set-queue-attributes --queue-url &quot;${QUEUE_URL}&quot; --attributes VisibilityTimeout=300
+DID=$(aws cloudformation detect-stack-drift --stack-name &quot;${STACK}&quot; --query StackDriftDetectionId --output text)
+until [ &quot;$(aws cloudformation describe-stack-drift-detection-status --stack-drift-detection-id &quot;${DID}&quot; \
+  --query DetectionStatus --output text)&quot; != DETECTION_IN_PROGRESS ]; do sleep 3; done
+aws cloudformation describe-stack-resource-drifts --stack-name &quot;${STACK}&quot; \
+  --stack-resource-drift-status-filters MODIFIED \
+  --query 'StackResourceDrifts[].[LogicalResourceId, PropertyDifferences[0].PropertyPath, PropertyDifferences[0].ExpectedValue, PropertyDifferences[0].ActualValue]' --output text</code></pre></div>
+<p><em>Kỳ vọng:</em> <code>OrdersQueue  /VisibilityTimeout  30  300</code>. Drift detection chỉ <strong>báo</strong>, không sửa. Cách sửa đúng là đưa giá trị mong muốn vào template rồi deploy (hoặc đặt lại bằng tay cho khớp template), không phải để drift tồn tại. Đặt lại để không ảnh hưởng bước sau:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws sqs set-queue-attributes --queue-url &quot;${QUEUE_URL}&quot; --attributes VisibilityTimeout=30</code></pre></div>
+<hr>
+<h2 id="bước-7--oidc-cho-github-actions"><a class="anchor" href="#bước-7--oidc-cho-github-actions">Bước 7 — OIDC cho GitHub Actions</a></h2>
+<h3 id="1-oidc-provider-dùng-chung-cả-account"><a class="anchor" href="#1-oidc-provider-dùng-chung-cả-account">1. OIDC provider (dùng chung cả account)</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>PROVIDER_ARN=$(aws iam list-open-id-connect-providers \
+  --query &quot;OpenIDConnectProviderList[?ends_with(Arn,'/token.actions.githubusercontent.com')].Arn | [0]&quot; --output text)
+if [ &quot;${PROVIDER_ARN}&quot; = &quot;None&quot; ]; then
+  # Không cần thumbprint: IAM xác minh certificate của GitHub bằng thư viện CA tin cậy
+  PROVIDER_ARN=$(aws iam create-open-id-connect-provider --url https://token.actions.githubusercontent.com \
+    --client-id-list sts.amazonaws.com --tags Key=Project,Value=aws-lab-12 \
+    --query OpenIDConnectProviderArn --output text)
+  echo &quot;lab tạo provider&quot; &gt; provider-created-by-lab
+fi
+echo &quot;PROVIDER_ARN=${PROVIDER_ARN}&quot;</code></pre></div>
+<p>Provider là tài nguyên <strong>dùng chung cả account</strong>: nếu đã có sẵn (do người khác tạo), lab dùng lại và <strong>không</strong> xóa ở cleanup. Nếu CLI cũ báo thiếu <code>--thumbprint-list</code>, cập nhật AWS CLI thay vì tự tính thumbprint.</p>
+<h3 id="2-role-cho-workflow-trust-giới-hạn-repo--environment-quyền-giới-hạn-stack"><a class="anchor" href="#2-role-cho-workflow-trust-giới-hạn-repo--environment-quyền-giới-hạn-stack">2. Role cho workflow: trust giới hạn repo + environment, quyền giới hạn stack</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>GH_OWNER=&quot;&lt;GH_OWNER&gt;&quot;; GH_REPO=&quot;&lt;GH_REPO&gt;&quot;   # repo của bạn; giữ nguyên placeholder nếu không làm nhánh GitHub
+cat &gt; gh-trust.json &lt;&lt; EOF
+{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Principal&quot;: { &quot;Federated&quot;: &quot;${PROVIDER_ARN}&quot; },
+    &quot;Action&quot;: &quot;sts:AssumeRoleWithWebIdentity&quot;,
+    &quot;Condition&quot;: {
+      &quot;StringEquals&quot;: {
+        &quot;token.actions.githubusercontent.com:aud&quot;: &quot;sts.amazonaws.com&quot;,
+        &quot;token.actions.githubusercontent.com:sub&quot;: &quot;repo:${GH_OWNER}/${GH_REPO}:environment:dev&quot;
+      }
+    }
+  }]
+}
+EOF
+cat &gt; gh-deployer.json &lt;&lt; EOF
+{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    { &quot;Effect&quot;: &quot;Allow&quot;, &quot;Action&quot;: [&quot;cloudformation:CreateChangeSet&quot;, &quot;cloudformation:DescribeChangeSet&quot;,
+        &quot;cloudformation:ExecuteChangeSet&quot;, &quot;cloudformation:DeleteChangeSet&quot;, &quot;cloudformation:DescribeStacks&quot;,
+        &quot;cloudformation:DescribeStackEvents&quot;, &quot;cloudformation:GetTemplateSummary&quot;],
+      &quot;Resource&quot;: &quot;arn:aws:cloudformation:${AWS_REGION}:${ACCOUNT_ID}:stack/lab12-*/*&quot; },
+    { &quot;Effect&quot;: &quot;Allow&quot;, &quot;Action&quot;: &quot;cloudformation:ValidateTemplate&quot;, &quot;Resource&quot;: &quot;*&quot; },
+    { &quot;Effect&quot;: &quot;Allow&quot;, &quot;Action&quot;: &quot;iam:PassRole&quot;, &quot;Resource&quot;: &quot;${CFN_EXEC_ARN}&quot;,
+      &quot;Condition&quot;: { &quot;StringEquals&quot;: { &quot;iam:PassedToService&quot;: &quot;cloudformation.amazonaws.com&quot; } } }
+  ]
+}
+EOF
+aws iam create-role --role-name lab12-github-deployer --assume-role-policy-document file://gh-trust.json \
+  --max-session-duration 3600 --tags Key=Project,Value=aws-lab-12 &gt;/dev/null
+aws iam put-role-policy --role-name lab12-github-deployer --policy-name DeployLab12Stacks --policy-document file://gh-deployer.json
+echo &quot;GH_ROLE_ARN=arn:aws:iam::${ACCOUNT_ID}:role/lab12-github-deployer&quot;</code></pre></div>
+<ul>
+<li><code>sub</code> dạng <code>repo:&lt;owner&gt;/&lt;repo&gt;:environment:dev</code> chỉ khớp job khai báo <code>environment: dev</code>. Kết hợp với <strong>environment protection rule</strong> trên GitHub (chỉ branch <code>main</code>, cần reviewer), bạn giới hạn được cả nhánh lẫn người duyệt. Nếu không dùng environment, <code>sub</code> là <code>repo:&lt;owner&gt;/&lt;repo&gt;:ref:refs/heads/main</code>.</li>
+<li>Dùng <code>StringEquals</code> với giá trị cụ thể. <code>StringLike</code> với <code>repo:&lt;owner&gt;/*</code> cho <strong>mọi</strong> repo của owner assume role.</li>
+<li>Role này <strong>không</strong> có quyền SNS/SQS: nó chỉ ra lệnh cho CloudFormation, còn CloudFormation dùng <code>lab12-cfn-exec</code>. Pipeline bị chiếm cũng không thể tạo EC2 hay đọc S3.</li>
+</ul>
+<h3 id="3-negative-case-không-cần-github-token-không-do-github-ký"><a class="anchor" href="#3-negative-case-không-cần-github-token-không-do-github-ký">3. Negative case không cần GitHub: token không do GitHub ký</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws sts assume-role-with-web-identity --role-arn &quot;arn:aws:iam::${ACCOUNT_ID}:role/lab12-github-deployer&quot; \
+  --role-session-name forged --web-identity-token &quot;eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL2V2aWwuZXhhbXBsZSJ9.c2ln&quot; 2&gt;&amp;1 | tail -1</code></pre></div>
+<p><em>Kỳ vọng:</em> lỗi <code>InvalidIdentityToken</code> (thông điệp cụ thể tùy lý do, ví dụ issuer không khớp provider nào hoặc chữ ký không hợp lệ). Biết ARN của role là chưa đủ: STS kiểm tra chữ ký của issuer, rồi mới tới <code>aud</code>/<code>sub</code> trong trust policy.</p>
+<h3 id="4-nhánh-tùy-chọn-workflow-github-actions-thật"><a class="anchor" href="#4-nhánh-tùy-chọn-workflow-github-actions-thật">4. (Nhánh tùy chọn) Workflow GitHub Actions thật</a></h3>
+<p>Chỉ làm với repo <strong>của bạn</strong>. Tạo environment <code>dev</code> trong <em>Settings → Environments</em> (tùy chọn: deployment branch <code>main</code>, required reviewer). Lưu <code>GH_ROLE_ARN</code> và <code>CFN_EXEC_ARN</code> vào <strong>environment variables</strong> của <code>dev</code> (<code>AWS_ROLE_ARN</code>, <code>CFN_EXEC_ROLE_ARN</code>), không hardcode trong file. Copy <code>orders.yaml</code> vào <code>infra/orders.yaml</code> của repo.</p>
+<div class="code"><span class="lang">yaml</span><button type="button">Copy</button><pre><code># .github/workflows/deploy-dev.yml
+name: deploy-dev
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write          # bắt buộc để xin OIDC token
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: dev       # quyết định claim sub = repo:&lt;owner&gt;/&lt;repo&gt;:environment:dev
+    steps:
+      # Pin action theo commit SHA đầy đủ của bản release bạn đã review (lấy ở trang Releases)
+      - uses: actions/checkout@&lt;COMMIT_SHA&gt;                       # vX.Y.Z
+      - uses: aws-actions/configure-aws-credentials@&lt;COMMIT_SHA&gt;  # vX.Y.Z
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ap-southeast-1
+      - name: Validate
+        run: aws cloudformation validate-template --template-body file://infra/orders.yaml
+      - name: Change set
+        run: |
+          aws cloudformation create-change-set --stack-name lab12-dev-orders \
+            --change-set-name &quot;gh-${GITHUB_RUN_ID}&quot; --change-set-type UPDATE \
+            --template-body file://infra/orders.yaml --role-arn &quot;${{ vars.CFN_EXEC_ROLE_ARN }}&quot; \
+            --parameters ParameterKey=EnvironmentName,UsePreviousValue=true
+          aws cloudformation wait change-set-create-complete --stack-name lab12-dev-orders --change-set-name &quot;gh-${GITHUB_RUN_ID}&quot;
+          aws cloudformation describe-change-set --stack-name lab12-dev-orders --change-set-name &quot;gh-${GITHUB_RUN_ID}&quot; \
+            --query 'Changes[].ResourceChange.[Action,LogicalResourceId]' --output table</code></pre></div>
+<p><em>Kỳ vọng:</em> bước <code>configure-aws-credentials</code> thành công; bước cuối in change set (rỗng nếu template không đổi; khi đó <code>wait</code> báo change set <code>FAILED</code> với lý do &quot;didn&#39;t contain changes&quot;, là bình thường). Workflow mẫu dừng ở change set để review; thêm bước <code>execute-change-set</code> sau khi đã quen.</p>
+<p>Negative case thật: tạm đổi <code>environment: dev</code> thành <code>environment: staging</code> (hoặc bỏ dòng <code>environment</code>), chạy lại.
+<em>Kỳ vọng:</em> <code>Could not assume role with OIDC: Not authorized to perform sts:AssumeRoleWithWebIdentity</code>, vì <code>sub</code> không còn khớp trust policy.</p>
+<hr>
+<h2 id="bước-8--dọn-dẹp"><a class="anchor" href="#bước-8--dọn-dẹp">Bước 8 — Dọn dẹp</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code># 1. Stack (CloudFormation dùng execution role để xóa, nên xóa stack TRƯỚC role)
+aws cloudformation delete-stack --stack-name &quot;${STACK}&quot; --role-arn &quot;${CFN_EXEC_ARN}&quot;
+aws cloudformation wait stack-delete-complete --stack-name &quot;${STACK}&quot;
+
+# 2. Parameter tạo tay ở Bước 5 (không thuộc stack)
+aws ssm delete-parameter --name /lab12/dev/feature-flag
+
+# 3. Role
+aws iam delete-role-policy --role-name lab12-github-deployer --policy-name DeployLab12Stacks
+aws iam delete-role --role-name lab12-github-deployer
+aws iam delete-role-policy --role-name lab12-cfn-exec --policy-name Lab12StackResources
+aws iam delete-role --role-name lab12-cfn-exec
+
+# 4. OIDC provider: CHỈ xóa nếu lab tạo ra
+[ -f provider-created-by-lab ] &amp;&amp; aws iam delete-open-id-connect-provider --open-id-connect-provider-arn &quot;${PROVIDER_ARN}&quot;
+
+# 5. File tạm (và workflow/environment trên GitHub nếu đã làm nhánh tùy chọn)
+cd ~ &amp;&amp; rm -rf &quot;${LAB_DIR}&quot;</code></pre></div>
+<p>Nếu xóa role <code>lab12-cfn-exec</code> trước stack, <code>delete-stack</code> sẽ fail vì CloudFormation không assume được role đã gắn với stack; khi đó tạo lại role cùng tên/quyền rồi xóa stack.</p>
+<h3 id="kiểm-tra-inventory-sau-cleanup"><a class="anchor" href="#kiểm-tra-inventory-sau-cleanup">Kiểm tra inventory sau cleanup</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>echo &quot;== Stack&quot;;     aws cloudformation describe-stacks --stack-name lab12-dev-orders 2&gt;&amp;1 | grep -o 'does not exist'
+echo &quot;== SQS/SNS&quot;;   aws sqs list-queues --queue-name-prefix lab12 --query QueueUrls --output text; aws sns list-topics --query &quot;Topics[?contains(TopicArn,':lab12-')].TopicArn&quot; --output text
+echo &quot;== Alarm&quot;;     aws cloudwatch describe-alarms --alarm-name-prefix lab12 --query 'MetricAlarms[].AlarmName' --output text
+echo &quot;== Parameter&quot;; aws ssm get-parameters-by-path --path /lab12 --recursive --query 'Parameters[].Name' --output text
+echo &quot;== IAM&quot;;       aws iam list-roles --query &quot;Roles[?starts_with(RoleName,'lab12-')].RoleName&quot; --output text
+echo &quot;== OIDC&quot;;      aws iam list-open-id-connect-providers --query 'OpenIDConnectProviderList[].Arn' --output text</code></pre></div>
+<p><em>Kỳ vọng:</em> stack in <code>does not exist</code>; các mục còn lại rỗng, trừ OIDC provider nếu nó có từ trước lab (retained có chủ đích, không tính phí).</p>
+<h3 id="nếu-lab-dừng-giữa-chừng-hoặc-mất-shell"><a class="anchor" href="#nếu-lab-dừng-giữa-chừng-hoặc-mất-shell">Nếu lab dừng giữa chừng hoặc mất shell</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export AWS_PROFILE=&quot;aws-lab&quot; AWS_REGION=&quot;ap-southeast-1&quot; STACK=&quot;lab12-dev-orders&quot;
+export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+export LAB_DIR=$(mktemp -d) &amp;&amp; cd &quot;${LAB_DIR}&quot;
+CFN_EXEC_ARN=&quot;arn:aws:iam::${ACCOUNT_ID}:role/lab12-cfn-exec&quot;
+PROVIDER_ARN=$(aws iam list-open-id-connect-providers \
+  --query &quot;OpenIDConnectProviderList[?ends_with(Arn,'/token.actions.githubusercontent.com')].Arn | [0]&quot; --output text)
+aws iam list-open-id-connect-provider-tags --open-id-connect-provider-arn &quot;${PROVIDER_ARN}&quot; \
+  --query &quot;Tags[?Value=='aws-lab-12']&quot; --output text | grep -q aws-lab-12 &amp;&amp; touch provider-created-by-lab</code></pre></div>
+<p>Sau đó chạy lại Bước 8. Provider chỉ bị xóa nếu mang tag <code>Project=aws-lab-12</code> (do lab tạo). Lệnh báo <code>does not exist</code>, <code>NoSuchEntity</code>, <code>ParameterNotFound</code> nghĩa là đã xóa.</p>
+<hr>
+<h2 id="checklist-hoàn-thành"><a class="anchor" href="#checklist-hoàn-thành">Checklist hoàn thành</a></h2>
+<ul>
+<li><input type="checkbox"> Template có tham số, DLQ, alarm; giải thích được <code>!Ref</code> và <code>!GetAtt</code> của SQS khác nhau thế nào.</li>
+<li><input type="checkbox"> Đọc change set trước khi execute; publish SNS và nhận được message ở SQS sau deploy.</li>
+<li><input type="checkbox"> Stack được deploy qua execution role; người deploy/pipeline không có quyền SNS/SQS trực tiếp.</li>
+<li><input type="checkbox"> Update lỗi → <code>UPDATE_ROLLBACK_COMPLETE</code>; tìm được event lỗi <strong>đầu tiên</strong>; thay đổi hợp lệ trong cùng update cũng bị hoàn tác; hệ thống vẫn chạy.</li>
+<li><input type="checkbox"> Drift detection chỉ ra <code>VisibilityTimeout</code> bị sửa tay.</li>
+<li><input type="checkbox"> Trust policy OIDC có cả <code>aud</code> và <code>sub</code> cụ thể; token giả bị <code>InvalidIdentityToken</code>.</li>
+<li><input type="checkbox"> (Tùy chọn) Workflow assume role thành công với <code>environment: dev</code>, thất bại khi đổi environment.</li>
+<li><input type="checkbox"> Cleanup xong; chỉ OIDC provider có từ trước (nếu có) được giữ lại.</li>
+</ul>
+<hr>
+<h2 id="troubleshooting-nhanh"><a class="anchor" href="#troubleshooting-nhanh">Troubleshooting nhanh</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Triệu chứng</th>
+<th>Nguyên nhân khả dĩ</th>
+<th>Bằng chứng / Khắc phục</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Not authorized to perform sts:AssumeRoleWithWebIdentity</code></td>
+<td><code>sub</code> không khớp (sai owner/repo, thiếu <code>environment</code>, chạy từ branch/PR khác), sai <code>aud</code>, thiếu <code>id-token: write</code></td>
+<td>So <code>sub</code> trong trust policy với claim thật; GitHub hiển thị claim trong log bước configure-aws-credentials khi bật debug</td>
+</tr>
+<tr>
+<td><code>No OpenIDConnect provider found</code></td>
+<td>Provider chưa tạo hoặc sai URL/issuer</td>
+<td><code>aws iam list-open-id-connect-providers</code>; URL phải là <code>https://token.actions.githubusercontent.com</code></td>
+</tr>
+<tr>
+<td>Change set <code>FAILED</code> với &quot;didn&#39;t contain changes&quot;</td>
+<td>Template và tham số không đổi</td>
+<td>Không phải lỗi; xóa change set đó</td>
+</tr>
+<tr>
+<td>Stack <code>ROLLBACK_COMPLETE</code> sau lần tạo đầu</td>
+<td>Lần <strong>tạo</strong> thất bại; stack này không update được</td>
+<td>Đọc event lỗi đầu tiên, <code>delete-stack</code>, sửa template rồi tạo lại</td>
+</tr>
+<tr>
+<td><code>UPDATE_ROLLBACK_FAILED</code></td>
+<td>Rollback cũng lỗi (tài nguyên bị sửa/xóa tay)</td>
+<td>Sửa nguyên nhân rồi <code>continue-update-rollback</code> (có thể <code>--resources-to-skip</code>); không xóa tay thêm</td>
+</tr>
+<tr>
+<td><code>CREATE_FAILED ... not authorized</code> khi deploy</td>
+<td>Execution role thiếu quyền cho resource type đó</td>
+<td>Đọc action bị từ chối trong <code>ResourceStatusReason</code>; thêm đúng action vào <code>lab12-cfn-exec</code></td>
+</tr>
+<tr>
+<td><code>iam:PassRole</code> bị từ chối</td>
+<td>Người deploy/pipeline thiếu PassRole trên execution role</td>
+<td>Thêm <code>iam:PassRole</code> giới hạn <code>Resource</code> và <code>iam:PassedToService</code></td>
+</tr>
+<tr>
+<td><code>delete-stack</code> treo/<code>DELETE_FAILED</code></td>
+<td>Tài nguyên còn phụ thuộc bên ngoài, <code>DeletionPolicy: Retain</code>, hoặc role đã bị xóa</td>
+<td>Xem event <code>DELETE_FAILED</code>; kiểm tra retain policy; tạo lại execution role nếu cần</td>
+</tr>
+</tbody></table>
+</div>
+<hr>
+<h2 id="tiếp-theo"><a class="anchor" href="#tiếp-theo">Tiếp theo</a></h2>
+<p>Bạn đã deploy hạ tầng có review, có quyền tách bạch và có rollback được chứng minh, và cho CI dùng credentials tạm thời. Bài tiếp theo: <strong><a href="../../notes/13-reliability-and-performance.html">Bài 13 — Độ tin cậy và hiệu năng: SLO, load test, backup, DR</a></strong>.</p>
+
+<footer>Sinh tự động từ <code>labs/12-iac-and-cicd/README.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

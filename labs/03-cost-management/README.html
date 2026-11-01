@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab 03 — Quản lý chi phí: Thiết lập AWS Budgets và Rà soát tài nguyên ngầm</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="../../notes/01-foundations.html">01. Lý thuyết</a><a href="../01-foundations/README.html">01. Lab</a><a href="../../notes/02-identity-and-access.html">02. Lý thuyết</a><a href="../02-identity-and-access/README.html">02. Lab</a><a href="../../notes/03-cost-management.html">03. Lý thuyết</a><a href="README.html" class="active">03. Lab</a><a href="../../notes/04-networking.html">04. Lý thuyết</a><a href="../04-networking/README.html">04. Lab</a><a href="../../notes/05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../05-compute-and-load-balancing/README.html">05. Lab</a><a href="../../notes/06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../06-storage-and-content-delivery/README.html">06. Lab</a><a href="../../notes/07-databases-and-cache.html">07. Lý thuyết</a><a href="../07-databases-and-cache/README.html">07. Lab</a><a href="../../notes/08-containers.html">08. Lý thuyết</a><a href="../08-containers/README.html">08. Lab</a><a href="../../notes/09-serverless.html">09. Lý thuyết</a><a href="../09-serverless/README.html">09. Lab</a><a href="../../notes/10-observability-and-application-security.html">10. Lý thuyết</a><a href="../10-observability-and-application-security/README.html">10. Lab</a><a href="../../notes/11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../11-messaging-and-workflows/README.html">11. Lab</a><a href="../../notes/12-iac-and-cicd.html">12. Lý thuyết</a><a href="../12-iac-and-cicd/README.html">12. Lab</a><a href="../../notes/13-reliability-and-performance.html">13. Lý thuyết</a><a href="../13-reliability-and-performance/README.html">13. Lab</a><a href="../../notes/14-architecture-and-governance.html">14. Lý thuyết</a><a href="../14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></li><li><a href="#quy-ước-placeholder">Quy ước placeholder</a></li><li><a href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></li><li><a href="#bước-1--lập-bảng-dự-toán-kiến-trúc-order-api">Bước 1 — Lập bảng dự toán kiến trúc Order API</a></li><li><a href="#bước-2--khám-phá-dữ-liệu-chi-phí-với-cost-explorer">Bước 2 — Khám phá dữ liệu chi phí với Cost Explorer</a></li><li><a href="#bước-3--tạo-định-nghĩa-budget-json">Bước 3 — Tạo định nghĩa Budget (JSON)</a></li><li><a href="#bước-4--tạo-budget-bằng-cli">Bước 4 — Tạo Budget bằng CLI</a></li><li><a href="#bước-5--xác-minh-budget-và-negative-test">Bước 5 — Xác minh Budget và negative test</a></li><li><a href="#bước-6--rà-soát-tài-nguyên-ngầm-cost-auditing">Bước 6 — Rà soát tài nguyên ngầm (Cost Auditing)</a></li><li><a href="#bước-7-tùy-chọn--so-sánh-ước-tính-với-thực-tế">Bước 7 (tùy chọn) — So sánh ước tính với thực tế</a></li><li><a href="#bước-8--dọn-dẹp-cleanup">Bước 8 — Dọn dẹp (Cleanup)</a></li><li><a href="#checklist-hoàn-thành">Checklist hoàn thành</a></li><li><a href="#troubleshooting-nhanh">Troubleshooting nhanh</a></li><li><a href="#tiếp-theo">Tiếp theo</a></li></ol></aside>
+<main>
+<h1 id="lab-03--quản-lý-chi-phí-thiết-lập-aws-budgets-và-rà-soát-tài-nguyên-ngầm"><a class="anchor" href="#lab-03--quản-lý-chi-phí-thiết-lập-aws-budgets-và-rà-soát-tài-nguyên-ngầm">Lab 03 — Quản lý chi phí: Thiết lập AWS Budgets và Rà soát tài nguyên ngầm</a></h1>
+<blockquote>
+<p><strong>Lý thuyết:</strong> <a href="../../notes/03-cost-management.html">notes/03-cost-management.md</a>. Đọc phần 1–5 trước khi thực hiện lab.
+<strong>Thời lượng:</strong> khoảng 45–60 phút.
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Mọi output là <strong>minh họa</strong>, thông tin cá nhân dùng placeholder. Lab chưa được chạy thử trên account thật.</p>
+</blockquote>
+<hr>
+<h2 id="lab-này-làm-gì-và-không-làm-gì"><a class="anchor" href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>✅ Có</th>
+<th>❌ Không</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Lập bảng dự toán chi phí trước khi triển khai hệ thống</td>
+<td>Hứa hẹn Free Tier hoặc một mức giá cố định</td>
+</tr>
+<tr>
+<td>Truy vấn chi phí bằng Cost Explorer API (hoặc dùng dữ liệu minh họa)</td>
+<td>Bật Budgets Actions (stop instance, gắn policy/SCP)</td>
+</tr>
+<tr>
+<td>Tạo Cost Budget $10/tháng với ngưỡng Actual và Forecasted</td>
+<td>Gửi email thông báo tới người khác ngoài chính bạn</td>
+</tr>
+<tr>
+<td>Negative test: tạo budget trùng tên</td>
+<td>Xóa tài nguyên không rõ chủ sở hữu khi rà soát</td>
+</tr>
+<tr>
+<td>Rà soát tài nguyên nhàn rỗi (EBS không gắn, EIP không gắn, public IPv4)</td>
+<td>Chờ 24h để xem billing thật như điều kiện bắt buộc</td>
+</tr>
+<tr>
+<td>Dọn dẹp budget vừa tạo sau khi kiểm chứng</td>
+<td></td>
+</tr>
+</tbody></table>
+</div>
+<hr>
+<h2 id="quy-ước-placeholder"><a class="anchor" href="#quy-ước-placeholder">Quy ước placeholder</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Placeholder / biến</th>
+<th>Ý nghĩa</th>
+<th>Ví dụ minh họa</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>aws-lab</code></td>
+<td>Tên named profile CLI đã cấu hình ở Lab 01</td>
+<td><code>aws-lab</code></td>
+</tr>
+<tr>
+<td><code>ACCOUNT_ID</code></td>
+<td>12 số account ID (lấy tự động)</td>
+<td><code>111122223333</code></td>
+</tr>
+<tr>
+<td><code>MY_EMAIL</code></td>
+<td>Email <strong>của chính bạn</strong> để nhận thông báo budget</td>
+<td><code>developer@example.com</code></td>
+</tr>
+<tr>
+<td><code>REGION</code></td>
+<td>Region học tập của bạn</td>
+<td><code>ap-southeast-1</code></td>
+</tr>
+<tr>
+<td><code>LabMonthlyCostBudget</code></td>
+<td>Tên budget được tạo trong lab</td>
+<td><code>LabMonthlyCostBudget</code></td>
+</tr>
+</tbody></table>
+</div>
+<hr>
+<h2 id="điều-kiện-đầu-vào"><a class="anchor" href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></h2>
+<ul>
+<li><input type="checkbox"> Đã hoàn thành <a href="../01-foundations/README.html">Lab 01</a> và <a href="../02-identity-and-access/README.html">Lab 02</a>.</li>
+<li><input type="checkbox"> Quyền cần thiết:<ul>
+<li>Budgets: <code>budgets:ModifyBudget</code> (tạo/xóa budget và notification), <code>budgets:ViewBudget</code>.</li>
+<li>Cost Explorer (Bước 2, tùy chọn): <code>ce:GetCostAndUsage</code>.</li>
+<li>Rà soát (Bước 6): <code>ec2:DescribeVolumes</code>, <code>ec2:DescribeAddresses</code>, <code>ec2:DescribeNetworkInterfaces</code>.</li>
+</ul>
+</li>
+<li><input type="checkbox"> Root user của account đã bật <strong>&quot;IAM user and role access to Billing information&quot;</strong>. Nếu account là member trong Organization, management account cũng phải cho phép member xem Cost Explorer.</li>
+<li><input type="checkbox"> Nếu không có quyền billing: vẫn làm được Bước 1, Bước 2 (nhánh B) và Bước 6; đọc Bước 3–5 như bài thiết kế.</li>
+</ul>
+<h3 id="chi-phí-ước-tính"><a class="anchor" href="#chi-phí-ước-tính">Chi phí ước tính</a></h3>
+<ul>
+<li>Budget chỉ có notification (không có action) <strong>không tính phí</strong>.</li>
+<li>Mỗi request tới Cost Explorer API tính khoảng <strong>$0.01</strong>. Lab gọi 1–3 lần.</li>
+<li>Các lệnh <code>describe-*</code> của EC2 không tính phí.</li>
+</ul>
+<hr>
+<h2 id="bước-1--lập-bảng-dự-toán-kiến-trúc-order-api"><a class="anchor" href="#bước-1--lập-bảng-dự-toán-kiến-trúc-order-api">Bước 1 — Lập bảng dự toán kiến trúc Order API</a></h2>
+<p><strong>Mục đích:</strong> luyện thói quen ước tính <em>trước khi</em> tạo tài nguyên.</p>
+<p><strong>Giả định kiến trúc</strong> (chạy liên tục 730 giờ/tháng tại Region của bạn):</p>
+<ul>
+<li>2x EC2 <code>t4g.micro</code> có public IPv4 (mỗi máy 1 IP).</li>
+<li>Mỗi instance gắn 1x EBS gp3 20 GB.</li>
+<li>1x Application Load Balancer internet-facing trên 2 AZ (2 public IPv4), khoảng 3 triệu request/tháng (~1 LCU).</li>
+<li>Internet egress 50 GB/tháng.</li>
+</ul>
+<p><strong>Việc cần làm:</strong> mở <a href="https://calculator.aws/" target="_blank" rel="noopener">AWS Pricing Calculator</a> hoặc trang giá của từng dịch vụ, tra đơn giá <strong>cho Region của bạn</strong>, ghi ngày tra cứu, rồi điền bảng. <strong>Không trừ Free Tier</strong>, vì Free Tier phụ thuộc loại account và thời điểm.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Thành phần</th>
+<th>Đơn giá (bạn tra)</th>
+<th>Công thức</th>
+<th>Thành tiền</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>EC2 <code>t4g.micro</code> ×2</td>
+<td><code>&lt;giá/giờ&gt;</code></td>
+<td>2 × 730 × giá/giờ</td>
+<td></td>
+</tr>
+<tr>
+<td>EBS gp3 40 GB</td>
+<td><code>&lt;giá/GB-tháng&gt;</code></td>
+<td>40 × giá</td>
+<td></td>
+</tr>
+<tr>
+<td>ALB (giờ)</td>
+<td><code>&lt;giá/giờ&gt;</code></td>
+<td>730 × giá</td>
+<td></td>
+</tr>
+<tr>
+<td>ALB (LCU)</td>
+<td><code>&lt;giá/LCU-giờ&gt;</code></td>
+<td>~1 LCU × 730 × giá</td>
+<td></td>
+</tr>
+<tr>
+<td>Public IPv4 ×4</td>
+<td><code>&lt;giá/IP-giờ&gt;</code></td>
+<td>4 × 730 × giá</td>
+<td></td>
+</tr>
+<tr>
+<td>Data transfer out 50 GB</td>
+<td><code>&lt;giá/GB&gt;</code></td>
+<td>50 × giá</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>Tổng</strong></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody></table>
+</div>
+<details>
+<summary>Đáp án minh họa (giá tham khảo, có thể đã thay đổi)</summary>
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Thành phần</th>
+<th>Đơn giá minh họa</th>
+<th>Thành tiền</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>EC2 <code>t4g.micro</code> ×2</td>
+<td>~$0.0106/giờ</td>
+<td>~$15.48</td>
+</tr>
+<tr>
+<td>EBS gp3 40 GB</td>
+<td>~$0.096/GB-tháng</td>
+<td>~$3.84</td>
+</tr>
+<tr>
+<td>ALB (giờ)</td>
+<td>~$0.0252/giờ</td>
+<td>~$18.40</td>
+</tr>
+<tr>
+<td>ALB (LCU)</td>
+<td>~$0.008/LCU-giờ</td>
+<td>~$5.84</td>
+</tr>
+<tr>
+<td>Public IPv4 ×4</td>
+<td>~$0.005/IP-giờ</td>
+<td>~$14.60</td>
+</tr>
+<tr>
+<td>Data transfer out 50 GB</td>
+<td>~$0.12/GB</td>
+<td>~$6.00</td>
+</tr>
+<tr>
+<td><strong>Tổng</strong></td>
+<td></td>
+<td><strong>~$64</strong></td>
+</tr>
+</tbody></table>
+</div>
+<p><strong>Nhận xét:</strong></p>
+<ul>
+<li>ALB (<del>$24) cộng 2 IP của nó (</del>$7) chiếm gần một nửa tổng chi phí. Với lab ngắn, chỉ bật ALB khi kiểm thử và xóa ngay sau buổi học.</li>
+<li>Public IPv4 (~$15) là khoản dễ bị quên nhất. Đặt instance trong private subnet giúp bỏ được IP của EC2, nhưng khi đó cần đường ra internet (NAT Gateway) hoặc VPC endpoint, và hai thứ này cũng tính phí (xem Bài 04).</li>
+<li>Compute (EC2) thực ra không phải khoản lớn nhất trong kiến trúc nhỏ này.</li>
+</ul>
+</details>
+
+<hr>
+<h2 id="bước-2--khám-phá-dữ-liệu-chi-phí-với-cost-explorer"><a class="anchor" href="#bước-2--khám-phá-dữ-liệu-chi-phí-với-cost-explorer">Bước 2 — Khám phá dữ liệu chi phí với Cost Explorer</a></h2>
+<blockquote>
+<p>[!NOTE]
+Account mới phải mở <strong>Billing and Cost Management → Cost Explorer</strong> trên console một lần để bật tính năng. Dữ liệu có thể mất đến 24 giờ mới sẵn sàng. Mỗi lệnh dưới đây tốn khoảng $0.01.</p>
+</blockquote>
+<p>Truy vấn chi phí 7 ngày gần nhất, nhóm theo dịch vụ (<code>End</code> là ngày <strong>không</strong> tính vào kết quả):</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code># macOS
+START=$(date -v-7d +%Y-%m-%d)
+# Linux: START=$(date -d &quot;7 days ago&quot; +%Y-%m-%d)
+END=$(date +%Y-%m-%d)
+
+aws ce get-cost-and-usage \
+  --time-period Start=${START},End=${END} \
+  --granularity DAILY \
+  --metrics &quot;UnblendedCost&quot; \
+  --group-by Type=DIMENSION,Key=SERVICE \
+  --profile aws-lab \
+  --output json</code></pre></div>
+<h3 id="nhánh-a-account-có-dữ-liệu-chi-phí"><a class="anchor" href="#nhánh-a-account-có-dữ-liệu-chi-phí">Nhánh A: Account có dữ liệu chi phí</a></h3>
+<p>Lệnh trả về mảng <code>ResultsByTime</code>, mỗi phần tử là một ngày, bên trong có <code>Groups</code> theo từng dịch vụ.</p>
+<h3 id="nhánh-b-account-mới-chưa-bật-cost-explorer-hoặc-thiếu-quyền"><a class="anchor" href="#nhánh-b-account-mới-chưa-bật-cost-explorer-hoặc-thiếu-quyền">Nhánh B: Account mới, chưa bật Cost Explorer, hoặc thiếu quyền</a></h3>
+<p>Bạn có thể gặp:</p>
+<ul>
+<li><code>AccessDeniedException</code>: thiếu quyền <code>ce:GetCostAndUsage</code> hoặc account chưa bật truy cập billing cho IAM.</li>
+<li><code>DataUnavailableException</code> hoặc thông báo chưa bật Cost Explorer: mở Cost Explorer trên console rồi chờ đến 24 giờ.</li>
+<li>Kết quả có <code>Groups</code> rỗng: account chưa phát sinh chi phí.</li>
+</ul>
+<p>Trong trường hợp này, dùng <strong>dữ liệu minh họa</strong> dưới đây để đọc cấu trúc response (đã rút gọn còn 1 ngày):</p>
+<div class="code"><span class="lang">json</span><button type="button">Copy</button><pre><code>{
+  &quot;GroupDefinitions&quot;: [
+    { &quot;Type&quot;: &quot;DIMENSION&quot;, &quot;Key&quot;: &quot;SERVICE&quot; }
+  ],
+  &quot;ResultsByTime&quot;: [
+    {
+      &quot;TimePeriod&quot;: { &quot;Start&quot;: &quot;2026-10-30&quot;, &quot;End&quot;: &quot;2026-10-31&quot; },
+      &quot;Total&quot;: {},
+      &quot;Groups&quot;: [
+        {
+          &quot;Keys&quot;: [&quot;Amazon Elastic Compute Cloud - Compute&quot;],
+          &quot;Metrics&quot;: { &quot;UnblendedCost&quot;: { &quot;Amount&quot;: &quot;0.2074&quot;, &quot;Unit&quot;: &quot;USD&quot; } }
+        },
+        {
+          &quot;Keys&quot;: [&quot;Amazon Virtual Private Cloud&quot;],
+          &quot;Metrics&quot;: { &quot;UnblendedCost&quot;: { &quot;Amount&quot;: &quot;0.1200&quot;, &quot;Unit&quot;: &quot;USD&quot; } }
+        }
+      ],
+      &quot;Estimated&quot;: true
+    }
+  ],
+  &quot;DimensionValueAttributes&quot;: []
+}</code></pre></div>
+<p><strong>Câu hỏi đọc dữ liệu:</strong> dòng &quot;Amazon Virtual Private Cloud&quot; ở trên nhiều khả năng là khoản gì, dù bạn không tạo NAT Gateway? (Gợi ý: xem bảng Data Transfer trong lý thuyết.) <code>&quot;Estimated&quot;: true</code> nghĩa là gì?</p>
+<details>
+<summary>Đáp án</summary>
+
+<ul>
+<li>Phí <strong>public IPv4</strong> được tính dưới dịch vụ &quot;Amazon Virtual Private Cloud&quot; (usage type dạng <code>PublicIPv4:InUseAddress</code>). $0.12/ngày ≈ 1 public IP chạy 24 giờ.</li>
+<li><code>Estimated: true</code> nghĩa là số liệu của khoảng thời gian đó chưa chốt và còn có thể thay đổi khi AWS xử lý xong dữ liệu billing.</li>
+</ul>
+</details>
+
+<hr>
+<h2 id="bước-3--tạo-định-nghĩa-budget-json"><a class="anchor" href="#bước-3--tạo-định-nghĩa-budget-json">Bước 3 — Tạo định nghĩa Budget (JSON)</a></h2>
+<p>Budget dùng cho việc học:</p>
+<ul>
+<li>Giới hạn: <strong>$10.00 USD / tháng</strong>, loại <code>COST</code>, chu kỳ <code>MONTHLY</code>.</li>
+<li>Ba ngưỡng thông báo:<ul>
+<li><code>ACTUAL</code> &gt; 50% ($5): cảnh báo sớm, hoạt động ngay cả với account mới.</li>
+<li><code>ACTUAL</code> &gt; 100% ($10).</li>
+<li><code>FORECASTED</code> &gt; 80% ($8): chỉ hoạt động khi account có khoảng 5 tuần lịch sử chi phí.</li>
+</ul>
+</li>
+</ul>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export MY_EMAIL=&quot;&lt;email-cua-ban&gt;&quot;   # chỉ dùng email của chính bạn
+export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text --profile aws-lab)
+export LAB_DIR=$(mktemp -d)
+
+cat &lt;&lt;'EOF' &gt; &quot;${LAB_DIR}/budget.json&quot;
+{
+  &quot;BudgetName&quot;: &quot;LabMonthlyCostBudget&quot;,
+  &quot;BudgetLimit&quot;: { &quot;Amount&quot;: &quot;10.0&quot;, &quot;Unit&quot;: &quot;USD&quot; },
+  &quot;TimeUnit&quot;: &quot;MONTHLY&quot;,
+  &quot;BudgetType&quot;: &quot;COST&quot;
+}
+EOF
+
+cat &lt;&lt;EOF &gt; &quot;${LAB_DIR}/notifications.json&quot;
+[
+  {
+    &quot;Notification&quot;: {
+      &quot;NotificationType&quot;: &quot;ACTUAL&quot;,
+      &quot;ComparisonOperator&quot;: &quot;GREATER_THAN&quot;,
+      &quot;Threshold&quot;: 50.0,
+      &quot;ThresholdType&quot;: &quot;PERCENTAGE&quot;
+    },
+    &quot;Subscribers&quot;: [{ &quot;SubscriptionType&quot;: &quot;EMAIL&quot;, &quot;Address&quot;: &quot;${MY_EMAIL}&quot; }]
+  },
+  {
+    &quot;Notification&quot;: {
+      &quot;NotificationType&quot;: &quot;ACTUAL&quot;,
+      &quot;ComparisonOperator&quot;: &quot;GREATER_THAN&quot;,
+      &quot;Threshold&quot;: 100.0,
+      &quot;ThresholdType&quot;: &quot;PERCENTAGE&quot;
+    },
+    &quot;Subscribers&quot;: [{ &quot;SubscriptionType&quot;: &quot;EMAIL&quot;, &quot;Address&quot;: &quot;${MY_EMAIL}&quot; }]
+  },
+  {
+    &quot;Notification&quot;: {
+      &quot;NotificationType&quot;: &quot;FORECASTED&quot;,
+      &quot;ComparisonOperator&quot;: &quot;GREATER_THAN&quot;,
+      &quot;Threshold&quot;: 80.0,
+      &quot;ThresholdType&quot;: &quot;PERCENTAGE&quot;
+    },
+    &quot;Subscribers&quot;: [{ &quot;SubscriptionType&quot;: &quot;EMAIL&quot;, &quot;Address&quot;: &quot;${MY_EMAIL}&quot; }]
+  }
+]
+EOF
+
+grep -c &quot;${MY_EMAIL}&quot; &quot;${LAB_DIR}/notifications.json&quot;   # mong đợi: 3</code></pre></div>
+<p><code>budget.json</code> bỏ qua <code>CostTypes</code> để dùng giá trị mặc định (unblended, có thuế, có subscription, không trừ credit/refund). Heredoc của <code>budget.json</code> đặt trong nháy (<code>&#39;EOF&#39;</code>) vì không cần thay biến; <code>notifications.json</code> thì không, để shell điền <code>${MY_EMAIL}</code>.</p>
+<hr>
+<h2 id="bước-4--tạo-budget-bằng-cli"><a class="anchor" href="#bước-4--tạo-budget-bằng-cli">Bước 4 — Tạo Budget bằng CLI</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws budgets create-budget \
+  --account-id &quot;${ACCOUNT_ID}&quot; \
+  --budget &quot;file://${LAB_DIR}/budget.json&quot; \
+  --notifications-with-subscribers &quot;file://${LAB_DIR}/notifications.json&quot; \
+  --profile aws-lab
+echo &quot;exit code: $?&quot;</code></pre></div>
+<p>Kết quả mong đợi: không in gì và <code>exit code: 0</code>.</p>
+<hr>
+<h2 id="bước-5--xác-minh-budget-và-negative-test"><a class="anchor" href="#bước-5--xác-minh-budget-và-negative-test">Bước 5 — Xác minh Budget và negative test</a></h2>
+<h3 id="xem-budget-vừa-tạo"><a class="anchor" href="#xem-budget-vừa-tạo">Xem budget vừa tạo</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws budgets describe-budget \
+  --account-id &quot;${ACCOUNT_ID}&quot; \
+  --budget-name &quot;LabMonthlyCostBudget&quot; \
+  --profile aws-lab \
+  --query 'Budget.{Name:BudgetName,Limit:BudgetLimit,Spend:CalculatedSpend}' \
+  --output json</code></pre></div>
+<p>Output minh họa (account mới):</p>
+<div class="code"><span class="lang">json</span><button type="button">Copy</button><pre><code>{
+    &quot;Name&quot;: &quot;LabMonthlyCostBudget&quot;,
+    &quot;Limit&quot;: { &quot;Amount&quot;: &quot;10.0&quot;, &quot;Unit&quot;: &quot;USD&quot; },
+    &quot;Spend&quot;: {
+        &quot;ActualSpend&quot;: { &quot;Amount&quot;: &quot;0.0&quot;, &quot;Unit&quot;: &quot;USD&quot; }
+    }
+}</code></pre></div>
+<p><code>ForecastedSpend</code> có thể không xuất hiện, hoặc xuất hiện sau vài giờ. Account chưa đủ lịch sử thì sẽ không có forecast.</p>
+<h3 id="xem-các-ngưỡng-thông-báo"><a class="anchor" href="#xem-các-ngưỡng-thông-báo">Xem các ngưỡng thông báo</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws budgets describe-notifications-for-budget \
+  --account-id &quot;${ACCOUNT_ID}&quot; \
+  --budget-name &quot;LabMonthlyCostBudget&quot; \
+  --profile aws-lab \
+  --query 'Notifications[].[NotificationType,Threshold]' \
+  --output table</code></pre></div>
+<p>Kết quả mong đợi: 3 dòng <code>ACTUAL 50.0</code>, <code>ACTUAL 100.0</code>, <code>FORECASTED 80.0</code>.</p>
+<h3 id="negative-test-tạo-budget-trùng-tên"><a class="anchor" href="#negative-test-tạo-budget-trùng-tên">Negative test: tạo budget trùng tên</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws budgets create-budget \
+  --account-id &quot;${ACCOUNT_ID}&quot; \
+  --budget &quot;file://${LAB_DIR}/budget.json&quot; \
+  --profile aws-lab</code></pre></div>
+<p>Kết quả mong đợi:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>An error occurred (DuplicateRecordException) when calling the CreateBudget operation: ...</code></pre></div>
+<p>✅ Tên budget là duy nhất trong account. Đây cũng là lỗi bạn sẽ gặp nếu chạy lại lab khi chưa cleanup.</p>
+<blockquote>
+<p>[!NOTE]
+AWS <strong>không</strong> gửi email xác nhận khi tạo budget. Email chỉ đến khi chi phí vượt ngưỡng, và có thể trễ vài giờ vì Budgets không cập nhật theo thời gian thực.</p>
+</blockquote>
+<hr>
+<h2 id="bước-6--rà-soát-tài-nguyên-ngầm-cost-auditing"><a class="anchor" href="#bước-6--rà-soát-tài-nguyên-ngầm-cost-auditing">Bước 6 — Rà soát tài nguyên ngầm (Cost Auditing)</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export REGION=&quot;ap-southeast-1&quot;   # lặp lại bước này cho mọi Region bạn đã dùng</code></pre></div>
+<h3 id="1-ebs-volume-không-gắn-vào-instance-nào"><a class="anchor" href="#1-ebs-volume-không-gắn-vào-instance-nào">1. EBS volume không gắn vào instance nào</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ec2 describe-volumes \
+  --region &quot;${REGION}&quot; \
+  --filters Name=status,Values=available \
+  --query &quot;Volumes[*].{VolumeId:VolumeId,Size:Size,Created:CreateTime,Tags:Tags}&quot; \
+  --profile aws-lab \
+  --output table</code></pre></div>
+<h3 id="2-elastic-ip-chưa-được-gắn"><a class="anchor" href="#2-elastic-ip-chưa-được-gắn">2. Elastic IP chưa được gắn</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ec2 describe-addresses \
+  --region &quot;${REGION}&quot; \
+  --query &quot;Addresses[?AssociationId==null].{AllocationId:AllocationId,PublicIp:PublicIp,Tags:Tags}&quot; \
+  --profile aws-lab \
+  --output table</code></pre></div>
+<p>Lọc theo <code>AssociationId</code> chứ không theo <code>InstanceId</code>, vì EIP gắn vào NAT Gateway hoặc ENI không có <code>InstanceId</code> nhưng vẫn đang được sử dụng.</p>
+<h3 id="3-toàn-bộ-public-ipv4-đang-tính-phí"><a class="anchor" href="#3-toàn-bộ-public-ipv4-đang-tính-phí">3. Toàn bộ public IPv4 đang tính phí</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ec2 describe-network-interfaces \
+  --region &quot;${REGION}&quot; \
+  --query &quot;NetworkInterfaces[?Association.PublicIp!=null].{ENI:NetworkInterfaceId,PublicIp:Association.PublicIp,Type:InterfaceType,Desc:Description}&quot; \
+  --profile aws-lab \
+  --output table</code></pre></div>
+<p>Danh sách này gồm IP của EC2, ALB, NAT Gateway... Mỗi dòng là khoảng $3.6/tháng.</p>
+<blockquote>
+<p>[!WARNING]
+<strong>Không xóa ngay</strong> những gì tìm được. Trước khi <code>delete-volume</code> hay <code>release-address</code>, kiểm tra tag/tên để chắc chắn tài nguyên do bạn tạo cho lab. Volume có thể chứa dữ liệu cần giữ (tạo snapshot trước nếu không chắc). Trên account dùng chung, hỏi chủ sở hữu.</p>
+</blockquote>
+<p>Với tài nguyên chắc chắn của bạn và không cần nữa:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ec2 delete-volume --volume-id &lt;vol-id&gt; --region &quot;${REGION}&quot; --profile aws-lab
+aws ec2 release-address --allocation-id &lt;alloc-id&gt; --region &quot;${REGION}&quot; --profile aws-lab</code></pre></div>
+<hr>
+<h2 id="bước-7-tùy-chọn--so-sánh-ước-tính-với-thực-tế"><a class="anchor" href="#bước-7-tùy-chọn--so-sánh-ước-tính-với-thực-tế">Bước 7 (tùy chọn) — So sánh ước tính với thực tế</a></h2>
+<p>Sau khi làm Lab 05 (có ALB và EC2), chờ ít nhất 24 giờ rồi chạy lại Bước 2 với <code>--group-by Type=DIMENSION,Key=USAGE_TYPE</code> cho ngày làm lab. So sánh với bảng ước tính của Lab 05: khoản nào lệch nhiều nhất và vì sao (thời gian chạy thực tế, public IPv4, data transfer...)?</p>
+<p>Nếu bạn giữ budget này qua tháng, đây cũng là lúc kiểm tra xem email <code>ACTUAL 50%</code> có đến không.</p>
+<hr>
+<h2 id="bước-8--dọn-dẹp-cleanup"><a class="anchor" href="#bước-8--dọn-dẹp-cleanup">Bước 8 — Dọn dẹp (Cleanup)</a></h2>
+<p>Nếu muốn giữ budget làm &quot;lưới an toàn&quot; cho các lab sau, <strong>có thể bỏ qua bước xóa</strong>: budget notification-only không tính phí. Ghi nhận đây là tài nguyên giữ lại có chủ đích.</p>
+<p>Nếu không giữ:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws budgets delete-budget \
+  --account-id &quot;${ACCOUNT_ID}&quot; \
+  --budget-name &quot;LabMonthlyCostBudget&quot; \
+  --profile aws-lab
+
+rm -rf &quot;${LAB_DIR}&quot;</code></pre></div>
+<p>Xóa budget cũng xóa luôn các notification và subscriber của nó. Xác minh:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws budgets describe-budget \
+  --account-id &quot;${ACCOUNT_ID}&quot; \
+  --budget-name &quot;LabMonthlyCostBudget&quot; \
+  --profile aws-lab
+# Mong đợi: An error occurred (NotFoundException) ...</code></pre></div>
+<h3 id="nếu-lab-dừng-giữa-chừng-hoặc-mất-shell"><a class="anchor" href="#nếu-lab-dừng-giữa-chừng-hoặc-mất-shell">Nếu lab dừng giữa chừng hoặc mất shell</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text --profile aws-lab)
+aws budgets describe-budgets --account-id &quot;${ACCOUNT_ID}&quot; --profile aws-lab \
+  --query 'Budgets[].BudgetName' --output text</code></pre></div>
+<p>Nếu thấy <code>LabMonthlyCostBudget</code>, chạy lệnh <code>delete-budget</code> ở trên.</p>
+<hr>
+<h2 id="checklist-hoàn-thành"><a class="anchor" href="#checklist-hoàn-thành">Checklist hoàn thành</a></h2>
+<ul>
+<li><input type="checkbox"> Lập bảng dự toán với giá tra cứu cho Region của mình, không trừ Free Tier, có public IPv4.</li>
+<li><input type="checkbox"> Hiểu 4 chiều chi phí: Compute, Storage, Request và Data Transfer.</li>
+<li><input type="checkbox"> Đọc được cấu trúc <code>ResultsByTime</code> → <code>Groups</code> → <code>Metrics</code> của <code>aws ce get-cost-and-usage</code>.</li>
+<li><input type="checkbox"> Tạo được budget với 2 ngưỡng <code>ACTUAL</code> và 1 ngưỡng <code>FORECASTED</code>; giải thích được vì sao <code>FORECASTED</code> có thể chưa hoạt động.</li>
+<li><input type="checkbox"> Gặp <code>DuplicateRecordException</code> ở negative test.</li>
+<li><input type="checkbox"> Rà soát được EBS <code>available</code>, EIP chưa gắn và toàn bộ public IPv4 trong Region.</li>
+<li><input type="checkbox"> Xóa budget (hoặc ghi rõ lý do giữ lại).</li>
+</ul>
+<hr>
+<h2 id="troubleshooting-nhanh"><a class="anchor" href="#troubleshooting-nhanh">Troubleshooting nhanh</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Triệu chứng</th>
+<th>Nguyên nhân khả dĩ</th>
+<th>Khắc phục</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>AccessDeniedException</code> khi gọi Budgets/CE API</td>
+<td>Thiếu quyền <code>budgets:*</code>/<code>ce:*</code>, hoặc root của account chưa bật IAM access to billing</td>
+<td>Kiểm tra ARN bằng <code>get-caller-identity</code>; nhờ quản trị cấp đúng quyền billing hoặc nhờ root user bật cờ. Không xin <code>AdministratorAccess</code></td>
+</tr>
+<tr>
+<td><code>create-budget</code> báo lỗi validation</td>
+<td>JSON sai cú pháp, hoặc <code>Amount</code> không phải chuỗi</td>
+<td>Chạy <code>python3 -m json.tool &quot;${LAB_DIR}/budget.json&quot;</code>; <code>Amount</code> phải là chuỗi <code>&quot;10.0&quot;</code></td>
+</tr>
+<tr>
+<td>Email chứa <code>${MY_EMAIL}</code> nguyên văn hoặc rỗng</td>
+<td>Biến chưa export trước khi tạo file</td>
+<td><code>echo &quot;${MY_EMAIL}&quot;</code>, export rồi tạo lại <code>notifications.json</code></td>
+</tr>
+<tr>
+<td>Không nhận email cảnh báo</td>
+<td>Chưa vượt ngưỡng, dữ liệu billing trễ, account chưa đủ lịch sử để forecast, hoặc email vào Spam</td>
+<td>Kiểm tra <code>CalculatedSpend</code>; dựa vào ngưỡng <code>ACTUAL</code>, không dựa vào <code>FORECASTED</code> với account mới</td>
+</tr>
+<tr>
+<td><code>DuplicateRecordException</code></td>
+<td>Budget cùng tên đã tồn tại (chạy lại lab)</td>
+<td>Xóa budget cũ hoặc dùng tên khác</td>
+</tr>
+<tr>
+<td>Cost Explorer trả về rỗng</td>
+<td>Account mới, chưa bật Cost Explorer, hoặc chưa có chi phí</td>
+<td>Dùng nhánh B; chờ đến 24 giờ sau khi mở Cost Explorer lần đầu</td>
+</tr>
+</tbody></table>
+</div>
+<h2 id="tiếp-theo"><a class="anchor" href="#tiếp-theo">Tiếp theo</a></h2>
+<p>Bạn đã có công cụ theo dõi ngân sách. Bài tiếp theo bắt đầu thiết kế hạ tầng mạng của mọi hệ thống AWS: <strong>VPC, Subnets, Route Tables, Internet Gateway và Security Groups</strong>.</p>
+
+<footer>Sinh tự động từ <code>labs/03-cost-management/README.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

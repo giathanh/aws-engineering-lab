@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bài 08 — Vận hành Ứng dụng Container: Amazon ECR, ECS và AWS Fargate</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="01-foundations.html">01. Lý thuyết</a><a href="../labs/01-foundations/README.html">01. Lab</a><a href="02-identity-and-access.html">02. Lý thuyết</a><a href="../labs/02-identity-and-access/README.html">02. Lab</a><a href="03-cost-management.html">03. Lý thuyết</a><a href="../labs/03-cost-management/README.html">03. Lab</a><a href="04-networking.html">04. Lý thuyết</a><a href="../labs/04-networking/README.html">04. Lab</a><a href="05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../labs/05-compute-and-load-balancing/README.html">05. Lab</a><a href="06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../labs/06-storage-and-content-delivery/README.html">06. Lab</a><a href="07-databases-and-cache.html">07. Lý thuyết</a><a href="../labs/07-databases-and-cache/README.html">07. Lab</a><a href="08-containers.html" class="active">08. Lý thuyết</a><a href="../labs/08-containers/README.html">08. Lab</a><a href="09-serverless.html">09. Lý thuyết</a><a href="../labs/09-serverless/README.html">09. Lab</a><a href="10-observability-and-application-security.html">10. Lý thuyết</a><a href="../labs/10-observability-and-application-security/README.html">10. Lab</a><a href="11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../labs/11-messaging-and-workflows/README.html">11. Lab</a><a href="12-iac-and-cicd.html">12. Lý thuyết</a><a href="../labs/12-iac-and-cicd/README.html">12. Lab</a><a href="13-reliability-and-performance.html">13. Lý thuyết</a><a href="../labs/13-reliability-and-performance/README.html">13. Lab</a><a href="14-architecture-and-governance.html">14. Lý thuyết</a><a href="../labs/14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#mục-tiêu">Mục tiêu</a></li><li><a href="#phần-1--amazon-ecr-kho-chứa-ảnh-container-tag-bất-biến-và-vòng-đời-45-phút">Phần 1 — Amazon ECR: Kho chứa Ảnh Container, Tag Bất biến và Vòng đời (45 phút)</a></li><li><a href="#phần-2--kiến-trúc-amazon-ecs-cluster-task-definition-task-service-và-aws-fargate-50-phút">Phần 2 — Kiến trúc Amazon ECS: Cluster, Task Definition, Task, Service và AWS Fargate (50 phút)</a></li><li><a href="#phần-3--phân-biệt-hai-iam-role-sống-còn-trong-ecs-execution-role-vs-task-role-45-phút">Phần 3 — Phân biệt Hai IAM Role Sống còn trong ECS: Execution Role vs Task Role (45 phút)</a></li><li><a href="#phần-4--mô-hình-mạng-awsvpc-subnet-riêng-tư-và-alb-target-type-ip-45-phút">Phần 4 — Mô hình mạng awsvpc, Subnet Riêng tư và ALB Target Type ip (45 phút)</a></li><li><a href="#phần-5--chiến-lược-triển-khai-kiểm-tra-sức-khỏe-và-graceful-shutdown-50-phút">Phần 5 — Chiến lược Triển khai, Kiểm tra Sức khỏe và Graceful Shutdown (50 phút)</a></li><li><a href="#phần-6--giới-thiệu-bài-thực-hành-lab-08">Phần 6 — Giới thiệu bài thực hành (Lab 08)</a></li><li><a href="#phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi phổ biến (25 phút)</a></li><li><a href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></li><li><a href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></li><li><a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></li><li><a href="#đáp-án-gợi-ý">Đáp án gợi ý</a></li></ol></aside>
+<main>
+<h1 id="bài-08--vận-hành-ứng-dụng-container-amazon-ecr-ecs-và-aws-fargate"><a class="anchor" href="#bài-08--vận-hành-ứng-dụng-container-amazon-ecr-ecs-và-aws-fargate">Bài 08 — Vận hành Ứng dụng Container: Amazon ECR, ECS và AWS Fargate</a></h1>
+<blockquote>
+<p><strong>Đối tượng:</strong> developer có kinh nghiệm nhưng mới học AWS.
+<strong>Thời lượng:</strong> khoảng 5–7 giờ, chia hai buổi. Buổi 1 gồm phần 1–3 (Docker Registry ECR, Kiến trúc ECS &amp; Phân biệt IAM Roles). Buổi 2 gồm phần 4–7 (Mạng awsvpc, Rolling Update, Graceful Shutdown và <a href="../labs/08-containers/README.html">lab thực hành</a>).
+<strong>Kế hoạch gốc:</strong> <a href="../plans/08-containers.md">plans/08-containers.md</a>
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Xem <a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a> ở cuối bài.</p>
+</blockquote>
+<h2 id="mục-tiêu"><a class="anchor" href="#mục-tiêu">Mục tiêu</a></h2>
+<p>Sau bài này, bạn có thể:</p>
+<ol>
+<li>Quản lý kho lưu trữ ảnh container an toàn với <strong>Amazon Elastic Container Registry (ECR)</strong>: cơ chế mã hóa, gắn tag bất biến (<strong>Image Tag Immutability</strong>), định danh bằng <strong>SHA-256 Digest</strong> và quy tắc dọn dẹp <strong>Lifecycle Policy</strong>.</li>
+<li>Nắm vững kiến trúc <strong>Amazon Elastic Container Service (ECS)</strong>: phân cấp Cluster, Task Definition, Task, Service và ưu thế của nền tảng tính toán không máy chủ <strong>AWS Fargate</strong> so với EC2 Launch Type.</li>
+<li>Phân biệt chính xác hai loại IAM Role sống còn trong ECS: <strong>Task Execution Role</strong> (dành cho ECS Container Agent) và <strong>Task Role</strong> (dành riêng cho code ứng dụng gọi AWS SDK).</li>
+<li>Thiết lập mô hình mạng chuẩn doanh nghiệp với chế độ mạng <strong><code>awsvpc</code></strong>: gán ENI riêng biệt, chạy trong Private Subnet và tích hợp với <strong>Application Load Balancer (ALB)</strong> qua Target Type <code>ip</code>.</li>
+<li>Vận hành quy trình cập nhật không gián đoạn (<strong>Zero-Downtime Rolling Update</strong>), xử lý tắt ứng dụng an toàn (<strong>Graceful Shutdown với SIGTERM</strong>) và cấu hình <strong>Deregistration Delay / Connection Draining</strong>.</li>
+</ol>
+<hr>
+<h2 id="phần-1--amazon-ecr-kho-chứa-ảnh-container-tag-bất-biến-và-vòng-đời-45-phút"><a class="anchor" href="#phần-1--amazon-ecr-kho-chứa-ảnh-container-tag-bất-biến-và-vòng-đời-45-phút">Phần 1 — Amazon ECR: Kho chứa Ảnh Container, Tag Bất biến và Vòng đời (45 phút)</a></h2>
+<h3 id="amazon-elastic-container-registry-ecr"><a class="anchor" href="#amazon-elastic-container-registry-ecr">Amazon Elastic Container Registry (ECR)</a></h3>
+<p>Amazon ECR là dịch vụ kho lưu trữ ảnh Docker/OCI container riêng tư (Private Container Registry) có độ sẵn sàng và độ bảo mật cao, tích hợp chặt chẽ với IAM và các dịch vụ tính toán của AWS.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Quy trình Push/Pull ảnh Container với Amazon ECR:
+┌─────────────────┐                                        ┌─────────────────────────┐
+│ Developer Máy / │ ──1. docker login (get-login-password)&gt;│ Amazon ECR Private Repo │
+│ CI/CD Pipeline  │ ──2. docker push &lt;repo&gt;:&lt;tag&gt;─────────&gt;│  - Tag Immutability: BẬT│
+└─────────────────┘                                        │  - Scan on Push: BẬT    │
+                                                           │  - Lifecycle Policy     │
+                                                           └───────────┬─────────────┘
+                                                                       │
+                                                       3. Pull Image   │ (Qua Task Execution
+                                                          bằng Digest  │  Role &amp; VPC Endpoint)
+                                                                       ▼
+                                                           ┌─────────────────────────┐
+                                                           │ ECS Fargate Task        │
+                                                           │ (Chạy trong Private Sub)│
+                                                           └─────────────────────────┘</code></pre></div>
+<h3 id="rủi-ro-của-tag-mutable-và-giải-pháp-tag-immutability"><a class="anchor" href="#rủi-ro-của-tag-mutable-và-giải-pháp-tag-immutability">Rủi ro của Tag Mutable và Giải pháp Tag Immutability</a></h3>
+<p>Trong môi trường phát triển, lập trình viên thường có thói quen đẩy đè ảnh lên tag <code>:latest</code> hoặc <code>:v1.0</code>.</p>
+<ul>
+<li><strong>Rủi ro sản xuất (Production Hazard):</strong> Nếu tag <code>:latest</code> bị ghi đè bởi một bản build lỗi, các máy chủ tự động co giãn (Auto Scaling) khi bật lên sau đó sẽ kéo về image lỗi, trong khi các máy cũ vẫn chạy image tốt. Kết quả là hệ thống rơi vào trạng thái phân mảnh không đồng nhất, không thể tái hiện lỗi và cực kỳ khó rollback.</li>
+<li><strong>Giải pháp:</strong> Bật tính năng <strong>Tag Immutability (Bất biến)</strong> trên ECR Repository. Khi đã bật, bất kỳ lệnh <code>docker push</code> nào cố gắng ghi đè lên một tag đã tồn tại sẽ bị ECR từ chối ngay lập tức.</li>
+<li><strong>Quy chuẩn CI/CD chuẩn:</strong> Định danh image bằng <strong>Git Commit SHA</strong> ngắn kết hợp số hiệu bản build (ví dụ: <code>my-order-api:build-102-commit-a8f9b2c</code>). Khi triển khai trên ECS, trỏ chính xác theo <strong>Image Digest</strong> (ví dụ: <code>my-order-api@sha256:7b5d...</code>) để đảm bảo 100% tính xác thực của artifact.</li>
+</ul>
+<h3 id="ecr-lifecycle-policy-quy-tắc-dọn-dẹp"><a class="anchor" href="#ecr-lifecycle-policy-quy-tắc-dọn-dẹp">ECR Lifecycle Policy (Quy tắc dọn dẹp)</a></h3>
+<p>Mỗi image Docker thường có dung lượng từ vài trăm MB đến cả GB. Nếu không dọn dẹp, hàng trăm bản build trong quy trình CI/CD sẽ tích tụ hàng Terabytes dữ liệu và tiêu tốn chi phí lưu trữ không nhỏ.</p>
+<ul>
+<li><strong>Lifecycle Policy</strong> cho phép bạn tự động hóa việc xóa các image cũ:<ul>
+<li><em>Quy tắc 1:</em> Giữ lại tối đa 30 image có tag bắt đầu bằng <code>release-</code>.</li>
+<li><em>Quy tắc 2:</em> Tự động xóa các image không có tag (<code>untagged</code>) sau 3 ngày.</li>
+</ul>
+</li>
+<li>Lifecycle policy <strong>không biết</strong> image nào đang được service dùng. Đặt số lượng giữ lại đủ để rollback, hoặc pin image đang chạy bằng tag riêng được loại khỏi rule.</li>
+</ul>
+<hr>
+<h2 id="phần-2--kiến-trúc-amazon-ecs-cluster-task-definition-task-service-và-aws-fargate-50-phút"><a class="anchor" href="#phần-2--kiến-trúc-amazon-ecs-cluster-task-definition-task-service-và-aws-fargate-50-phút">Phần 2 — Kiến trúc Amazon ECS: Cluster, Task Definition, Task, Service và AWS Fargate (50 phút)</a></h2>
+<p>Amazon ECS là hệ thống điều phối container (Container Orchestration) mạnh mẽ, đơn giản và tối ưu của AWS.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Hệ thống phân cấp trong Amazon ECS:
+┌────────────────────────────────────────────────────────────────────────┐
+│ Amazon ECS Cluster: `production-cluster`                               │
+│                                                                        │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │ Amazon ECS Service: `order-service`                              │  │
+│  │ (Đảm bảo số lượng mong muốn `desiredCount = 2`, gắn sau ALB)     │  │
+│  │                                                                  │  │
+│  │  ┌─────────────────────────────┐   ┌───────────────────────────┐ │  │
+│  │  │ Task Instance 1 (Fargate)   │   │ Task Instance 2 (Fargate) │ │  │
+│  │  │ ┌─────────────────────────┐ │   │ ┌───────────────────────┐ │ │  │
+│  │  │ │ Container: order-api    │ │   │ │ Container: order-api  │ │ │  │
+│  │  │ └─────────────────────────┘ │   │ └───────────────────────┘ │ │  │
+│  │  │ ENI: 10.0.11.45 (awsvpc)  │ │   │ ENI: 10.0.12.89 (awsvpc)│ │ │  │
+│  │  └─────────────────────────────┘   └───────────────────────────┘ │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────────────┘</code></pre></div>
+<h3 id="các-thành-phần-cốt-lõi"><a class="anchor" href="#các-thành-phần-cốt-lõi">Các thành phần cốt lõi:</a></h3>
+<ol>
+<li><strong>Cluster:</strong> Ranh giới logic gom nhóm các dịch vụ và tác vụ.</li>
+<li><strong>Task Definition:</strong> Bản thiết kế chi tiết (Blueprint) định dạng JSON mô tả một hoặc nhiều container phối hợp hoạt động:<ul>
+<li>Image URL cần chạy từ ECR.</li>
+<li>Hạn mức CPU và Bộ nhớ (ví dụ: <code>0.5 vCPU</code> và <code>1024 MB RAM</code>).</li>
+<li>Biến môi trường, Secrets tiêm vào từ SSM Parameter Store hoặc Secrets Manager.</li>
+<li>Cổng mạng (Port Mappings), IAM Roles và cấu hình đẩy log (<code>awslogs</code>).</li>
+</ul>
+</li>
+<li><strong>Task:</strong> Một phiên bản thực thi cụ thể đang chạy (Running instance) được tạo ra từ Task Definition. Tương tự như một container đơn lẻ hoặc một Pod trong Kubernetes.</li>
+<li><strong>Service:</strong> Bộ điều khiển đảm bảo duy trì liên tục một số lượng Task mong muốn (<code>desiredCount</code>). Nếu một Task bị chết do crash ứng dụng hoặc lỗi phần cứng, Service sẽ lập tức tự động sinh ra một Task mới để thay thế. Service cũng quản lý việc đăng ký/hủy đăng ký IP của Task vào Target Group của Load Balancer.</li>
+</ol>
+<h3 id="aws-fargate-vs-ec2-launch-type"><a class="anchor" href="#aws-fargate-vs-ec2-launch-type">AWS Fargate vs EC2 Launch Type</a></h3>
+<p>Khi chạy container trên ECS, bạn có hai lựa chọn hạ tầng tính toán:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tiêu chí</th>
+<th>EC2 Launch Type</th>
+<th>AWS Fargate (Serverless Compute)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Mô hình quản trị</strong></td>
+<td>Bạn tự quản lý máy ảo EC2: vá lỗi HĐH, cập nhật ECS Agent, giám sát dung lượng đĩa EBS.</td>
+<td><strong>Hoàn toàn không có máy chủ (Serverless).</strong> AWS quản trị toàn bộ hạ tầng bên dưới.</td>
+</tr>
+<tr>
+<td><strong>Đơn vị thanh toán</strong></td>
+<td>Trả tiền theo giờ cho máy ảo EC2 đang chạy (dù container có dùng hết CPU hay không).</td>
+<td>Trả theo vCPU và RAM <strong>được cấp phát</strong> cho Task (không phải mức dùng thực tế), tính theo giây với mức tối thiểu 1 phút. ARM64 (Graviton) rẻ hơn x86_64.</td>
+</tr>
+<tr>
+<td><strong>Bảo mật cách ly</strong></td>
+<td>Nhiều container từ các dịch vụ khác nhau có thể chạy chung trên cùng một máy ảo EC2.</td>
+<td><strong>Cách ly cấp độ Kernel (VM-isolated):</strong> Mỗi Task chạy trên một máy ảo vi mô (microVM) độc lập hoàn toàn.</td>
+</tr>
+<tr>
+<td><strong>Bảo trì vận hành</strong></td>
+<td>Tốn công sức quản lý cụm máy chủ và dung lượng Auto Scaling của EC2.</td>
+<td>Không quản lý host, nhưng <strong>vẫn phải</strong> thiết kế mạng (subnet, SG, đường ra ECR/logs), IAM role và chọn cỡ CPU/RAM.</td>
+</tr>
+<tr>
+<td><strong>Kiến trúc CPU</strong></td>
+<td>Theo instance type</td>
+<td>Mặc định <code>X86_64</code>; muốn chạy image arm64 phải khai báo <code>runtimePlatform.cpuArchitecture = ARM64</code>. Sai kiến trúc → container thoát với <code>exec format error</code>.</td>
+</tr>
+</tbody></table>
+</div>
+<hr>
+<h2 id="phần-3--phân-biệt-hai-iam-role-sống-còn-trong-ecs-execution-role-vs-task-role-45-phút"><a class="anchor" href="#phần-3--phân-biệt-hai-iam-role-sống-còn-trong-ecs-execution-role-vs-task-role-45-phút">Phần 3 — Phân biệt Hai IAM Role Sống còn trong ECS: Execution Role vs Task Role (45 phút)</a></h2>
+<p>Một trong những nhầm lẫn phổ biến nhất dẫn đến lỗi triển khai container trên AWS là gộp chung hoặc đảo lộn hai IAM Role này:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Sự khác biệt giữa Task Execution Role và Task Role:
+┌────────────────────────────────────────────────────────────────────────┐
+│ Amazon ECS Fargate Task Environment                                    │
+│                                                                        │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │ 1. ECS Container Agent (Môi trường nền tảng của AWS)             │  │
+│  │                                                                  │  │
+│  │    Dùng: TASK EXECUTION ROLE                                     │  │
+│  │    - Quyền: ecr:GetAuthorizationToken, ecr:BatchGetImage         │  │
+│  │    - Quyền: logs:CreateLogStream, logs:PutLogEvents              │  │
+│  │    - Quyền: ssm:GetParameters, secretsmanager:GetSecretValue     │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│                                                                        │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │ 2. Ứng dụng của bạn (Mã nguồn Node.js/Python chạy trong container)│  │
+│  │                                                                  │  │
+│  │    Dùng: TASK ROLE                                               │  │
+│  │    - Quyền: s3:GetObject / s3:PutObject                          │  │
+│  │    - Quyền: dynamodb:Query / dynamodb:PutItem                    │  │
+│  │    - Quyền: sqs:SendMessage                                      │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────────────┘</code></pre></div>
+<ol>
+<li><strong>Task Execution Role (Quyền của Nền tảng):</strong><ul>
+<li>Được sử dụng bởi hệ thống ECS Agent <strong>trước khi container của bạn thực sự khởi chạy</strong>.</li>
+<li>Cần các quyền:<ul>
+<li>Đăng nhập và kéo ảnh từ kho lưu trữ riêng tư ECR (<code>ecr:GetDownloadUrlForLayer</code>, <code>ecr:BatchGetImage</code>).</li>
+<li>Tạo log stream và gửi log ứng dụng lên CloudWatch Logs (<code>logs:PutLogEvents</code>).</li>
+<li>Giải mã và kéo các biến môi trường nhạy cảm từ AWS Secrets Manager hoặc Systems Manager Parameter Store để tiêm vào container.</li>
+</ul>
+</li>
+<li>Thường sử dụng AWS managed policy có sẵn: <code>service-role/AmazonECSTaskExecutionRolePolicy</code>.</li>
+</ul>
+</li>
+<li><strong>Task Role (Quyền của Ứng dụng Nghiệp vụ):</strong><ul>
+<li>Được cung cấp trực tiếp vào bên trong container cho <strong>chính mã nguồn ứng dụng của bạn</strong>.</li>
+<li>Khi code gọi AWS SDK (ví dụ <code>new S3Client({})</code> hoặc <code>boto3.client(&#39;dynamodb&#39;)</code>), SDK sẽ tự động truy vấn thông qua đường dẫn nội bộ <code>AWS_CONTAINER_CREDENTIALS_RELATIVE_URI</code> để lấy temporary credentials từ Task Role này.</li>
+<li><strong>Tuyệt đối không bao giờ cấp quyền đọc/ghi S3 hay DynamoDB vào Task Execution Role!</strong></li>
+</ul>
+</li>
+<li><strong><code>iam:PassRole</code>:</strong> người (hoặc pipeline) đăng ký task definition/tạo service phải có <code>iam:PassRole</code> trên cả hai role. Trust policy của hai role nên có điều kiện <code>aws:SourceAccount</code> để chống confused deputy.</li>
+</ol>
+<hr>
+<h2 id="phần-4--mô-hình-mạng-awsvpc-subnet-riêng-tư-và-alb-target-type-ip-45-phút"><a class="anchor" href="#phần-4--mô-hình-mạng-awsvpc-subnet-riêng-tư-và-alb-target-type-ip-45-phút">Phần 4 — Mô hình mạng <code>awsvpc</code>, Subnet Riêng tư và ALB Target Type <code>ip</code> (45 phút)</a></h2>
+<h3 id="chế-độ-mạng-awsvpc-bắt-buộc-trên-fargate"><a class="anchor" href="#chế-độ-mạng-awsvpc-bắt-buộc-trên-fargate">Chế độ mạng <code>awsvpc</code> (Bắt buộc trên Fargate)</a></h3>
+<p>Khác với chế độ mạng <code>bridge</code> truyền thống của Docker (nhiều container dùng chung 1 IP của host EC2 và map các port ngẫu nhiên), chế độ mạng <strong><code>awsvpc</code></strong> biến mỗi Task thành một công dân mạng hạng nhất (First-class citizen) trong VPC:</p>
+<ul>
+<li>Mỗi Task được cấp phát một giao diện mạng linh hoạt (<strong>Elastic Network Interface - ENI</strong>) riêng biệt.</li>
+<li>Mỗi Task có <strong>một địa chỉ IP nội bộ Private IP riêng</strong> nằm trực tiếp trong Subnet của bạn.</li>
+<li>Bạn có thể gắn riêng các quy tắc <strong>Security Group</strong> cho từng Task một cách chi tiết và độc lập.</li>
+</ul>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Mô hình kết nối Mạng giữa ALB và ECS Fargate Tasks:
+┌────────────────────────────────────────────────────────────────────────┐
+│ Amazon VPC (10.0.0.0/16)                                               │
+│                                                                        │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │ Public Subnets                                                   │  │
+│  │  ┌────────────────────────────────────────────────────────────┐  │  │
+│  │  │ Application Load Balancer (`sg-alb`, Port 80)              │  │  │
+│  │  └──────────────────────────────┬─────────────────────────────┘  │  │
+│  └─────────────────────────────────┼────────────────────────────────┘  │
+│                                    │ Target Type: `ip`                 │
+│                                    │ Chuyển tiếp tới IP: 10.0.11.45/8080│
+│  ┌─────────────────────────────────┼────────────────────────────────┐  │
+│  │ Private Subnets                 ▼                                │  │
+│  │  ┌────────────────────────────────────────────────────────────┐  │  │
+│  │  │ ECS Fargate Tasks (`sg-ecs-task`)                          │  │  │
+│  │  │ - Task A: IP 10.0.11.45:8080                               │  │  │
+│  │  │ - Task B: IP 10.0.12.89:8080                               │  │  │
+│  │  └────────────────────────────────────────────────────────────┘  │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────────────┘</code></pre></div>
+<h3 id="tại-sao-target-group-bắt-buộc-chọn-target-type-ip"><a class="anchor" href="#tại-sao-target-group-bắt-buộc-chọn-target-type-ip">Tại sao Target Group bắt buộc chọn Target Type <code>ip</code>?</a></h3>
+<ul>
+<li>Khi dùng chế độ mạng <code>awsvpc</code> trên Fargate, container không gắn liền với máy ảo EC2 cố định nào.</li>
+<li>Do đó, Application Load Balancer không thể chuyển tiếp traffic theo kiểu <code>instance</code> ID truyền thống.</li>
+<li>Target Group phải được cấu hình với <strong>Target Type là <code>ip</code></strong>. ECS Service sẽ tự động phát hiện IP private của từng Task mới sinh ra và đăng ký trực tiếp IP đó vào Target Group.</li>
+</ul>
+<hr>
+<h2 id="phần-5--chiến-lược-triển-khai-kiểm-tra-sức-khỏe-và-graceful-shutdown-50-phút"><a class="anchor" href="#phần-5--chiến-lược-triển-khai-kiểm-tra-sức-khỏe-và-graceful-shutdown-50-phút">Phần 5 — Chiến lược Triển khai, Kiểm tra Sức khỏe và Graceful Shutdown (50 phút)</a></h2>
+<h3 id="rolling-update-minimumhealthypercent-và-maximumpercent"><a class="anchor" href="#rolling-update-minimumhealthypercent-và-maximumpercent">Rolling Update: <code>minimumHealthyPercent</code> và <code>maximumPercent</code></a></h3>
+<p>ECS quản lý chiến lược cập nhật ứng dụng thông qua hai tham số phần trăm cốt lõi:</p>
+<ul>
+<li><strong><code>minimumHealthyPercent</code> (ví dụ 100%):</strong> Quy định số lượng Task tối thiểu luôn phải ở trạng thái chạy ổn định (healthy) trong suốt quá trình triển khai phiên bản mới.</li>
+<li><strong><code>maximumPercent</code> (ví dụ 200%):</strong> Quy định giới hạn số lượng Task tối đa được phép sinh ra tạm thời trong lúc deploy.</li>
+</ul>
+<p><em>Kịch bản với <code>desiredCount = 2</code>, <code>min = 100%</code>, <code>max = 200%</code>:</em></p>
+<ol>
+<li>Hiện tại: 2 Task cũ V1 đang chạy (100%).</li>
+<li>Bắt đầu deploy: ECS sinh thêm 2 Task mới V2 (Tổng là 4 Task = 200%).</li>
+<li>Chờ Task V2 vượt qua bài kiểm tra sức khỏe (<strong>Health Check</strong>).</li>
+<li>Khi Task V2 đã <code>healthy</code>, ALB bắt đầu chuyển lưu lượng sang V2.</li>
+<li>ECS tiến hành hủy bỏ (Drain và Terminate) 2 Task cũ V1.</li>
+<li>Hệ thống quay về trạng thái cân bằng với 2 Task V2.</li>
+</ol>
+<p>Rolling update <strong>không tự động</strong> có nghĩa là không mất request. Chỉ đạt được khi: health check phản ánh đúng app đã sẵn sàng, deregistration delay đủ cho request dài nhất, và app xử lý <code>SIGTERM</code> đúng (phần dưới). Thiếu một trong ba, người dùng vẫn gặp <code>502</code>/<code>503</code> trong lúc deploy.</p>
+<h3 id="deployment-circuit-breaker-và-rollback"><a class="anchor" href="#deployment-circuit-breaker-và-rollback">Deployment circuit breaker và rollback</a></h3>
+<p>Nếu revision mới không bao giờ healthy, ECS mặc định cứ thử khởi động task mới mãi. Bật <code>deploymentCircuitBreaker={enable=true,rollback=true}</code> để ECS đếm số task thất bại; vượt ngưỡng (tối thiểu 3 task) thì đánh dấu deployment <code>FAILED</code> và tự quay về revision ổn định gần nhất. Trong thời gian đó, <code>minimumHealthyPercent=100</code> giữ các task cũ tiếp tục phục vụ.</p>
+<h3 id="cơ-chế-tắt-ứng-dụng-an-toàn-graceful-shutdown-với-sigterm"><a class="anchor" href="#cơ-chế-tắt-ứng-dụng-an-toàn-graceful-shutdown-với-sigterm">Cơ chế Tắt Ứng dụng An toàn (Graceful Shutdown với SIGTERM)</a></h3>
+<p>Khi một task đứng sau load balancer bị dừng (do scale-in hoặc deploy bản mới), ECS làm <strong>tuần tự</strong>: hủy đăng ký target khỏi target group và chờ hết <strong>deregistration delay</strong> (ALB ngừng gửi request mới, request đang chạy được hoàn thành), <strong>sau đó</strong> mới gửi <strong><code>SIGTERM</code></strong> tới tiến trình chính (PID 1) trong container:</p>
+<ol>
+<li>Container của bạn cần bắt tín hiệu <code>SIGTERM</code> trong mã nguồn (ví dụ <code>process.on(&#39;SIGTERM&#39;, ...)</code> trong Node.js). Dockerfile phải dùng <strong>exec form</strong> (<code>CMD [&quot;node&quot;, &quot;server.js&quot;]</code>); shell form (<code>CMD node server.js</code>) làm <code>/bin/sh</code> thành PID 1 và tín hiệu không tới được app.</li>
+<li>Khi nhận <code>SIGTERM</code>, server ngừng nhận request mới, hoàn tất xử lý nốt các request HTTP đang dở dang và giải phóng các kết nối database.</li>
+<li><strong><code>stopTimeout</code> (mặc định 30 giây, tối đa 120 giây trên Fargate):</strong> Khoảng thời gian ECS chờ container tự tắt sau <code>SIGTERM</code>. Nếu tiến trình chưa thoát, ECS gửi <strong><code>SIGKILL</code></strong> (exit code <code>137</code>).</li>
+<li><strong>Deregistration Delay (Connection Draining trên ALB):</strong> mặc định 300 giây, làm deploy chậm. Đặt bằng thời gian request dài nhất cộng biên an toàn (ví dụ 15–30 giây cho API ngắn).</li>
+</ol>
+<hr>
+<h2 id="phần-6--giới-thiệu-bài-thực-hành-lab-08"><a class="anchor" href="#phần-6--giới-thiệu-bài-thực-hành-lab-08">Phần 6 — Giới thiệu bài thực hành (Lab 08)</a></h2>
+<p>Trong bài thực hành đính kèm, bạn sẽ trực tiếp triển khai:</p>
+<ol>
+<li>Tạo một kho lưu trữ <strong>Amazon ECR</strong> với cờ Tag Immutability và Lifecycle Policy.</li>
+<li>Đóng gói mã nguồn ứng dụng Order API, gắn thẻ và đẩy ảnh lên ECR an toàn.</li>
+<li>Cấu hình cặp IAM Role: <strong>Task Execution Role</strong> và <strong>Task Role</strong>.</li>
+<li>Khởi tạo <strong>ECS Cluster</strong> và khai báo <strong>Task Definition</strong> cho môi trường Fargate kèm logging CloudWatch.</li>
+<li>Triển khai <strong>ECS Service</strong> kết nối sau Application Load Balancer với Target Type <code>ip</code>.</li>
+<li>Rolling deploy v1 → v2 trong khi chạy vòng <code>curl</code> liên tục để đo số request lỗi; xem log <code>SIGTERM</code>.</li>
+<li>Thực nghiệm tình huống lỗi (<strong>Negative Case</strong>): bản v3 lắng nghe sai cổng, quan sát circuit breaker tự rollback và đọc <code>stoppedReason</code>.</li>
+<li>Scale-in để thấy thứ tự draining → <code>SIGTERM</code> → thoát.</li>
+<li>Dọn dẹp toàn bộ tài nguyên ECS, ALB, NAT, ECR và kiểm tra inventory.</li>
+</ol>
+<p>👉 Mở bài hướng dẫn chi tiết tại: <strong><a href="../labs/08-containers/README.html">labs/08-containers/README.md</a></strong>.</p>
+<hr>
+<h2 id="phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút"><a class="anchor" href="#phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi phổ biến (25 phút)</a></h2>
+<h3 id="1-task-lập-tức-bị-dừng-với-lỗi-cannotpullcontainererror"><a class="anchor" href="#1-task-lập-tức-bị-dừng-với-lỗi-cannotpullcontainererror">1. Task lập tức bị dừng với lỗi <code>CannotPullContainerError</code></a></h3>
+<ul>
+<li><strong>Nguyên nhân 1:</strong> ECS Task chạy trong Private Subnet nhưng Subnet đó không có đường ra Internet (qua NAT Gateway) hoặc thiếu các <strong>VPC Endpoints</strong> cho ECR (<code>ecr.api</code>, <code>ecr.dkr</code> và S3 Gateway Endpoint).</li>
+<li><strong>Nguyên nhân 2:</strong> Task Execution Role thiếu quyền <code>AmazonECSTaskExecutionRolePolicy</code> để đăng nhập và kéo ảnh từ ECR.</li>
+<li><strong>Nguyên nhân 3:</strong> Tên URI của image hoặc Tag bị sai chính tả trong Task Definition.</li>
+</ul>
+<h3 id="2-task-liên-tục-khởi-động-rồi-tự-tắt-crashloop--essential-container-exited"><a class="anchor" href="#2-task-liên-tục-khởi-động-rồi-tự-tắt-crashloop--essential-container-exited">2. Task liên tục khởi động rồi tự tắt (CrashLoop / Essential container exited)</a></h3>
+<ul>
+<li><strong>Cách chẩn đoán:</strong> Xem mã thoát (<code>ExitCode</code>) và <code>StoppedReason</code> bằng lệnh:<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws ecs describe-tasks --cluster &lt;cluster&gt; --tasks &lt;task-id&gt; \
+  --query 'tasks[0].containers[0].[exitCode,reason]'</code></pre></div>
+<ul>
+<li><strong>ExitCode 137:</strong> tiến trình nhận <code>SIGKILL</code>. Hai nguyên nhân thường gặp: hết bộ nhớ (<code>stoppedReason</code> chứa <code>OutOfMemoryError</code>; tăng <code>memory</code> hoặc giảm dùng bộ nhớ), hoặc không thoát kịp trong <code>stopTimeout</code> sau <code>SIGTERM</code> (sửa xử lý shutdown).</li>
+<li><strong>ExitCode 1:</strong> Mã nguồn ứng dụng văng ngoại lệ không được xử lý (Unhandled Exception) ngay khi khởi động. Hãy kiểm tra CloudWatch Logs của container.</li>
+</ul>
+</li>
+</ul>
+<h3 id="3-target-trên-alb-luôn-ở-trạng-thái-unhealthy"><a class="anchor" href="#3-target-trên-alb-luôn-ở-trạng-thái-unhealthy">3. Target trên ALB luôn ở trạng thái <code>unhealthy</code></a></h3>
+<ul>
+<li><strong>Nguyên nhân 1:</strong> Port mapping trong Task Definition không khớp với port cấu hình trong Target Group (ví dụ container listen cổng 8080 nhưng Target Group kiểm tra cổng 80).</li>
+<li><strong>Nguyên nhân 2:</strong> Đường dẫn Health Check Path (ví dụ <code>/health</code>) trả về mã khác success code của target group. Mặc định ALB chỉ chấp nhận <code>200</code>; redirect <code>301/302</code> cũng bị coi là unhealthy.</li>
+<li><strong>Nguyên nhân 3:</strong> Security Group của ECS Task chưa mở Inbound cho Security Group của ALB.</li>
+</ul>
+<hr>
+<h2 id="câu-hỏi-tự-kiểm-tra"><a class="anchor" href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></h2>
+<ol>
+<li>Tại sao quy chuẩn doanh nghiệp nghiêm cấm việc ghi đè lên tag <code>:latest</code> trong Amazon ECR và yêu cầu kích hoạt cờ <code>Tag Immutability</code>?</li>
+<li>Trình bày sự khác biệt cốt lõi về mặt chức năng và phạm vi cấp quyền giữa <strong>Task Execution Role</strong> và <strong>Task Role</strong> trong Amazon ECS?</li>
+<li>Khi triển khai container trên AWS Fargate với chế độ mạng <code>awsvpc</code>, tại sao Target Group trên Application Load Balancer bắt buộc phải cấu hình <code>TargetType = &quot;ip&quot;</code> thay vì <code>TargetType = &quot;instance&quot;</code>?</li>
+<li>Trình bày quy trình diễn ra khi ECS dừng một container trong quá trình Rolling Update. Ý nghĩa của tín hiệu <code>SIGTERM</code> và tham số <code>Deregistration Delay</code> là gì?</li>
+<li>Nếu một ECS Fargate Task đặt trong Private Subnet không có Public IP, nó cần những điều kiện hạ tầng mạng nào để có thể kéo được ảnh từ ECR và gửi log lên CloudWatch?</li>
+</ol>
+<hr>
+<h2 id="tài-liệu-tham-khảo-chính-thức"><a class="anchor" href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></h2>
+<ul>
+<li><a href="https://docs.aws.amazon.com/AmazonECS/latest/developerguide/" target="_blank" rel="noopener">Amazon ECS Developer Guide</a></li>
+<li><a href="https://docs.aws.amazon.com/AmazonECS/latest/userguide/what-is-fargate.html" target="_blank" rel="noopener">AWS Fargate for Amazon ECS</a></li>
+<li><a href="https://docs.aws.amazon.com/AmazonECR/latest/userguide/" target="_blank" rel="noopener">Amazon ECR User Guide</a></li>
+<li><a href="https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html" target="_blank" rel="noopener">ECS Task execution IAM role vs Task IAM role</a></li>
+<li><a href="https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-target-groups.html#deregistration-delay" target="_blank" rel="noopener">Speeding up ECS deployment with ALB deregistration delay</a></li>
+</ul>
+<h2 id="trạng-thái-kiểm-chứng"><a class="anchor" href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></h2>
+<ul>
+<li><strong>Đối chiếu tài liệu (2026-10-31):</strong> Fargate bắt buộc <code>awsvpc</code> và target type <code>ip</code>; <code>runtimePlatform</code> ARM64; trình tự draining → <code>SIGTERM</code> → <code>SIGKILL</code> và giới hạn <code>stopTimeout</code>; deployment circuit breaker; ECR tag immutability; <code>aws ecr get-login-password</code> (lệnh <code>get-login</code> cũ đã bị bỏ ở CLI v2); ALB success code mặc định <code>200</code>.</li>
+<li><strong>Chưa chạy thử trên AWS:</strong> lệnh trong lab chưa được thực thi trên account thật; output và số đo là minh họa.</li>
+<li><strong>Chi phí:</strong> task Fargate cỡ nhỏ nhất (0,25 vCPU, 0,5 GB) chỉ khoảng $0.01/task-giờ, nhưng NAT Gateway và ALB khiến cả lab khoảng $0.13–0.15/giờ (xem bảng trong lab). Phải xóa ngay sau buổi học.</li>
+</ul>
+<hr>
+<h2 id="đáp-án-gợi-ý"><a class="anchor" href="#đáp-án-gợi-ý">Đáp án gợi ý</a></h2>
+<details>
+<summary>Mở để xem đáp án</summary>
+
+<ol>
+<li>Bật <code>Tag Immutability</code> để ngăn ngừa việc ghi đè lên các tag image đã có. Nếu dùng <code>:latest</code>, các lần scale-out máy ảo sau này có thể kéo về bản build mới hơn bản đang chạy, gây ra hiện tượng phân mảnh phiên bản (Version drift) giữa các container trong cùng một cụm. Định danh bất biến giúp đảm bảo tính toàn vẹn của mã nguồn, khả năng rollback tức thì và truy vết chính xác phiên bản mã nguồn tương ứng trong Git.</li>
+<li>Sự khác biệt:<ul>
+<li><strong>Task Execution Role:</strong> Trao quyền cho chính hạ tầng <strong>ECS Container Agent</strong> của AWS để thực hiện các tác vụ chuẩn bị trước khi container khởi chạy: kéo image từ ECR, đẩy log vào CloudWatch và lấy secret/parameter giải mã tiêm vào biến môi trường.</li>
+<li><strong>Task Role:</strong> Trao quyền trực tiếp cho <strong>mã nguồn ứng dụng</strong> chạy bên trong container để gọi các dịch vụ AWS khác (như ghi file lên S3, đọc ghi bảng DynamoDB) thông qua AWS SDK mà không cần nhúng Access Key vào container.</li>
+</ul>
+</li>
+<li>Vì ở chế độ mạng <code>awsvpc</code>, mỗi Task được cấp phát một giao diện mạng ảo (ENI) và địa chỉ IP riêng biệt trong subnet, hoàn toàn không phụ thuộc vào máy chủ vật lý hay instance EC2 nào bên dưới. Do đó, ALB chỉ có thể định tuyến lưu lượng trực tiếp tới địa chỉ IP cụ thể của từng task thông qua cấu hình <code>TargetType = &quot;ip&quot;</code>.</li>
+<li>Quy trình:<ul>
+<li>ECS hủy đăng ký target; ALB đưa task vào trạng thái <code>draining</code>, ngừng gửi request mới và chờ tối đa <code>Deregistration Delay</code> để request đang xử lý hoàn tất.</li>
+<li><strong>Sau khi</strong> draining xong, ECS gửi <code>SIGTERM</code> tới container. Ứng dụng đóng listener, đóng kết nối idle/keep-alive và kết nối database, rồi tự thoát.</li>
+<li>Nếu hết hạn <code>stopTimeout</code> mà container chưa dừng, ECS sẽ gửi <code>SIGKILL</code> để tiêu diệt tiến trình.</li>
+</ul>
+</li>
+<li>Cần một trong hai phương án mạng sau:<ul>
+<li><strong>Phương án 1 (NAT Gateway):</strong> Route Table của Private Subnet có một default route (<code>0.0.0.0/0</code>) trỏ tới một NAT Gateway đặt ở Public Subnet để container đi ra ngoài Internet kéo ảnh và gửi log.</li>
+<li><strong>Phương án 2 (VPC Endpoints - Hoàn toàn cô lập không cần Internet):</strong> Cần tối thiểu 4 VPC Endpoints trong VPC:<ul>
+<li>Interface Endpoint cho <code>ecr.api</code> (gọi ECR Control Plane).</li>
+<li>Interface Endpoint cho <code>ecr.dkr</code> (kéo các layer image).</li>
+<li>Gateway Endpoint cho <code>s3</code> (vì các layer Docker thực chất được ECR lưu trữ trên S3).</li>
+<li>Interface Endpoint cho <code>logs</code> (để gửi log lên CloudWatch Logs).</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+</details>
+
+
+<footer>Sinh tự động từ <code>notes/08-containers.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

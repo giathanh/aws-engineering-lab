@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bài 05 — Máy chủ và cân bằng tải: EC2, EBS, ALB, Auto Scaling và Systems Manager</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="01-foundations.html">01. Lý thuyết</a><a href="../labs/01-foundations/README.html">01. Lab</a><a href="02-identity-and-access.html">02. Lý thuyết</a><a href="../labs/02-identity-and-access/README.html">02. Lab</a><a href="03-cost-management.html">03. Lý thuyết</a><a href="../labs/03-cost-management/README.html">03. Lab</a><a href="04-networking.html">04. Lý thuyết</a><a href="../labs/04-networking/README.html">04. Lab</a><a href="05-compute-and-load-balancing.html" class="active">05. Lý thuyết</a><a href="../labs/05-compute-and-load-balancing/README.html">05. Lab</a><a href="06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../labs/06-storage-and-content-delivery/README.html">06. Lab</a><a href="07-databases-and-cache.html">07. Lý thuyết</a><a href="../labs/07-databases-and-cache/README.html">07. Lab</a><a href="08-containers.html">08. Lý thuyết</a><a href="../labs/08-containers/README.html">08. Lab</a><a href="09-serverless.html">09. Lý thuyết</a><a href="../labs/09-serverless/README.html">09. Lab</a><a href="10-observability-and-application-security.html">10. Lý thuyết</a><a href="../labs/10-observability-and-application-security/README.html">10. Lab</a><a href="11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../labs/11-messaging-and-workflows/README.html">11. Lab</a><a href="12-iac-and-cicd.html">12. Lý thuyết</a><a href="../labs/12-iac-and-cicd/README.html">12. Lab</a><a href="13-reliability-and-performance.html">13. Lý thuyết</a><a href="../labs/13-reliability-and-performance/README.html">13. Lab</a><a href="14-architecture-and-governance.html">14. Lý thuyết</a><a href="../labs/14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#mục-tiêu">Mục tiêu</a></li><li><a href="#phần-1--amazon-ec2-instance-ami-user-data-và-instance-profile-45-phút">Phần 1 — Amazon EC2: Instance, AMI, User Data và Instance Profile (45 phút)</a></li><li><a href="#phần-2--amazon-ebs-vòng-đời-snapshot-và-giới-hạn-vùng-40-phút">Phần 2 — Amazon EBS: Vòng đời, Snapshot và Giới hạn vùng (40 phút)</a></li><li><a href="#phần-3--application-load-balancer-alb-và-health-check-45-phút">Phần 3 — Application Load Balancer (ALB) và Health Check (45 phút)</a></li><li><a href="#phần-4--launch-template-và-auto-scaling-group-asg-45-phút">Phần 4 — Launch Template và Auto Scaling Group (ASG) (45 phút)</a></li><li><a href="#phần-5--quản-trị-máy-chủ-an-toàn-với-aws-systems-manager-ssm-30-phút">Phần 5 — Quản trị máy chủ an toàn với AWS Systems Manager (SSM) (30 phút)</a></li><li><a href="#phần-6--giới-thiệu-bài-thực-hành-lab-05">Phần 6 — Giới thiệu bài thực hành (Lab 05)</a></li><li><a href="#phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi phổ biến (25 phút)</a></li><li><a href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></li><li><a href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></li><li><a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></li><li><a href="#đáp-án-gợi-ý">Đáp án gợi ý</a></li></ol></aside>
+<main>
+<h1 id="bài-05--máy-chủ-và-cân-bằng-tải-ec2-ebs-alb-auto-scaling-và-systems-manager"><a class="anchor" href="#bài-05--máy-chủ-và-cân-bằng-tải-ec2-ebs-alb-auto-scaling-và-systems-manager">Bài 05 — Máy chủ và cân bằng tải: EC2, EBS, ALB, Auto Scaling và Systems Manager</a></h1>
+<blockquote>
+<p><strong>Đối tượng:</strong> developer có kinh nghiệm nhưng mới học AWS.
+<strong>Thời lượng:</strong> khoảng 5–7 giờ, chia hai buổi. Buổi 1 gồm phần 1–4 (lý thuyết &amp; kiến trúc điện toán phân tán). Buổi 2 gồm phần 5–7 và <a href="../labs/05-compute-and-load-balancing/README.html">lab thực hành</a>.
+<strong>Kế hoạch gốc:</strong> <a href="../plans/05-compute-and-load-balancing.md">plans/05-compute-and-load-balancing.md</a>
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Xem <a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a> ở cuối bài.</p>
+</blockquote>
+<h2 id="mục-tiêu"><a class="anchor" href="#mục-tiêu">Mục tiêu</a></h2>
+<p>Sau bài này, bạn có thể:</p>
+<ol>
+<li>Phân loại các họ máy chủ <strong>Amazon EC2</strong>, kiến trúc vi xử lý (x86 vs AWS Graviton arm64), quy trình khởi động qua <strong>User Data</strong> và vai trò của <strong>Instance Metadata Service v2 (IMDSv2)</strong>.</li>
+<li>Hiểu vòng đời của <strong>Amazon Elastic Block Store (EBS)</strong>, cờ <code>DeleteOnTermination</code>, cơ chế sao lưu <strong>EBS Snapshot</strong> và ràng buộc gắn ổ đĩa theo Availability Zone (Zonal constraint).</li>
+<li>Nắm vững cơ chế hoạt động của <strong>Application Load Balancer (ALB)</strong>: Listener, Routing Rules, Target Group và thuật toán kiểm tra sức khỏe (<strong>Health Check</strong>).</li>
+<li>Thiết kế cụm máy chủ tự động co giãn bằng <strong>Launch Template</strong> và <strong>EC2 Auto Scaling Group (ASG)</strong> qua nhiều AZ với các tham số <code>min</code>, <code>max</code>, <code>desired</code> và chính sách <strong>Target Tracking Scaling Policy</strong>.</li>
+<li>Thay thế hoàn toàn giao thức SSH truyền thống (Port 22) bằng <strong>AWS Systems Manager (SSM) Session Manager</strong>, giúp quản trị máy chủ riêng tư (Private Subnet) an toàn mà không cần mở cổng mạng hoặc dùng Bastion Host.</li>
+<li>Thiết kế ứng dụng phi trạng thái (<strong>Stateless Architecture</strong>) và cơ chế xử lý dừng dịch vụ an toàn (<strong>Graceful Shutdown</strong>).</li>
+</ol>
+<hr>
+<h2 id="phần-1--amazon-ec2-instance-ami-user-data-và-instance-profile-45-phút"><a class="anchor" href="#phần-1--amazon-ec2-instance-ami-user-data-và-instance-profile-45-phút">Phần 1 — Amazon EC2: Instance, AMI, User Data và Instance Profile (45 phút)</a></h2>
+<h3 id="amazon-elastic-compute-cloud-ec2"><a class="anchor" href="#amazon-elastic-compute-cloud-ec2">Amazon Elastic Compute Cloud (EC2)</a></h3>
+<p>EC2 cung cấp năng lực tính toán máy ảo có thể thay đổi quy mô linh hoạt trong đám mây.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Cấu tạo một Instance EC2:
+┌────────────────────────────────────────────────────────┐
+│ Amazon EC2 Instance                                    │
+│                                                        │
+│  ┌───────────────────┐        ┌─────────────────────┐  │
+│  │   AMI (HĐH Linux) │        │ User Data Bootstrap │  │
+│  └───────────────────┘        └─────────────────────┘  │
+│  ┌───────────────────┐        ┌─────────────────────┐  │
+│  │ vCPU / RAM (Họ T) │        │ IAM Instance Profile│  │
+│  └───────────────────┘        └─────────────────────┘  │
+│            ▲                                           │
+└────────────┼───────────────────────────────────────────┘
+             ▼ (Gắn qua mạng; trên instance Nitro hiện ra như ổ NVMe)
+┌────────────────────────┐
+│ EBS Volume (Root Disk) │
+└────────────────────────┘</code></pre></div>
+<h3 id="các-họ-máy-chủ-ec2-instance-families"><a class="anchor" href="#các-họ-máy-chủ-ec2-instance-families">Các họ máy chủ EC2 (Instance Families)</a></h3>
+<p>Quy ước đặt tên của EC2 theo dạng <code>&lt;Family&gt;&lt;Generation&gt;&lt;Capabilities&gt;.&lt;Size&gt;</code>. Ví dụ: <code>t4g.small</code>:</p>
+<ul>
+<li><code>t</code>: Họ máy chủ burstable (phù hợp tải biến thiên, lab, dev/test).</li>
+<li><code>4</code>: Thế hệ thứ 4.</li>
+<li><code>g</code>: Trang bị chip AWS Graviton (kiến trúc ARM64, hiệu năng/giá tốt hơn x86 tới 20–40%).</li>
+<li><code>small</code>: Kích cỡ phần cứng (vCPU và RAM).</li>
+</ul>
+<p>Các họ chính:</p>
+<ul>
+<li><strong>T (General Purpose / Burstable):</strong> <code>t4g</code>, <code>t3</code> — Cân bằng giữa CPU, bộ nhớ và chi phí thấp.</li>
+<li><strong>M (General Purpose):</strong> <code>m6i</code>, <code>m7g</code> — Tỷ lệ vCPU : RAM là 1 : 4, dùng cho web server, app server tiêu chuẩn.</li>
+<li><strong>C (Compute Optimized):</strong> <code>c6i</code>, <code>c7g</code> — Tỷ lệ 1 : 2, tối ưu cho xử lý tính toán cao, batch processing, video encoding.</li>
+<li><strong>R (Memory Optimized):</strong> <code>r6i</code>, <code>r7g</code> — Tỷ lệ 1 : 8, tối ưu cho in-memory cache (Redis), cơ sở dữ liệu (PostgreSQL/MySQL).</li>
+</ul>
+<h3 id="amazon-machine-image-ami"><a class="anchor" href="#amazon-machine-image-ami">Amazon Machine Image (AMI)</a></h3>
+<p>AMI là khuôn mẫu đóng gói sẵn hệ điều hành, cấu hình kernel và phần mềm cài đặt sẵn. Khuyến nghị chuẩn hiện nay của AWS là <strong>Amazon Linux 2023 (AL2023)</strong> — tối ưu hóa thời gian khởi động, đi kèm kernel Linux mới và trình quản lý gói <code>dnf</code>.</p>
+<h3 id="user-data-script"><a class="anchor" href="#user-data-script">User Data Script</a></h3>
+<p>User Data là đoạn script (thường là Bash shell script) được chuyển vào máy ảo khi khởi tạo:</p>
+<ul>
+<li><strong>Cơ chế chạy:</strong> Script này được tiện ích <code>cloud-init</code> thực thi với quyền <code>root</code> <strong>duy nhất một lần trong lần khởi động đầu tiên (first boot)</strong> của instance.</li>
+<li><strong>Lưu ý:</strong> Khi bạn Reboot hay Stop/Start máy ảo, User Data <strong>mặc định không chạy lại</strong> (có thể cấu hình cloud-init để chạy mỗi lần boot, nhưng đó không phải mặc định; hành vi cụ thể phụ thuộc AMI). Vì vậy, process khởi chạy bằng <code>&amp;</code> trong user data sẽ <strong>mất sau reboot</strong>; muốn ứng dụng tự chạy lại, hãy đăng ký nó thành <strong>systemd service</strong>.</li>
+<li><strong>Bảo mật:</strong> Không đưa secrets vào User Data, vì bất kỳ ai có quyền <code>ec2:DescribeInstanceAttribute</code> và mọi process trên instance (qua IMDS) đều đọc được nội dung này dưới dạng plain text.</li>
+<li><strong>Debug:</strong> output của script nằm ở <code>/var/log/cloud-init-output.log</code>.</li>
+</ul>
+<h3 id="imdsv2-instance-metadata-service-version-2"><a class="anchor" href="#imdsv2-instance-metadata-service-version-2">IMDSv2 (Instance Metadata Service Version 2)</a></h3>
+<p>Mỗi EC2 instance có thể truy vấn thông tin về chính nó (IP, AZ, IAM role credentials) qua địa chỉ IP link-local đặc biệt <code>http://169.254.169.254/latest/meta-data/</code>.</p>
+<ul>
+<li><strong>IMDSv1:</strong> Yêu cầu một request GET đơn giản, dễ bị lộ credentials nếu ứng dụng dính lỗ hổng SSRF (Server-Side Request Forgery).</li>
+<li><strong>IMDSv2 (Chuẩn bảo mật bắt buộc):</strong> Yêu cầu phương thức dựa trên session (Session-oriented). Client phải gửi request <code>PUT</code> với header <code>X-aws-ec2-metadata-token-ttl-seconds</code> để lấy token bí mật, sau đó mới dùng token đó trong header <code>X-aws-ec2-metadata-token</code> để đọc metadata.</li>
+</ul>
+<h3 id="iam-instance-profile"><a class="anchor" href="#iam-instance-profile">IAM Instance Profile</a></h3>
+<p>Để cấp quyền cho ứng dụng chạy trên EC2 gọi AWS API (ví dụ ghi file lên S3 hoặc kết nối Systems Manager), <strong>tuyệt đối không bao giờ copy Access Key vào máy ảo</strong>.
+Thay vào đó, bạn tạo một <strong>IAM Role</strong>, bọc nó vào một <strong>Instance Profile</strong> và gắn vào EC2:</p>
+<ul>
+<li>AWS tự động xoay vòng (rotate) temporary credentials định kỳ và cung cấp cho máy ảo qua IMDSv2.</li>
+<li>Ứng dụng dùng AWS SDK sẽ tự động phát hiện và sử dụng credentials này mà bạn không cần cấu hình thêm dòng code nào.</li>
+</ul>
+<hr>
+<h2 id="phần-2--amazon-ebs-vòng-đời-snapshot-và-giới-hạn-vùng-40-phút"><a class="anchor" href="#phần-2--amazon-ebs-vòng-đời-snapshot-và-giới-hạn-vùng-40-phút">Phần 2 — Amazon EBS: Vòng đời, Snapshot và Giới hạn vùng (40 phút)</a></h2>
+<p><strong>Amazon Elastic Block Store (EBS)</strong> là dịch vụ lưu trữ khối cấp độ mạng (network-attached block storage) hiệu năng cao, đóng vai trò như chiếc ổ cứng gắn ngoài kết nối vào máy ảo EC2.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Availability Zone A
+┌──────────────────────────────────────────────┐
+│  EC2 Instance A                              │
+│       ▲                                      │
+│       │ Gắn qua mạng nội bộ AZ (NVMe)        │
+│       ▼                                      │
+│  EBS Volume (gp3)                            │
+└───────┬──────────────────────────────────────┘
+        │
+        │ ec2:CreateSnapshot (Bản sao lưu tăng dần)
+        ▼
+   ┌────────────────────────────────────────┐
+   │ Amazon S3 Storage (Bảo vệ đa vùng AZ) │
+   └────────────────────────────────────────┘</code></pre></div>
+<h3 id="các-loại-volume-ebs-phổ-biến"><a class="anchor" href="#các-loại-volume-ebs-phổ-biến">Các loại Volume EBS phổ biến:</a></h3>
+<ol>
+<li><strong>General Purpose SSD (gp3):</strong> Lựa chọn mặc định tốt nhất cho hầu hết khối lượng công việc. Cho phép tùy chỉnh độc lập giữa dung lượng (GB), IOPS cơ sở (mặc định 3,000 IOPS miễn phí) và Throughput (mặc định 125 MB/s) mà không cần tăng dung lượng đĩa.</li>
+<li><strong>Provisioned IOPS SSD (io2 / io2 Block Express):</strong> Dành cho các hệ thống cơ sở dữ liệu quan trọng đòi hỏi độ trễ dưới mili-giây và độ bền bỉ 99.999%.</li>
+<li><strong>Throughput Optimized HDD (st1):</strong> Ổ đĩa từ tính giá rẻ cho Big Data, log processing và data warehousing.</li>
+</ol>
+<h3 id="hai-nguyên-tắc-vàng-về-kiến-trúc-ebs"><a class="anchor" href="#hai-nguyên-tắc-vàng-về-kiến-trúc-ebs">Hai nguyên tắc vàng về kiến trúc EBS:</a></h3>
+<ol>
+<li><p><strong>Ràng buộc Zonal (Zonal Constraint):</strong>
+Một EBS Volume được tạo trong một Availability Zone cụ thể (ví dụ <code>ap-southeast-1a</code>) thì <strong>chỉ có thể gắn (attach) vào instance EC2 nằm trong cùng AZ đó</strong>. Bạn không thể gắn trực tiếp một EBS volume ở AZ-1a vào một máy ảo ở AZ-1b. Muốn chuyển dữ liệu sang AZ khác, bạn phải tạo Snapshot rồi khôi phục thành Volume mới ở AZ đích.</p>
+</li>
+<li><p><strong>Cờ <code>DeleteOnTermination</code>:</strong>
+Mỗi volume khi gắn vào EC2 có một thuộc tính boolean <code>DeleteOnTermination</code>.</p>
+<ul>
+<li>Với <strong>Root Volume</strong> (chứa HĐH): Mặc định là <code>true</code> (khi terminate instance, ổ đĩa bị xóa tự động).</li>
+<li>Với <strong>Data Volume</strong> (ổ gắn thêm): Mặc định là <code>false</code> (khi terminate instance, ổ đĩa vẫn được giữ lại ở trạng thái <code>available</code> và tiếp tục tính tiền). Cần lưu ý điều này để tránh tài nguyên ngầm.</li>
+</ul>
+</li>
+</ol>
+<h3 id="ebs-snapshots"><a class="anchor" href="#ebs-snapshots">EBS Snapshots</a></h3>
+<p>EBS Snapshot là bản chụp ảnh sao lưu tại một thời điểm (Point-in-time backup) của volume, được lưu trữ an toàn trên Amazon S3:</p>
+<ul>
+<li><strong>Cơ chế sao lưu gia tăng (Incremental Backup):</strong> Lần snapshot đầu tiên copy 100% block dữ liệu đã dùng. Các lần snapshot tiếp theo chỉ lưu lại các block dữ liệu có thay đổi kể từ lần chụp trước, giúp tiết kiệm tối đa chi phí lưu trữ.</li>
+</ul>
+<hr>
+<h2 id="phần-3--application-load-balancer-alb-và-health-check-45-phút"><a class="anchor" href="#phần-3--application-load-balancer-alb-và-health-check-45-phút">Phần 3 — Application Load Balancer (ALB) và Health Check (45 phút)</a></h2>
+<p>Khi lưu lượng truy cập tăng cao hoặc cần đảm bảo tính sẵn sàng cao (High Availability), chúng ta không bao giờ để client kết nối trực tiếp vào một máy chủ đơn lẻ. Thay vào đó, ta đặt một <strong>Application Load Balancer (ALB)</strong> làm cửa ngõ phân phối.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Client Request (HTTP/HTTPS)
+            │
+            ▼
+┌───────────────────────────────────────────────┐
+│ Application Load Balancer (Tầng 7)            │
+│  - Trải trên 2 Public Subnets (AZ-A &amp; AZ-B)   │
+│  - DNS: my-alb-123.&lt;region&gt;.elb.amazonaws.com │
+├───────────────────────────────────────────────┤
+│ Listener: Cổng 80 HTTP                        │
+│  - Routing Rule: Nếu path=&quot;/api/*&quot; ──► TG-App │
+└───────────────────────┬───────────────────────┘
+                        │ Phân phối tải (Round Robin / Least Requests)
+                        ▼
+┌───────────────────────────────────────────────┐
+│ Target Group: tg-order-service                │
+│  - Health Check: GET /health (Mỗi 15s)        │
+├───────────────────────┬───────────────────────┤
+│   AZ-A (Private)      │   AZ-B (Private)      │
+│ ┌───────────────────┐ │ ┌───────────────────┐ │
+│ │ EC2 Instance #1   │ │ │ EC2 Instance #2   │ │
+│ │ Trạng thái: Healthy│ │ │ Trạng thái: Healthy│ │
+│ └───────────────────┘ │ └───────────────────┘ │
+└───────────────────────┴───────────────────────┘</code></pre></div>
+<h3 id="các-thành-phần-của-alb"><a class="anchor" href="#các-thành-phần-của-alb">Các thành phần của ALB:</a></h3>
+<ol>
+<li><strong>Load Balancer:</strong> Đặt node trên các Public Subnet ở nhiều AZ (mỗi node có public IPv4, tính phí) và cung cấp một <code>DNS Name</code> cố định. <strong>IP của ALB có thể thay đổi</strong>, nên client luôn dùng DNS name, không hard-code IP.</li>
+<li><strong>Listener:</strong> Lắng nghe kết nối trên một cổng cụ thể (ví dụ HTTP cổng 80 hoặc HTTPS cổng 443).</li>
+<li><strong>Routing Rules:</strong> Quy tắc định tuyến dựa trên nội dung tầng 7 (HTTP header, path, query parameter hoặc HTTP method). Ví dụ: <code>GET /orders/*</code> chuyển tiếp về Target Group Order, còn <code>GET /users/*</code> chuyển về Target Group User.</li>
+<li><strong>Target Group:</strong> Tập hợp các đối tượng đích nhận traffic (EC2 instances, container ECS, hoặc Lambda).</li>
+</ol>
+<h3 id="cơ-chế-health-check-kiểm-tra-sức-khỏe"><a class="anchor" href="#cơ-chế-health-check-kiểm-tra-sức-khỏe">Cơ chế Health Check (Kiểm tra sức khỏe)</a></h3>
+<p>ALB định kỳ gửi request HTTP (ví dụ <code>GET /health</code>) tới từng target trong Target Group:</p>
+<ul>
+<li><strong>Healthy Threshold (Ngưỡng sống):</strong> Số lần phản hồi HTTP 200 liên tiếp để đánh dấu instance là khỏe mạnh (ví dụ: 2 lần).</li>
+<li><strong>Unhealthy Threshold (Ngưỡng chết):</strong> Số lần health check thất bại liên tiếp (timeout, từ chối kết nối, hoặc mã HTTP ngoài <code>Matcher</code>, mặc định <code>200</code>) để đánh dấu target hỏng (ví dụ: 2 lần).</li>
+<li><strong>Thời gian phát hiện lỗi</strong> ≈ <code>interval × unhealthy_threshold</code>. Ví dụ interval 10 giây, threshold 2 thì mất khoảng 20 giây.</li>
+<li>Khi một target <code>unhealthy</code>, ALB <strong>ngừng gửi request mới</strong> tới target đó và chia cho các target healthy còn lại.</li>
+<li><strong>Fail open:</strong> nếu <strong>tất cả</strong> target đều unhealthy, ALB không trả lỗi ngay mà gửi request tới <strong>mọi</strong> target (vì có thể chính health check bị cấu hình sai). Request sau đó thất bại theo cách của target: không kết nối được thì <code>502</code>/<code>504</code>.</li>
+</ul>
+<h3 id="bảng-mã-lỗi-thường-gặp-của-alb"><a class="anchor" href="#bảng-mã-lỗi-thường-gặp-của-alb">Bảng mã lỗi thường gặp của ALB</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Mã</th>
+<th>Ý nghĩa thường gặp</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>502 Bad Gateway</code></td>
+<td>ALB kết nối được target nhưng nhận response không hợp lệ, hoặc target đóng/từ chối kết nối (app chết, app chỉ bind <code>127.0.0.1</code>)</td>
+</tr>
+<tr>
+<td><code>503 Service Unavailable</code></td>
+<td>Target group <strong>không có target nào được đăng ký</strong> (ví dụ ASG desired = 0), hoặc listener rule không có target</td>
+</tr>
+<tr>
+<td><code>504 Gateway Timeout</code></td>
+<td>Target không phản hồi kịp: SG chặn port, app treo, quá idle timeout</td>
+</tr>
+</tbody></table>
+</div>
+<h3 id="graceful-shutdown-và-deregistration-delay"><a class="anchor" href="#graceful-shutdown-và-deregistration-delay">Graceful shutdown và deregistration delay</a></h3>
+<p>Khi một target bị gỡ khỏi target group (scale-in, ASG thay instance, deploy), ALB chuyển nó sang trạng thái <code>draining</code>:</p>
+<ul>
+<li><strong>Deregistration delay</strong> (mặc định 300 giây, chỉnh qua <code>deregistration_delay.timeout_seconds</code>): ALB ngừng gửi request mới nhưng <strong>cho request đang xử lý chạy xong</strong> trong khoảng thời gian này.</li>
+<li>Ứng dụng cũng phải hợp tác: khi nhận <strong>SIGTERM</strong> (systemd/ECS gửi khi dừng), app ngừng nhận request mới, xử lý xong request đang chạy, đóng kết nối DB rồi mới thoát.</li>
+<li>Với ASG, <strong>lifecycle hook</strong> (<code>autoscaling:EC2_INSTANCE_TERMINATING</code>) giữ instance ở trạng thái chờ để chạy việc dọn dẹp (flush log, hoàn tất job) trước khi bị terminate.</li>
+</ul>
+<hr>
+<h2 id="phần-4--launch-template-và-auto-scaling-group-asg-45-phút"><a class="anchor" href="#phần-4--launch-template-và-auto-scaling-group-asg-45-phút">Phần 4 — Launch Template và Auto Scaling Group (ASG) (45 phút)</a></h2>
+<p>Tự phục hồi (Self-healing) và Tự co giãn (Auto-scaling) là hai phẩm chất tối quan trọng của kiến trúc đám mây.</p>
+<h3 id="launch-template-bản-thiết-kế-máy-chủ"><a class="anchor" href="#launch-template-bản-thiết-kế-máy-chủ">Launch Template (Bản thiết kế máy chủ)</a></h3>
+<p>Launch Template chứa đầy đủ thông số kỹ thuật cần thiết để khởi chạy một EC2 instance mới:</p>
+<ul>
+<li>ID của AMI (ví dụ Amazon Linux 2023).</li>
+<li>Loại instance (ví dụ <code>t4g.nano</code> hoặc <code>t4g.micro</code>).</li>
+<li>Security Groups.</li>
+<li>IAM Instance Profile.</li>
+<li>User Data bootstrap script.</li>
+<li>Cấu hình ổ đĩa EBS.</li>
+<li>Hỗ trợ đánh số phiên bản (Version 1, Version 2...) giúp dễ dàng rollback khi deploy phiên bản phần mềm mới.</li>
+</ul>
+<h3 id="auto-scaling-group-asg"><a class="anchor" href="#auto-scaling-group-asg">Auto Scaling Group (ASG)</a></h3>
+<p>ASG quản lý một tập hợp các máy ảo EC2 được tạo ra từ Launch Template, đảm bảo số lượng máy chủ luôn duy trì theo đúng nhu cầu:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Cấu hình Capacity của ASG:
+[ Min: 1 ] ◄─────── [ Desired: 2 ] ───────► [ Max: 4 ]
+ Số tối thiểu        Số lượng mong muốn       Số tối đa được phép mở</code></pre></div>
+<ul>
+<li><strong>Phân bổ đa vùng (Multi-AZ):</strong> Khi bạn cấu hình ASG nằm trên 2 Private Subnets ở 2 AZ khác nhau, ASG sẽ tự động cân bằng số lượng máy ảo đều giữa các AZ để tối đa hóa khả năng chịu lỗi.</li>
+<li><strong>Tích hợp Health Check giữa ALB và ASG:</strong><ul>
+<li>Mặc định, ASG chỉ kiểm tra sức khỏe ở mức phần cứng (<strong>EC2 status check</strong>: máy còn chạy không).</li>
+<li>Khi bật <strong><code>HealthCheckType: &quot;ELB&quot;</code></strong>, nếu ALB đánh dấu một instance <code>unhealthy</code> (app treo dù HĐH vẫn chạy), ASG sẽ terminate instance đó và launch instance mới thay thế.</li>
+<li><strong>Health check grace period</strong> cho instance mới thời gian khởi động (boot + user data + app start) trước khi ASG tính kết quả health check của ELB. Đặt quá ngắn thì ASG giết instance trước khi app kịp lên và lặp lại mãi.</li>
+<li>ASG chỉ thay <strong>máy</strong>. Dữ liệu và session lưu trên đĩa local của máy bị thay sẽ <strong>mất</strong>; ASG không sửa được điều đó. Đây là lý do ứng dụng cần stateless (Phần 5).</li>
+</ul>
+</li>
+</ul>
+<h3 id="chính-sách-co-giãn-scaling-policies"><a class="anchor" href="#chính-sách-co-giãn-scaling-policies">Chính sách co giãn (Scaling Policies)</a></h3>
+<ul>
+<li><strong>Target Tracking Scaling Policy (Khuyến nghị):</strong> Bạn chỉ cần đặt mục tiêu (Target Value), AWS sẽ tự động tăng/giảm số máy để duy trì chỉ số đó. Ví dụ: <em>&quot;Luôn giữ mức sử dụng CPU trung bình của cụm ở mức 60%&quot;</em>.</li>
+<li><strong>Instance warmup</strong> (dùng với target tracking/step scaling): khoảng thời gian instance mới <strong>chưa được tính</strong> vào metric trung bình của nhóm, để CPU cao lúc khởi động không kích hoạt scale-out thêm.</li>
+<li><strong>Cooldown</strong> (chủ yếu cho simple scaling): sau một lần scale, ASG chờ hết thời gian này mới xét lần scale tiếp theo.</li>
+<li><strong>Không scale như mong đợi?</strong> Kiểm tra: metric có thật sự vượt target không (CloudWatch), instance còn trong warmup không, đã chạm <code>max</code> chưa, và quota vCPU của account.</li>
+</ul>
+<hr>
+<h2 id="phần-5--quản-trị-máy-chủ-an-toàn-với-aws-systems-manager-ssm-30-phút"><a class="anchor" href="#phần-5--quản-trị-máy-chủ-an-toàn-với-aws-systems-manager-ssm-30-phút">Phần 5 — Quản trị máy chủ an toàn với AWS Systems Manager (SSM) (30 phút)</a></h2>
+<p>Trong kiến trúc truyền thống, để SSH vào máy ảo, lập trình viên thường:</p>
+<ul>
+<li>Mở cổng <code>22</code> trên Security Group.</li>
+<li>Gán Public IP cho máy ảo hoặc dựng một máy nhảy (Bastion Host / Jump Box).</li>
+<li>Quản lý và chia sẻ file SSH Key Pair (<code>.pem</code>) — tiềm ẩn nguy cơ lộ key nghiêm trọng.</li>
+</ul>
+<h3 id="giải-pháp-hiện-đại-aws-systems-manager-session-manager"><a class="anchor" href="#giải-pháp-hiện-đại-aws-systems-manager-session-manager">Giải pháp hiện đại: AWS Systems Manager Session Manager</a></h3>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Lập trình viên (Terminal / AWS CLI)
+       │
+       │ Không cần Port 22! Không cần Public IP! Không cần SSH Key!
+       ▼
+[ AWS Systems Manager API Endpoint ]
+       ▲
+       │ Kết nối bảo mật Outbound qua cổng 443 HTTPS (Websocket)
+       │ (Sử dụng IAM Role: AmazonSSMManagedInstanceCore)
+       │
+[ EC2 Instance trong Private Subnet ]
+  - Chạy sẵn SSM Agent (tích hợp sẵn trong Amazon Linux 2023)</code></pre></div>
+<p><strong>Ưu điểm vượt trội của SSM Session Manager:</strong></p>
+<ol>
+<li><strong>Zero Open Ports:</strong> Không cần mở bất kỳ cổng Inbound nào trên Security Group (kể cả cổng 22). Security Group Inbound có thể để trống hoàn toàn!</li>
+<li><strong>Private-Only:</strong> Máy ảo nằm trong Private Subnet, không cần public IP, nhưng <strong>bắt buộc</strong> có đường outbound HTTPS tới SSM (qua NAT Gateway hoặc VPC Interface Endpoints, xem Bài 04). Private subnet chỉ có local route thì SSM <strong>không</strong> hoạt động.</li>
+<li><strong>Quản trị bằng IAM:</strong> Phân quyền ai được mở session vào máy nào bằng IAM Policy (<code>ssm:StartSession</code> giới hạn theo tag/instance) thay vì phát SSH key.</li>
+<li><strong>Audit Logs:</strong> Có thể bật ghi log output của session lên Amazon S3 hoặc CloudWatch Logs, và CloudTrail ghi lại ai đã mở session nào, khi nào.</li>
+</ol>
+<hr>
+<h2 id="phần-6--giới-thiệu-bài-thực-hành-lab-05"><a class="anchor" href="#phần-6--giới-thiệu-bài-thực-hành-lab-05">Phần 6 — Giới thiệu bài thực hành (Lab 05)</a></h2>
+<p>Trong bài thực hành đi kèm, bạn ghép các mảnh kiến trúc từ Lab 02–04 để triển khai một dịch vụ đơn hàng nhỏ:</p>
+<ul>
+<li><strong>Kiến trúc:</strong><ul>
+<li>Tự tạo mạng riêng cho lab (cùng mô hình Lab 04) và thêm <strong>một NAT Gateway</strong> để instance trong private subnet kết nối được SSM.</li>
+<li>Tạo IAM Role + Instance Profile cho EC2 với <code>AmazonSSMManagedInstanceCore</code>.</li>
+<li>Tạo Launch Template (Amazon Linux 2023, <code>t4g.nano</code>, IMDSv2) với User Data đăng ký Order API viết bằng Python thành <strong>systemd service</strong>.</li>
+<li>Triển khai <strong>Application Load Balancer</strong> công khai trên 2 Public Subnet.</li>
+<li>Triển khai <strong>Auto Scaling Group</strong> với 2 instance <strong>không có public IP</strong> trong 2 Private Subnet.</li>
+</ul>
+</li>
+<li><strong>Thực nghiệm kiểm chứng:</strong><ul>
+<li>Negative test: gọi ALB khi chưa có target → <code>503</code>.</li>
+<li>Phân phối request qua DNS của ALB (<code>GET /order</code> trả về instance ID và AZ).</li>
+<li>Vào instance trong private subnet bằng Session Manager, không mở port 22.</li>
+<li>Giả lập sự cố: dừng service trên 1 instance, <strong>đo</strong> thời gian ALB đánh dấu <code>unhealthy</code> và thời gian ASG thay instance mới.</li>
+<li>Tùy chọn: target tracking policy và tạo tải CPU có giới hạn để quan sát scale-out.</li>
+<li>Dọn dẹp theo dependency và kiểm tra EBS, public IPv4/EIP, NAT còn sót.</li>
+</ul>
+</li>
+</ul>
+<p>👉 Mở bài hướng dẫn chi tiết tại: <strong><a href="../labs/05-compute-and-load-balancing/README.html">labs/05-compute-and-load-balancing/README.md</a></strong>.</p>
+<hr>
+<h2 id="phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút"><a class="anchor" href="#phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi phổ biến (25 phút)</a></h2>
+<h3 id="1-alb-trả-về-502-503-hoặc-504"><a class="anchor" href="#1-alb-trả-về-502-503-hoặc-504">1. ALB trả về 502, 503 hoặc 504</a></h3>
+<ul>
+<li><strong>Bằng chứng đầu tiên:</strong> <code>aws elbv2 describe-target-health</code> cho biết số target đã đăng ký, trạng thái và <code>Reason</code> (ví dụ <code>Target.Timeout</code>, <code>Target.FailedHealthChecks</code>, <code>Target.ResponseCodeMismatch</code>).</li>
+<li><strong>502 Bad Gateway:</strong> target từ chối hoặc đóng kết nối, hoặc trả response hỏng. Thường do app chưa chạy, app crash, hoặc app chỉ bind <code>127.0.0.1</code> thay vì <code>0.0.0.0</code>. Kiểm tra từ chính instance: <code>curl -v http://localhost:8080/health</code> và <code>ss -ltnp</code>.</li>
+<li><strong>503 Service Unavailable:</strong> target group <strong>không có target nào được đăng ký</strong>. Kiểm tra ASG có đang <code>desired = 0</code> không, ASG có gắn đúng target group không, instance có launch thất bại không (<code>describe-scaling-activities</code>).</li>
+<li><strong>504 Gateway Timeout:</strong> ALB không nhận được phản hồi. Thường do <strong>Security Group của instance không cho phép port app từ SG của ALB</strong>, hoặc app treo.</li>
+<li><strong>Sửa có phạm vi nhỏ:</strong> mở đúng port app từ SG của ALB, không mở <code>0.0.0.0/0</code> vào instance.</li>
+</ul>
+<h3 id="2-user-data-script-không-chạy-hoặc-cài-đặt-thất-bại"><a class="anchor" href="#2-user-data-script-không-chạy-hoặc-cài-đặt-thất-bại">2. User Data script không chạy hoặc cài đặt thất bại</a></h3>
+<ul>
+<li><strong>Cách chẩn đoán:</strong> Remote vào máy qua SSM Session Manager và kiểm tra file log của hệ điều hành:<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat /var/log/cloud-init-output.log</code></pre></div>
+File này lưu toàn bộ stdout và stderr của script User Data trong lần boot đầu tiên. Nếu dùng systemd service, xem thêm <code>systemctl status &lt;service&gt;</code> và <code>journalctl -u &lt;service&gt;</code>.</li>
+<li><strong>Nếu không vào được instance</strong> (SSM offline và instance bị ASG thay liên tục): xem console output qua <code>aws ec2 get-console-output --instance-id &lt;id&gt; --latest</code>, và tạm tăng health check grace period để instance sống đủ lâu cho bạn debug.</li>
+</ul>
+<h3 id="3-instance-không-hiện-trong-ssm-session-manager-ssm-offline"><a class="anchor" href="#3-instance-không-hiện-trong-ssm-session-manager-ssm-offline">3. Instance không hiện trong SSM Session Manager (SSM Offline)</a></h3>
+<ul>
+<li>Cần thỏa mãn đủ 3 điều kiện:<ol>
+<li>Instance đã được gắn IAM Role có AWS managed policy <code>AmazonSSMManagedInstanceCore</code>.</li>
+<li>SSM Agent đang chạy (đã bật sẵn trên AL2023).</li>
+<li>Instance trong Private Subnet phải có đường outbound HTTPS tới SSM endpoints (<code>ssm.&lt;region&gt;.amazonaws.com</code>, <code>ssmmessages.&lt;region&gt;.amazonaws.com</code>; agent phiên bản cũ cần thêm <code>ec2messages.&lt;region&gt;.amazonaws.com</code>) qua NAT Gateway hoặc VPC Interface Endpoints.</li>
+</ol>
+<ul>
+<li>Instance mới thường mất 1–3 phút sau khi boot mới hiện &quot;Online&quot; trong Fleet Manager.</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2 id="câu-hỏi-tự-kiểm-tra"><a class="anchor" href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></h2>
+<ol>
+<li>Khi một instance EC2 bị terminate, dữ liệu trên ổ đĩa Root EBS và ổ đĩa Data EBS gắn kèm sẽ ra sao? Điều gì quyết định hành vi này?</li>
+<li>Tại sao chúng ta nên ưu tiên sử dụng <code>Target Tracking Scaling Policy</code> thay vì tự viết các quy tắc Step Scaling thủ công phức tạp?</li>
+<li>Nếu Target Group cấu hình Health check là <code>GET /health</code>, cổng 8080, nhưng Security Group của EC2 chỉ mở Inbound cho cổng 80, điều gì sẽ xảy ra với trạng thái của target trên ALB?</li>
+<li>Trình bày ít nhất 3 lý do vì sao doanh nghiệp nên chuyển từ quản trị SSH (Port 22) sang AWS Systems Manager Session Manager?</li>
+<li>Thế nào là một ứng dụng &quot;phi trạng thái&quot; (Stateless Application) và vì sao tính chất này là điều kiện tiên quyết để Auto Scaling hoạt động trơn tru?</li>
+<li>ALB giải quyết vấn đề gì, ASG giải quyết vấn đề gì? Nếu chỉ có ALB mà không có ASG (2 instance cố định), điều gì xảy ra khi một instance chết?</li>
+<li>Vì sao ASG đặt health check grace period 30 giây cho một app cần 90 giây để khởi động có thể khiến nhóm không bao giờ ổn định?</li>
+</ol>
+<hr>
+<h2 id="tài-liệu-tham-khảo-chính-thức"><a class="anchor" href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></h2>
+<ul>
+<li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/concepts.html" target="_blank" rel="noopener">Amazon EC2 User Guide</a></li>
+<li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html" target="_blank" rel="noopener">Amazon EBS volumes</a></li>
+<li><a href="https://docs.aws.amazon.com/elasticloadbalancing/latest/application/introduction.html" target="_blank" rel="noopener">What is an Application Load Balancer?</a></li>
+<li><a href="https://docs.aws.amazon.com/autoscaling/ec2/userguide/what-is-amazon-ec2-auto-scaling.html" target="_blank" rel="noopener">What is Amazon EC2 Auto Scaling?</a></li>
+<li><a href="https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager.html" target="_blank" rel="noopener">AWS Systems Manager Session Manager</a></li>
+<li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html" target="_blank" rel="noopener">Instance metadata and user data</a></li>
+</ul>
+<h2 id="trạng-thái-kiểm-chứng"><a class="anchor" href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></h2>
+<ul>
+<li><strong>Đối chiếu tài liệu (2026-10-31):</strong> IMDSv2, <code>AmazonSSMManagedInstanceCore</code> và yêu cầu mạng của SSM, phối hợp health check ALB–ASG và grace period, fail-open của ALB, ý nghĩa các mã 502/503/504, deregistration delay, cloud-init log.</li>
+<li><strong>Chưa chạy thử trên AWS:</strong> lệnh trong lab chưa được thực thi trên account thật; output và thời gian đo là minh họa.</li>
+<li><strong>Chi phí:</strong> lab dùng <code>t4g.nano</code>, EBS gp3 nhỏ, một NAT Gateway và một ALB. NAT và ALB là hai khoản lớn nhất, nên phải xóa ngay sau buổi học (xem ước tính trong lab).</li>
+</ul>
+<hr>
+<h2 id="đáp-án-gợi-ý"><a class="anchor" href="#đáp-án-gợi-ý">Đáp án gợi ý</a></h2>
+<details>
+<summary>Mở để xem đáp án</summary>
+
+<ol>
+<li>Hành vi này được quyết định bởi cờ <strong><code>DeleteOnTermination</code></strong> của từng volume:<ul>
+<li>Với <strong>Root Volume</strong>: Cờ này mặc định là <code>true</code>, nên khi instance bị terminate, toàn bộ ổ đĩa Root sẽ bị xóa vĩnh viễn cùng instance.</li>
+<li>Với <strong>Data Volume</strong>: Cờ này mặc định là <code>false</code>, nên khi instance bị terminate, ổ đĩa Data vẫn được giữ nguyên vẹn ở trạng thái <code>available</code> trên AWS (và tiếp tục phát sinh phí lưu trữ cho đến khi bị xóa thủ công).</li>
+</ul>
+</li>
+<li>Vì <strong>Target Tracking Scaling Policy</strong> tự động hóa hoàn toàn phép toán tính toán tải. Thay vì người quản trị phải đau đầu thiết lập hàng loạt ngưỡng cứng phức tạp (như: nếu CPU &gt; 70% thì thêm 1 máy, nếu CPU &gt; 85% thì thêm 2 máy...), bạn chỉ cần định nghĩa một mục tiêu duy nhất (ví dụ: giữ CPU trung bình ở 60%). AWS sẽ tự động phân tích độ dốc của lưu lượng và quyết định số lượng máy ảo cần thêm hoặc bớt một cách tối ưu và mượt mà nhất.</li>
+<li>Health check tới cổng 8080 bị Security Group chặn nên không nhận được phản hồi. Sau <code>unhealthy_threshold</code> lần, target chuyển sang <strong><code>unhealthy</code></strong> với reason <code>Target.Timeout</code>. Khi <strong>tất cả</strong> target unhealthy, ALB <strong>fail open</strong> và vẫn gửi request tới chúng, nhưng request cũng bị SG chặn, nên client thường nhận <strong><code>504 Gateway Timeout</code></strong> (không phải 503, vì target vẫn đang được đăng ký). Nếu ASG dùng health check ELB, ASG còn liên tục thay instance mà không giải quyết được gì, vì lỗi nằm ở SG chứ không ở máy.</li>
+<li>Ba lý do vượt trội của SSM Session Manager:<ul>
+<li><strong>Bảo mật tối đa (Zero Open Ports):</strong> Không cần mở bất kỳ cổng Inbound nào trên Security Group (không cần mở port 22), triệt tiêu hoàn toàn nguy cơ bị quét cổng (port scanning) và tấn công brute-force SSH từ Internet.</li>
+<li><strong>Không cần quản lý SSH Key:</strong> Loại bỏ gánh nặng tạo, phân phối, lưu trữ và thu hồi file <code>.pem</code>. Mọi quyền truy cập được quản lý tập trung và tức thời bằng IAM Policy.</li>
+<li><strong>Ghi log và kiểm toán (Auditability):</strong> CloudTrail ghi lại ai mở session vào instance nào, khi nào; output của session có thể được ghi lên Amazon S3 hoặc CloudWatch Logs, giúp đáp ứng yêu cầu kiểm toán.</li>
+</ul>
+</li>
+<li><strong>Ứng dụng phi trạng thái (Stateless Application)</strong> là ứng dụng mà mọi request gửi đến đều chứa đầy đủ thông tin để xử lý độc lập, server không lưu trữ bất kỳ trạng thái phiên (session data), tệp tải lên (uploads) hay dữ liệu tạm của người dùng trên đĩa cứng cục bộ của chính máy đó (các dữ liệu này được chuyển sang dịch vụ lưu trữ ngoài như Redis, DynamoDB hoặc S3).
+Tính chất này là điều kiện tiên quyết cho Auto Scaling vì: Khi có nhu cầu co giãn, ASG có thể tùy ý khởi tạo một máy mới hoặc tiêu diệt bất kỳ máy cũ nào bất cứ lúc nào mà không làm mất phiên đăng nhập của người dùng hay làm hỏng dữ liệu giao dịch.</li>
+<li><strong>ALB</strong> giải quyết việc <strong>phân phối request</strong> và <strong>ngừng gửi traffic</strong> tới target hỏng (có một điểm vào ổn định). <strong>ASG</strong> giải quyết việc <strong>duy trì đúng số lượng máy</strong>: thay máy hỏng, thêm/bớt máy theo tải. Chỉ có ALB với 2 instance cố định: khi 1 máy chết, ALB dồn hết traffic sang máy còn lại (dịch vụ vẫn chạy nhưng mất dự phòng), và không ai tạo lại máy thứ hai cho đến khi bạn tự làm.</li>
+<li>Instance mới boot, app chưa lên nên health check của ALB thất bại. Hết 30 giây grace period, ASG thấy ELB báo unhealthy và terminate instance, rồi launch instance mới, và vòng lặp lặp lại. Grace period phải dài hơn thời gian từ lúc launch đến lúc app sẵn sàng (đo thực tế rồi cộng thêm biên an toàn).</li>
+</ol>
+</details>
+
+
+<footer>Sinh tự động từ <code>notes/05-compute-and-load-balancing.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

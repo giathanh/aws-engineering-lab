@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab 06 — Lưu trữ và phân phối nội dung: S3 private, Presigned URL, CloudFront với Origin Access Control (OAC)</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="../../notes/01-foundations.html">01. Lý thuyết</a><a href="../01-foundations/README.html">01. Lab</a><a href="../../notes/02-identity-and-access.html">02. Lý thuyết</a><a href="../02-identity-and-access/README.html">02. Lab</a><a href="../../notes/03-cost-management.html">03. Lý thuyết</a><a href="../03-cost-management/README.html">03. Lab</a><a href="../../notes/04-networking.html">04. Lý thuyết</a><a href="../04-networking/README.html">04. Lab</a><a href="../../notes/05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../05-compute-and-load-balancing/README.html">05. Lab</a><a href="../../notes/06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="README.html" class="active">06. Lab</a><a href="../../notes/07-databases-and-cache.html">07. Lý thuyết</a><a href="../07-databases-and-cache/README.html">07. Lab</a><a href="../../notes/08-containers.html">08. Lý thuyết</a><a href="../08-containers/README.html">08. Lab</a><a href="../../notes/09-serverless.html">09. Lý thuyết</a><a href="../09-serverless/README.html">09. Lab</a><a href="../../notes/10-observability-and-application-security.html">10. Lý thuyết</a><a href="../10-observability-and-application-security/README.html">10. Lab</a><a href="../../notes/11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../11-messaging-and-workflows/README.html">11. Lab</a><a href="../../notes/12-iac-and-cicd.html">12. Lý thuyết</a><a href="../12-iac-and-cicd/README.html">12. Lab</a><a href="../../notes/13-reliability-and-performance.html">13. Lý thuyết</a><a href="../13-reliability-and-performance/README.html">13. Lab</a><a href="../../notes/14-architecture-and-governance.html">14. Lý thuyết</a><a href="../14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></li><li><a href="#quy-ước-placeholder">Quy ước placeholder</a></li><li><a href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></li><li><a href="#sơ-đồ-kiến-trúc-lab-06">Sơ đồ kiến trúc Lab 06</a></li><li><a href="#bước-0--chuẩn-bị-biến-và-thư-mục-làm-việc">Bước 0 — Chuẩn bị biến và thư mục làm việc</a></li><li><a href="#bước-1--tạo-bucket-private-với-block-public-access-và-versioning">Bước 1 — Tạo bucket private với Block Public Access và Versioning</a></li><li><a href="#bước-2--presigned-url-upload-download-và-negative-case">Bước 2 — Presigned URL: upload, download và negative case</a></li><li><a href="#bước-3--cors-cho-phép-đúng-một-origin">Bước 3 — CORS: cho phép đúng một origin</a></li><li><a href="#bước-4--lifecycle-và-multipart-upload-vô-hình">Bước 4 — Lifecycle và multipart upload &quot;vô hình&quot;</a></li><li><a href="#bước-5--tạo-oac-và-cloudfront-distribution">Bước 5 — Tạo OAC và CloudFront Distribution</a></li><li><a href="#bước-6--bucket-policy-cho-đúng-distribution-này">Bước 6 — Bucket policy cho đúng distribution này</a></li><li><a href="#bước-7--s3-direct-bị-chặn-cloudfront-đọc-được-quan-sát-cache">Bước 7 — S3 direct bị chặn, CloudFront đọc được, quan sát cache</a></li><li><a href="#bước-8--invalidation-và-versioned-filename">Bước 8 — Invalidation và versioned filename</a></li><li><a href="#bước-9-nhánh-tùy-chọn--domain-riêng-qua-route-53-và-acm">Bước 9 (nhánh tùy chọn) — Domain riêng qua Route 53 và ACM</a></li><li><a href="#bước-10--dọn-dẹp-theo-dependency">Bước 10 — Dọn dẹp theo dependency</a></li><li><a href="#checklist-hoàn-thành">Checklist hoàn thành</a></li><li><a href="#troubleshooting-nhanh">Troubleshooting nhanh</a></li><li><a href="#tiếp-theo">Tiếp theo</a></li></ol></aside>
+<main>
+<h1 id="lab-06--lưu-trữ-và-phân-phối-nội-dung-s3-private-presigned-url-cloudfront-với-origin-access-control-oac"><a class="anchor" href="#lab-06--lưu-trữ-và-phân-phối-nội-dung-s3-private-presigned-url-cloudfront-với-origin-access-control-oac">Lab 06 — Lưu trữ và phân phối nội dung: S3 private, Presigned URL, CloudFront với Origin Access Control (OAC)</a></h1>
+<blockquote>
+<p><strong>Lý thuyết:</strong> <a href="../../notes/06-storage-and-content-delivery.html">notes/06-storage-and-content-delivery.md</a>. Đọc phần 1–5 trước khi thực hiện lab.
+<strong>Thời lượng:</strong> khoảng 90–120 phút, phần lớn là chờ CloudFront deploy (tạo và disable mỗi lần 5–15 phút).
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Mọi output là <strong>minh họa</strong>, thông tin định danh dùng placeholder. Lab chưa được chạy thử trên account thật.</p>
+</blockquote>
+<hr>
+<h2 id="lab-này-làm-gì-và-không-làm-gì"><a class="anchor" href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>✅ Có</th>
+<th>❌ Không</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Bucket private: 4 cờ Block Public Access, Versioning, tag <code>Project=aws-lab-06</code></td>
+<td>Mở bucket public dưới bất kỳ hình thức nào</td>
+</tr>
+<tr>
+<td>Presigned <strong>PUT</strong> bằng SDK (boto3), presigned <strong>GET</strong> bằng CLI, thời hạn ngắn</td>
+<td>Đưa URL presigned thật vào repo hoặc chat</td>
+</tr>
+<tr>
+<td>Checksum SHA-256 và negative case checksum sai</td>
+<td></td>
+</tr>
+<tr>
+<td>CORS cho một origin cụ thể, kiểm tra preflight bằng <code>curl</code></td>
+<td>Dùng <code>AllowedOrigins: [&quot;*&quot;]</code></td>
+</tr>
+<tr>
+<td>Lifecycle: hủy multipart dở dang, hết hạn version cũ; quan sát multipart &quot;vô hình&quot;</td>
+<td></td>
+</tr>
+<tr>
+<td>CloudFront + OAC tới <strong>S3 REST endpoint</strong>; S3 direct <code>403</code>, CDN <code>200</code></td>
+<td>Dùng S3 website endpoint</td>
+</tr>
+<tr>
+<td>Quan sát <code>x-cache</code>, <code>age</code>; so sánh invalidation với versioned filename</td>
+<td></td>
+</tr>
+<tr>
+<td>Tùy chọn: domain riêng qua Route 53 + ACM (chỉ khi bạn <strong>đã sở hữu</strong> domain)</td>
+<td>Mua domain</td>
+</tr>
+<tr>
+<td>Cleanup theo dependency, kiểm tra inventory</td>
+<td></td>
+</tr>
+</tbody></table>
+</div>
+<hr>
+<h2 id="quy-ước-placeholder"><a class="anchor" href="#quy-ước-placeholder">Quy ước placeholder</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Biến</th>
+<th>Ý nghĩa</th>
+<th>Ví dụ minh họa</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>aws-lab</code></td>
+<td>Named profile CLI đã cấu hình ở Lab 01</td>
+<td><code>aws-lab</code></td>
+</tr>
+<tr>
+<td><code>AWS_REGION</code></td>
+<td>Region của bucket</td>
+<td><code>ap-southeast-1</code></td>
+</tr>
+<tr>
+<td><code>ACCOUNT_ID</code></td>
+<td>Account ID 12 chữ số (lấy tự động)</td>
+<td><code>111122223333</code></td>
+</tr>
+<tr>
+<td><code>BUCKET_NAME</code></td>
+<td>Tên bucket duy nhất toàn cầu</td>
+<td><code>lab06-order-assets-111122223333</code></td>
+</tr>
+<tr>
+<td><code>OAC_ID</code>, <code>DIST_ID</code>, <code>CF_DOMAIN</code></td>
+<td>OAC, distribution và domain CloudFront</td>
+<td><code>E1234567890ABC</code>, <code>d111111abcdef8.cloudfront.net</code></td>
+</tr>
+<tr>
+<td><code>LAB_DIR</code></td>
+<td>Thư mục tạm chứa file lab</td>
+<td><code>/tmp/tmp.XXXX</code></td>
+</tr>
+</tbody></table>
+</div>
+<p>Lab đặt <code>AWS_PROFILE</code> và <code>AWS_REGION</code> bằng biến môi trường để cả AWS CLI và boto3 cùng dùng một profile/Region. Distribution được nhận diện bằng <code>Comment=aws-lab-06</code>, OAC bằng tên <code>lab06-oac</code>.</p>
+<hr>
+<h2 id="điều-kiện-đầu-vào"><a class="anchor" href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></h2>
+<ul>
+<li><input type="checkbox"> Đã hoàn thành <a href="../01-foundations/README.html">Lab 01</a> đến <a href="../04-networking/README.html">Lab 04</a>. Lab này không dùng tài nguyên của lab trước.</li>
+<li><input type="checkbox"> Công cụ: AWS CLI v2, <code>curl</code>, <code>jq</code>, <code>openssl</code>, Python 3 (dùng để tạo virtualenv cài <code>boto3</code>).</li>
+<li><input type="checkbox"> Quyền cần thiết (không cần <code>AdministratorAccess</code>; có thể giới hạn S3 theo <code>arn:aws:s3:::lab06-*</code>):<ul>
+<li><strong>S3 control plane:</strong> <code>s3:CreateBucket</code>, <code>s3:PutBucketTagging</code>, <code>s3:PutBucketPublicAccessBlock</code>, <code>s3:GetBucketPublicAccessBlock</code>, <code>s3:PutBucketVersioning</code>, <code>s3:GetBucketVersioning</code>, <code>s3:PutBucketPolicy</code>, <code>s3:GetBucketPolicy</code>, <code>s3:PutBucketCORS</code>, <code>s3:PutLifecycleConfiguration</code>, <code>s3:DeleteBucket</code>.</li>
+<li><strong>S3 data plane:</strong> <code>s3:PutObject</code>, <code>s3:GetObject</code>, <code>s3:ListBucket</code>, <code>s3:ListBucketVersions</code>, <code>s3:DeleteObject</code>, <code>s3:DeleteObjectVersion</code>, <code>s3:ListBucketMultipartUploads</code>, <code>s3:AbortMultipartUpload</code>. Presigned URL chỉ hoạt động khi <strong>người ký</strong> có quyền tương ứng (<code>s3:PutObject</code> cho URL PUT, <code>s3:GetObject</code> cho URL GET).</li>
+<li><strong>CloudFront:</strong> <code>cloudfront:CreateOriginAccessControl</code>, <code>GetOriginAccessControl</code>, <code>ListOriginAccessControls</code>, <code>DeleteOriginAccessControl</code>, <code>CreateDistribution</code>, <code>GetDistribution</code>, <code>GetDistributionConfig</code>, <code>UpdateDistribution</code>, <code>DeleteDistribution</code>, <code>ListDistributions</code>, <code>CreateInvalidation</code>, <code>GetInvalidation</code>.</li>
+<li><strong>Nhánh tùy chọn:</strong> <code>acm:RequestCertificate</code>, <code>acm:DescribeCertificate</code>, <code>acm:DeleteCertificate</code>, <code>route53:ChangeResourceRecordSets</code>, <code>route53:ListHostedZones</code>.</li>
+</ul>
+</li>
+<li><input type="checkbox"> Không sử dụng tài khoản production.</li>
+</ul>
+<h3 id="chi-phí-ước-tính-giá-minh-họa-tra-lại-s3-pricinghttpsawsamazoncoms3pricing-và-cloudfront-pricinghttpsawsamazoncomcloudfrontpricing"><a class="anchor" href="#chi-phí-ước-tính-giá-minh-họa-tra-lại-s3-pricinghttpsawsamazoncoms3pricing-và-cloudfront-pricinghttpsawsamazoncomcloudfrontpricing">Chi phí ước tính (giá minh họa, tra lại <a href="https://aws.amazon.com/s3/pricing/" target="_blank" rel="noopener">S3 pricing</a> và <a href="https://aws.amazon.com/cloudfront/pricing/" target="_blank" rel="noopener">CloudFront pricing</a>)</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tài nguyên</th>
+<th>Quy mô trong lab</th>
+<th>Đơn giá minh họa</th>
+<th>Chi phí</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>S3 Standard storage</td>
+<td>&lt; 10 MB (kể cả part multipart 5 MB)</td>
+<td>~$0.025/GB-tháng</td>
+<td>&lt; $0.001</td>
+</tr>
+<tr>
+<td>S3 request PUT/GET/LIST</td>
+<td>vài trăm</td>
+<td>~$0.005/1.000 PUT, ~$0.0004/1.000 GET</td>
+<td>&lt; $0.01</td>
+</tr>
+<tr>
+<td>CloudFront data transfer + request</td>
+<td>vài chục request, vài KB</td>
+<td>~$0.085–0.12/GB tùy khu vực</td>
+<td>&lt; $0.001</td>
+</tr>
+<tr>
+<td>CloudFront invalidation</td>
+<td>1 path</td>
+<td>1.000 path đầu mỗi tháng không tính phí</td>
+<td>$0</td>
+</tr>
+<tr>
+<td>Route 53 hosted zone (tùy chọn, nếu bạn tạo zone mới)</td>
+<td>1</td>
+<td>~$0.50/zone-tháng</td>
+<td>~$0.50</td>
+</tr>
+<tr>
+<td>ACM public certificate (tùy chọn)</td>
+<td>1</td>
+<td>không tính phí khi dùng với CloudFront</td>
+<td>$0</td>
+</tr>
+<tr>
+<td><strong>Tổng lab chính</strong></td>
+<td></td>
+<td></td>
+<td><strong>&lt; $0.05</strong></td>
+</tr>
+</tbody></table>
+</div>
+<ul>
+<li>Không có tài nguyên tính phí theo giờ, nên quên xóa một tháng vẫn chỉ vài cent. Rủi ro thật là <strong>bucket còn sót</strong> và <strong>distribution còn chạy</strong> bị truy cập từ bên ngoài, không phải tiền giờ.</li>
+<li><strong>Điều kiện dừng:</strong> nếu sau 2,5 giờ chưa xong, chạy cleanup (Bước 10) rồi làm lại sau.</li>
+</ul>
+<hr>
+<h2 id="sơ-đồ-kiến-trúc-lab-06"><a class="anchor" href="#sơ-đồ-kiến-trúc-lab-06">Sơ đồ kiến trúc Lab 06</a></h2>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>                    ┌─────────────────────────────────────────┐
+                    │ Client (curl / trình duyệt)              │
+                    └────┬──────────────────────────────┬─────┘
+       1. GET qua CDN    │                              │ 2. PUT/GET bằng presigned URL
+                         ▼                              │    (chữ ký SigV4 của người ký)
+             ┌───────────────────────┐                  │
+             │ CloudFront            │                  │
+             │ Comment=aws-lab-06    │                  │
+             └───────────┬───────────┘                  │
+                         │ request ký SigV4 qua OAC     │
+                         ▼                              ▼
+             ┌───────────────────────────────────────────────┐
+             │ S3 bucket lab06-order-assets-&lt;ACCOUNT_ID&gt;     │
+             │  - Block Public Access: 4 cờ = true           │
+             │  - Versioning: Enabled                        │
+             │  - Bucket policy: chỉ distribution này đọc    │
+             │  - CORS: chỉ https://shop.example.com         │
+             │  - Lifecycle: abort MPU 1 ngày, noncurrent 30 │
+             └───────────────────────────────────────────────┘
+                         ▲
+                         │ 3. GET thẳng S3 không chữ ký → 403 AccessDenied
+             ┌───────────┴───────────┐
+             │ Client ẩn danh        │
+             └───────────────────────┘</code></pre></div>
+<hr>
+<h2 id="bước-0--chuẩn-bị-biến-và-thư-mục-làm-việc"><a class="anchor" href="#bước-0--chuẩn-bị-biến-và-thư-mục-làm-việc">Bước 0 — Chuẩn bị biến và thư mục làm việc</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export AWS_PROFILE=&quot;aws-lab&quot;
+export AWS_REGION=&quot;ap-southeast-1&quot;
+export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+export BUCKET_NAME=&quot;lab06-order-assets-${ACCOUNT_ID}&quot;
+export LAB_DIR=$(mktemp -d)
+cd &quot;${LAB_DIR}&quot;
+
+aws sts get-caller-identity --query Arn --output text
+echo &quot;Bucket: ${BUCKET_NAME} | Region: ${AWS_REGION} | Thư mục: ${LAB_DIR}&quot;
+
+# Virtualenv riêng cho boto3, không cài vào Python hệ thống
+python3 -m venv .venv &amp;&amp; . .venv/bin/activate &amp;&amp; pip install --quiet boto3
+python3 -c &quot;import boto3; print('boto3', boto3.__version__)&quot;</code></pre></div>
+<p><em>Kỳ vọng:</em> ARN là role/user của profile lab (không phải root), boto3 in ra phiên bản.</p>
+<hr>
+<h2 id="bước-1--tạo-bucket-private-với-block-public-access-và-versioning"><a class="anchor" href="#bước-1--tạo-bucket-private-với-block-public-access-và-versioning">Bước 1 — Tạo bucket private với Block Public Access và Versioning</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code># us-east-1 không nhận LocationConstraint; mọi Region khác bắt buộc có
+if [ &quot;${AWS_REGION}&quot; = &quot;us-east-1&quot; ]; then
+  aws s3api create-bucket --bucket &quot;${BUCKET_NAME}&quot;
+else
+  aws s3api create-bucket --bucket &quot;${BUCKET_NAME}&quot; \
+    --create-bucket-configuration LocationConstraint=&quot;${AWS_REGION}&quot;
+fi
+
+aws s3api put-bucket-tagging --bucket &quot;${BUCKET_NAME}&quot; \
+  --tagging 'TagSet=[{Key=Project,Value=aws-lab-06}]'
+
+# Bucket mới đã bật sẵn 4 cờ BPA từ 2023; đặt lại tường minh để không phụ thuộc mặc định
+aws s3api put-public-access-block --bucket &quot;${BUCKET_NAME}&quot; \
+  --public-access-block-configuration \
+  &quot;BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true&quot;
+
+aws s3api put-bucket-versioning --bucket &quot;${BUCKET_NAME}&quot; \
+  --versioning-configuration Status=Enabled</code></pre></div>
+<p>Kiểm tra:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws s3api get-bucket-versioning --bucket &quot;${BUCKET_NAME}&quot;
+aws s3api get-public-access-block --bucket &quot;${BUCKET_NAME}&quot;</code></pre></div>
+<p><em>Kỳ vọng (minh họa):</em></p>
+<div class="code"><span class="lang">json</span><button type="button">Copy</button><pre><code>{ &quot;Status&quot;: &quot;Enabled&quot; }
+{
+  &quot;PublicAccessBlockConfiguration&quot;: {
+    &quot;BlockPublicAcls&quot;: true, &quot;IgnorePublicAcls&quot;: true,
+    &quot;BlockPublicPolicy&quot;: true, &quot;RestrictPublicBuckets&quot;: true
+  }
+}</code></pre></div>
+<p>Nếu <code>create-bucket</code> báo <code>BucketAlreadyExists</code>, tên đã bị account khác dùng: thêm hậu tố ngẫu nhiên vào <code>BUCKET_NAME</code>. <code>BucketAlreadyOwnedByYou</code> nghĩa là bạn đã tạo từ lần chạy trước, có thể đi tiếp.</p>
+<hr>
+<h2 id="bước-2--presigned-url-upload-download-và-negative-case"><a class="anchor" href="#bước-2--presigned-url-upload-download-và-negative-case">Bước 2 — Presigned URL: upload, download và negative case</a></h2>
+<p><code>aws s3 presign</code> của CLI <strong>chỉ sinh URL cho GET</strong>. Để upload trực tiếp, backend phải ký URL cho <code>PutObject</code> bằng SDK. Script dưới đây đóng vai backend.</p>
+<h3 id="1-script-ký-url-put-đóng-vai-backend"><a class="anchor" href="#1-script-ký-url-put-đóng-vai-backend">1. Script ký URL PUT (đóng vai backend)</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat &gt; presign_put.py &lt;&lt; 'EOF'
+import os, sys
+import boto3
+from botocore.config import Config
+
+# Regional endpoint + SigV4: tránh redirect 307 với bucket mới tạo ở Region khác us-east-1
+s3 = boto3.client(&quot;s3&quot;, region_name=os.environ[&quot;AWS_REGION&quot;],
+                  config=Config(signature_version=&quot;s3v4&quot;))
+key, content_type = sys.argv[1], sys.argv[2]
+print(s3.generate_presigned_url(
+    &quot;put_object&quot;,
+    Params={&quot;Bucket&quot;: os.environ[&quot;BUCKET_NAME&quot;], &quot;Key&quot;: key, &quot;ContentType&quot;: content_type},
+    ExpiresIn=300,  # 5 phút
+))
+EOF</code></pre></div>
+<p><code>ContentType</code> nằm trong phần được ký, nên client <strong>bắt buộc</strong> gửi đúng header <code>Content-Type</code> đó. Đây là cách backend giới hạn loại file client được upload.</p>
+<h3 id="2-upload-bằng-presigned-put"><a class="anchor" href="#2-upload-bằng-presigned-put">2. Upload bằng presigned PUT</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>echo &quot;Đơn hàng #10023 - Khách hàng: Khách Mẫu - Tổng tiền: 1.500.000 VND&quot; &gt; invoice-10023.txt
+UPLOAD_URL=$(python3 presign_put.py invoices/invoice-10023.txt text/plain)
+
+curl -sS -o /dev/null -w &quot;HTTP %{http_code}\n&quot; -X PUT \
+  -H &quot;Content-Type: text/plain&quot; --upload-file invoice-10023.txt &quot;${UPLOAD_URL}&quot;
+aws s3 ls &quot;s3://${BUCKET_NAME}/invoices/&quot;</code></pre></div>
+<p><em>Kỳ vọng:</em> <code>HTTP 200</code>, sau đó <code>aws s3 ls</code> hiện <code>invoice-10023.txt</code>. Không in <code>UPLOAD_URL</code> ra log chung: ai có URL đều upload được trong 5 phút.</p>
+<h3 id="3-negative-case-header-khác-lúc-ký"><a class="anchor" href="#3-negative-case-header-khác-lúc-ký">3. Negative case: header khác lúc ký</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>UPLOAD_URL=$(python3 presign_put.py invoices/invoice-10023.txt text/plain)
+curl -sS -X PUT -H &quot;Content-Type: application/pdf&quot; \
+  --upload-file invoice-10023.txt &quot;${UPLOAD_URL}&quot; | grep -o '&lt;Code&gt;[^&lt;]*&lt;/Code&gt;'</code></pre></div>
+<p><em>Kỳ vọng:</em> <code>&lt;Code&gt;SignatureDoesNotMatch&lt;/Code&gt;</code> (HTTP 403). Object không bị ghi đè.</p>
+<h3 id="4-presigned-get-và-negative-case-hết-hạn"><a class="anchor" href="#4-presigned-get-và-negative-case-hết-hạn">4. Presigned GET và negative case hết hạn</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>GET_URL=$(aws s3 presign &quot;s3://${BUCKET_NAME}/invoices/invoice-10023.txt&quot; --expires-in 300)
+curl -sS &quot;${GET_URL}&quot;
+
+SHORT_URL=$(aws s3 presign &quot;s3://${BUCKET_NAME}/invoices/invoice-10023.txt&quot; --expires-in 5)
+sleep 10
+curl -sS &quot;${SHORT_URL}&quot; | grep -o '&lt;Message&gt;[^&lt;]*&lt;/Message&gt;'</code></pre></div>
+<p><em>Kỳ vọng:</em> lệnh đầu in nội dung hóa đơn. Lệnh sau trả <code>&lt;Message&gt;Request has expired&lt;/Message&gt;</code> (HTTP 403).</p>
+<blockquote>
+<p>[!NOTE]
+Profile lab dùng temporary credentials (IAM Identity Center/role). URL presigned <strong>không sống lâu hơn session</strong> đã ký nó: nếu session hết hạn sau 1 giờ thì URL <code>--expires-in 604800</code> cũng chết sau 1 giờ.</p>
+</blockquote>
+<h3 id="5-versioning-ghi-đè-và-quan-sát-phiên-bản"><a class="anchor" href="#5-versioning-ghi-đè-và-quan-sát-phiên-bản">5. Versioning: ghi đè và quan sát phiên bản</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>echo &quot;Đơn hàng #10023 - ĐÃ THANH TOÁN&quot; &gt; invoice-10023.txt
+UPLOAD_URL=$(python3 presign_put.py invoices/invoice-10023.txt text/plain)
+curl -sS -o /dev/null -w &quot;HTTP %{http_code}\n&quot; -X PUT \
+  -H &quot;Content-Type: text/plain&quot; --upload-file invoice-10023.txt &quot;${UPLOAD_URL}&quot;
+
+aws s3api list-object-versions --bucket &quot;${BUCKET_NAME}&quot; \
+  --prefix invoices/invoice-10023.txt \
+  --query 'Versions[].[VersionId,IsLatest,Size]' --output table</code></pre></div>
+<p><em>Kỳ vọng:</em> 2 dòng; bản mới <code>IsLatest=True</code>, bản cũ <code>False</code> vẫn còn và vẫn bị tính tiền lưu trữ.</p>
+<h3 id="6-checksum-sha-256-và-negative-case"><a class="anchor" href="#6-checksum-sha-256-và-negative-case">6. Checksum SHA-256 và negative case</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws s3api put-object --bucket &quot;${BUCKET_NAME}&quot; --key invoices/checksum-demo.txt \
+  --body invoice-10023.txt --checksum-algorithm SHA256 --content-type text/plain &gt;/dev/null
+
+echo &quot;Local : $(openssl dgst -sha256 -binary invoice-10023.txt | base64)&quot;
+echo &quot;S3    : $(aws s3api head-object --bucket &quot;${BUCKET_NAME}&quot; --key invoices/checksum-demo.txt \
+  --checksum-mode ENABLED --query ChecksumSHA256 --output text)&quot;
+
+# Negative: gửi checksum không khớp nội dung (SHA-256 của chuỗi rỗng)
+aws s3api put-object --bucket &quot;${BUCKET_NAME}&quot; --key invoices/bad-checksum.txt \
+  --body invoice-10023.txt \
+  --checksum-sha256 &quot;47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hi1vI=&quot;</code></pre></div>
+<p><em>Kỳ vọng:</em> hai giá trị <code>Local</code> và <code>S3</code> giống nhau. Lệnh cuối thất bại với lỗi <code>BadDigest</code> (hoặc thông điệp tương đương &quot;did not match the calculated checksum&quot;); <code>aws s3 ls s3://${BUCKET_NAME}/invoices/</code> không có <code>bad-checksum.txt</code>.</p>
+<hr>
+<h2 id="bước-3--cors-cho-phép-đúng-một-origin"><a class="anchor" href="#bước-3--cors-cho-phép-đúng-một-origin">Bước 3 — CORS: cho phép đúng một origin</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat &gt; cors.json &lt;&lt; 'EOF'
+{
+  &quot;CORSRules&quot;: [{
+    &quot;AllowedOrigins&quot;: [&quot;https://shop.example.com&quot;],
+    &quot;AllowedMethods&quot;: [&quot;PUT&quot;, &quot;GET&quot;],
+    &quot;AllowedHeaders&quot;: [&quot;content-type&quot;, &quot;x-amz-checksum-sha256&quot;],
+    &quot;ExposeHeaders&quot;: [&quot;ETag&quot;],
+    &quot;MaxAgeSeconds&quot;: 300
+  }]
+}
+EOF
+aws s3api put-bucket-cors --bucket &quot;${BUCKET_NAME}&quot; --cors-configuration file://cors.json
+
+S3_URL=&quot;https://${BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com/invoices/new.txt&quot;
+preflight() {
+  curl -sS -o /dev/null -D - -X OPTIONS &quot;${S3_URL}&quot; \
+    -H &quot;Origin: $1&quot; -H &quot;Access-Control-Request-Method: PUT&quot; \
+    -H &quot;Access-Control-Request-Headers: content-type&quot; \
+    | grep -iE '^HTTP|^access-control-allow-origin'
+}
+preflight https://shop.example.com
+preflight https://evil.example.net</code></pre></div>
+<p><em>Kỳ vọng (minh họa):</em></p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>HTTP/1.1 200 OK
+Access-Control-Allow-Origin: https://shop.example.com
+HTTP/1.1 403 Forbidden</code></pre></div>
+<p>Preflight thành công <strong>không</strong> cấp quyền ghi: request PUT thật vẫn cần chữ ký hợp lệ. CORS chỉ cho trình duyệt biết có được phép đọc response hay không.</p>
+<hr>
+<h2 id="bước-4--lifecycle-và-multipart-upload-vô-hình"><a class="anchor" href="#bước-4--lifecycle-và-multipart-upload-vô-hình">Bước 4 — Lifecycle và multipart upload &quot;vô hình&quot;</a></h2>
+<h3 id="1-tạo-một-multipart-upload-dở-dang"><a class="anchor" href="#1-tạo-một-multipart-upload-dở-dang">1. Tạo một multipart upload dở dang</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>head -c 5242880 /dev/urandom &gt; part1.bin   # 5 MiB, kích thước part tối thiểu
+UPLOAD_ID=$(aws s3api create-multipart-upload --bucket &quot;${BUCKET_NAME}&quot; \
+  --key backups/big.bin --query UploadId --output text)
+aws s3api upload-part --bucket &quot;${BUCKET_NAME}&quot; --key backups/big.bin \
+  --part-number 1 --upload-id &quot;${UPLOAD_ID}&quot; --body part1.bin &gt;/dev/null
+
+aws s3 ls &quot;s3://${BUCKET_NAME}/backups/&quot; || echo &quot;(aws s3 ls không thấy gì)&quot;
+aws s3api list-multipart-uploads --bucket &quot;${BUCKET_NAME}&quot; \
+  --query 'Uploads[].[Key,Initiated]' --output table</code></pre></div>
+<p><em>Kỳ vọng:</em> <code>aws s3 ls</code> không thấy <code>big.bin</code>, nhưng <code>list-multipart-uploads</code> có một dòng. 5 MiB này <strong>vẫn bị tính tiền</strong> cho tới khi bị abort. Đây là lý do &quot;xóa hết object&quot; chưa chắc đã hết storage.</p>
+<h3 id="2-lifecycle-rule"><a class="anchor" href="#2-lifecycle-rule">2. Lifecycle rule</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat &gt; lifecycle.json &lt;&lt; 'EOF'
+{
+  &quot;Rules&quot;: [{
+    &quot;ID&quot;: &quot;lab06-hygiene&quot;,
+    &quot;Status&quot;: &quot;Enabled&quot;,
+    &quot;Filter&quot;: {},
+    &quot;AbortIncompleteMultipartUpload&quot;: { &quot;DaysAfterInitiation&quot;: 1 },
+    &quot;NoncurrentVersionExpiration&quot;: { &quot;NoncurrentDays&quot;: 30 }
+  }]
+}
+EOF
+aws s3api put-bucket-lifecycle-configuration --bucket &quot;${BUCKET_NAME}&quot; \
+  --lifecycle-configuration file://lifecycle.json
+aws s3api get-bucket-lifecycle-configuration --bucket &quot;${BUCKET_NAME}&quot; --query 'Rules[].ID'</code></pre></div>
+<p>Lifecycle chạy bất đồng bộ (thường vài lần mỗi ngày), nên upload dở dang ở trên <strong>không</strong> biến mất ngay. Cleanup ở Bước 10 abort thủ công. Rule này không có transition sang Standard-IA/Glacier vì object nhỏ hơn 128 KB và sống dưới 30 ngày sẽ đắt hơn khi chuyển tầng.</p>
+<hr>
+<h2 id="bước-5--tạo-oac-và-cloudfront-distribution"><a class="anchor" href="#bước-5--tạo-oac-và-cloudfront-distribution">Bước 5 — Tạo OAC và CloudFront Distribution</a></h2>
+<h3 id="1-nội-dung-tĩnh"><a class="anchor" href="#1-nội-dung-tĩnh">1. Nội dung tĩnh</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>mkdir -p web
+cat &gt; web/index.html &lt;&lt; 'EOF'
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta charset=&quot;utf-8&quot;&gt;&lt;title&gt;Cổng đơn hàng&lt;/title&gt;&lt;/head&gt;
+&lt;body&gt;&lt;h1&gt;Cổng đơn hàng V1&lt;/h1&gt;&lt;script src=&quot;/app.js&quot;&gt;&lt;/script&gt;&lt;/body&gt;&lt;/html&gt;
+EOF
+echo 'console.log(&quot;app v1&quot;);' &gt; web/app.js
+
+aws s3 cp web/index.html &quot;s3://${BUCKET_NAME}/index.html&quot; --content-type &quot;text/html; charset=utf-8&quot;
+aws s3 cp web/app.js &quot;s3://${BUCKET_NAME}/app.js&quot; --content-type &quot;application/javascript&quot;</code></pre></div>
+<h3 id="2-origin-access-control"><a class="anchor" href="#2-origin-access-control">2. Origin Access Control</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>OAC_ID=$(aws cloudfront create-origin-access-control \
+  --origin-access-control-config \
+  &quot;Name=lab06-oac,Description=aws-lab-06,SigningProtocol=sigv4,SigningBehavior=always,OriginAccessControlOriginType=s3&quot; \
+  --query 'OriginAccessControl.Id' --output text)
+echo &quot;OAC_ID=${OAC_ID}&quot;</code></pre></div>
+<h3 id="3-distribution-trỏ-tới-s3-rest-endpoint"><a class="anchor" href="#3-distribution-trỏ-tới-s3-rest-endpoint">3. Distribution trỏ tới S3 REST endpoint</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat &gt; cf-config.json &lt;&lt; EOF
+{
+  &quot;CallerReference&quot;: &quot;lab06-$(date +%s)&quot;,
+  &quot;Comment&quot;: &quot;aws-lab-06&quot;,
+  &quot;DefaultRootObject&quot;: &quot;index.html&quot;,
+  &quot;Enabled&quot;: true,
+  &quot;PriceClass&quot;: &quot;PriceClass_100&quot;,
+  &quot;Origins&quot;: {
+    &quot;Quantity&quot;: 1,
+    &quot;Items&quot;: [{
+      &quot;Id&quot;: &quot;S3Origin&quot;,
+      &quot;DomainName&quot;: &quot;${BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com&quot;,
+      &quot;OriginAccessControlId&quot;: &quot;${OAC_ID}&quot;,
+      &quot;S3OriginConfig&quot;: { &quot;OriginAccessIdentity&quot;: &quot;&quot; }
+    }]
+  },
+  &quot;DefaultCacheBehavior&quot;: {
+    &quot;TargetOriginId&quot;: &quot;S3Origin&quot;,
+    &quot;ViewerProtocolPolicy&quot;: &quot;redirect-to-https&quot;,
+    &quot;AllowedMethods&quot;: {
+      &quot;Quantity&quot;: 2, &quot;Items&quot;: [&quot;GET&quot;, &quot;HEAD&quot;],
+      &quot;CachedMethods&quot;: { &quot;Quantity&quot;: 2, &quot;Items&quot;: [&quot;GET&quot;, &quot;HEAD&quot;] }
+    },
+    &quot;CachePolicyId&quot;: &quot;658327ea-f89d-4fab-a63d-7e88639e58f6&quot;,
+    &quot;Compress&quot;: true
+  }
+}
+EOF
+
+read -r DIST_ID CF_DOMAIN &lt; &lt;(aws cloudfront create-distribution \
+  --distribution-config file://cf-config.json \
+  --query 'Distribution.[Id,DomainName]' --output text)
+echo &quot;DIST_ID=${DIST_ID} CF_DOMAIN=${CF_DOMAIN}&quot;</code></pre></div>
+<ul>
+<li><code>658327ea-…</code> là managed cache policy <strong>CachingOptimized</strong>: cache key chỉ gồm host + path, không query string/header/cookie; TTL mặc định 1 ngày nếu origin không gửi <code>Cache-Control</code>.</li>
+<li><code>OriginAccessIdentity: &quot;&quot;</code> là bắt buộc về cú pháp khi dùng OAC; để rỗng nghĩa là không dùng OAI (cơ chế cũ).</li>
+<li><code>PriceClass_100</code> giới hạn edge ở Bắc Mỹ/châu Âu cho rẻ hơn; từ Việt Nam latency sẽ cao hơn, chấp nhận được với lab.</li>
+</ul>
+<hr>
+<h2 id="bước-6--bucket-policy-cho-đúng-distribution-này"><a class="anchor" href="#bước-6--bucket-policy-cho-đúng-distribution-này">Bước 6 — Bucket policy cho đúng distribution này</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cat &gt; bucket-policy.json &lt;&lt; EOF
+{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Sid&quot;: &quot;AllowCloudFrontOACReadOnly&quot;,
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Principal&quot;: { &quot;Service&quot;: &quot;cloudfront.amazonaws.com&quot; },
+    &quot;Action&quot;: &quot;s3:GetObject&quot;,
+    &quot;Resource&quot;: &quot;arn:aws:s3:::${BUCKET_NAME}/*&quot;,
+    &quot;Condition&quot;: {
+      &quot;StringEquals&quot;: {
+        &quot;AWS:SourceArn&quot;: &quot;arn:aws:cloudfront::${ACCOUNT_ID}:distribution/${DIST_ID}&quot;
+      }
+    }
+  }]
+}
+EOF
+aws s3api put-bucket-policy --bucket &quot;${BUCKET_NAME}&quot; --policy file://bucket-policy.json</code></pre></div>
+<p>Policy này không bị <code>BlockPublicPolicy</code> chặn vì principal là một service và bị ràng buộc bằng <code>AWS:SourceArn</code> của một distribution cụ thể, nên S3 không coi là public. Policy không cấp <code>s3:ListBucket</code>, nên CloudFront nhận <code>403</code> (không phải <code>404</code>) với key không tồn tại.</p>
+<p>Chờ distribution deploy:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws cloudfront wait distribution-deployed --id &quot;${DIST_ID}&quot;
+aws cloudfront get-distribution --id &quot;${DIST_ID}&quot; --query 'Distribution.Status' --output text</code></pre></div>
+<p><em>Kỳ vọng:</em> <code>Deployed</code> (thường 5–15 phút).</p>
+<hr>
+<h2 id="bước-7--s3-direct-bị-chặn-cloudfront-đọc-được-quan-sát-cache"><a class="anchor" href="#bước-7--s3-direct-bị-chặn-cloudfront-đọc-được-quan-sát-cache">Bước 7 — S3 direct bị chặn, CloudFront đọc được, quan sát cache</a></h2>
+<h3 id="1-negative-case-truy-cập-thẳng-s3"><a class="anchor" href="#1-negative-case-truy-cập-thẳng-s3">1. Negative case: truy cập thẳng S3</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>curl -sS -o /dev/null -w &quot;S3 direct: HTTP %{http_code}\n&quot; \
+  &quot;https://${BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com/index.html&quot;</code></pre></div>
+<p><em>Kỳ vọng:</em> <code>S3 direct: HTTP 403</code>, body XML <code>&lt;Code&gt;AccessDenied&lt;/Code&gt;</code>.</p>
+<h3 id="2-positive-case-qua-cloudfront"><a class="anchor" href="#2-positive-case-qua-cloudfront">2. Positive case qua CloudFront</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>hdr() { curl -sS -o /dev/null -D - &quot;https://${CF_DOMAIN}$1&quot; | grep -iE '^HTTP|^x-cache|^age|^content-type'; }
+hdr /index.html
+hdr /index.html</code></pre></div>
+<p><em>Kỳ vọng (minh họa):</em></p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>HTTP/2 200
+content-type: text/html; charset=utf-8
+x-cache: Miss from cloudfront
+HTTP/2 200
+content-type: text/html; charset=utf-8
+x-cache: Hit from cloudfront
+age: 3</code></pre></div>
+<p>Lần hai thường là <code>Hit</code> vì cùng edge đã có bản sao; nếu vẫn <code>Miss</code>, request có thể rơi vào server khác trong POP, chạy thêm 1–2 lần. <code>age</code> là số giây object đã nằm trong cache.</p>
+<h3 id="3-negative-case-key-không-tồn-tại"><a class="anchor" href="#3-negative-case-key-không-tồn-tại">3. Negative case: key không tồn tại</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>curl -sS -o /dev/null -w &quot;HTTP %{http_code}\n&quot; &quot;https://${CF_DOMAIN}/khong-ton-tai.html&quot;</code></pre></div>
+<p><em>Kỳ vọng:</em> <code>HTTP 403</code> (không phải 404) vì policy không cho <code>s3:ListBucket</code>. Đây là lý do 403 từ CloudFront chưa chắc là lỗi OAC (xem Troubleshooting).</p>
+<hr>
+<h2 id="bước-8--invalidation-và-versioned-filename"><a class="anchor" href="#bước-8--invalidation-và-versioned-filename">Bước 8 — Invalidation và versioned filename</a></h2>
+<h3 id="1-nội-dung-cũ-do-cache"><a class="anchor" href="#1-nội-dung-cũ-do-cache">1. Nội dung cũ do cache</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>sed -i.bak 's/V1/V2/' web/index.html
+aws s3 cp web/index.html &quot;s3://${BUCKET_NAME}/index.html&quot; --content-type &quot;text/html; charset=utf-8&quot;
+curl -sS &quot;https://${CF_DOMAIN}/index.html&quot; | grep -o '&lt;h1&gt;[^&lt;]*&lt;/h1&gt;'</code></pre></div>
+<p><em>Kỳ vọng:</em> vẫn <code>&lt;h1&gt;Cổng đơn hàng V1&lt;/h1&gt;</code>: S3 đã có V2 nhưng edge còn giữ V1 tới hết TTL (1 ngày với CachingOptimized).</p>
+<h3 id="2-invalidation"><a class="anchor" href="#2-invalidation">2. Invalidation</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>INV_ID=$(aws cloudfront create-invalidation --distribution-id &quot;${DIST_ID}&quot; \
+  --paths &quot;/index.html&quot; --query 'Invalidation.Id' --output text)
+aws cloudfront wait invalidation-completed --distribution-id &quot;${DIST_ID}&quot; --id &quot;${INV_ID}&quot;
+curl -sS &quot;https://${CF_DOMAIN}/index.html&quot; | grep -o '&lt;h1&gt;[^&lt;]*&lt;/h1&gt;'
+hdr /index.html</code></pre></div>
+<p><em>Kỳ vọng:</em> <code>&lt;h1&gt;Cổng đơn hàng V2&lt;/h1&gt;</code>, request đầu sau invalidation là <code>Miss from cloudfront</code>. Invalidation <strong>không</strong> xóa cache trình duyệt của người dùng.</p>
+<h3 id="3-versioned-filename"><a class="anchor" href="#3-versioned-filename">3. Versioned filename</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>echo 'console.log(&quot;app v2&quot;);' &gt; web/app.3f9a2c.js
+aws s3 cp web/app.3f9a2c.js &quot;s3://${BUCKET_NAME}/app.3f9a2c.js&quot; \
+  --content-type &quot;application/javascript&quot; --cache-control &quot;public, max-age=31536000, immutable&quot;
+hdr /app.3f9a2c.js</code></pre></div>
+<p><em>Kỳ vọng:</em> <code>200</code>, <code>Miss</code> ngay lần đầu, không cần invalidation. Trong thực tế, chỉ <code>index.html</code> (TTL ngắn) cần đổi để trỏ tới file mới; asset có hash được cache 1 năm.</p>
+<hr>
+<h2 id="bước-9-nhánh-tùy-chọn--domain-riêng-qua-route-53-và-acm"><a class="anchor" href="#bước-9-nhánh-tùy-chọn--domain-riêng-qua-route-53-và-acm">Bước 9 (nhánh tùy chọn) — Domain riêng qua Route 53 và ACM</a></h2>
+<p>Chỉ làm nếu bạn <strong>đã sở hữu</strong> một domain với public hosted zone trên Route 53. Bỏ qua bước này không ảnh hưởng mục tiêu chính.</p>
+<ol>
+<li>Yêu cầu certificate <strong>ở <code>us-east-1</code></strong> (CloudFront chỉ dùng certificate ACM ở Region này):<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>CERT_ARN=$(aws acm request-certificate --region us-east-1 \
+  --domain-name &quot;assets.&lt;YOUR_DOMAIN&gt;&quot; --validation-method DNS \
+  --query CertificateArn --output text)
+aws acm describe-certificate --region us-east-1 --certificate-arn &quot;${CERT_ARN}&quot; \
+  --query 'Certificate.DomainValidationOptions[0].ResourceRecord'</code></pre></div>
+</li>
+<li>Tạo bản ghi CNAME validation ở trên vào hosted zone (console: nút <strong>Create records in Route 53</strong> trong ACM). Chờ <code>Status</code> = <code>ISSUED</code>.</li>
+<li>Sửa distribution: thêm <code>Aliases</code> = <code>assets.&lt;YOUR_DOMAIN&gt;</code>, <code>ViewerCertificate</code> dùng <code>ACMCertificateArn=${CERT_ARN}</code>, <code>SSLSupportMethod=sni-only</code>, <code>MinimumProtocolVersion=TLSv1.2_2021</code>.</li>
+<li>Tạo bản ghi <strong>A Alias</strong> (và <strong>AAAA Alias</strong> nếu bật IPv6) <code>assets.&lt;YOUR_DOMAIN&gt;</code> → <code>${CF_DOMAIN}</code>, hosted zone ID của CloudFront là <code>Z2FDTNDATAQYW2</code>.</li>
+<li>Kiểm tra: <code>dig +short assets.&lt;YOUR_DOMAIN&gt;</code> trả về IP của CloudFront; <code>curl -I https://assets.&lt;YOUR_DOMAIN&gt;/</code> trả <code>200</code>.</li>
+</ol>
+<p>DNS TTL (bao lâu resolver nhớ bản ghi) và CDN TTL (bao lâu edge giữ object) là hai cơ chế độc lập: invalidation không làm resolver quên bản ghi cũ, và đổi bản ghi DNS không xóa cache của CloudFront.</p>
+<p>Cleanup nhánh này: gỡ <code>Aliases</code>/certificate khỏi distribution (hoặc xóa distribution ở Bước 10), xóa bản ghi Alias, xóa bản ghi validation, rồi <code>aws acm delete-certificate --region us-east-1 --certificate-arn &quot;${CERT_ARN}&quot;</code>. Không xóa hosted zone nếu nó đang phục vụ domain của bạn.</p>
+<hr>
+<h2 id="bước-10--dọn-dẹp-theo-dependency"><a class="anchor" href="#bước-10--dọn-dẹp-theo-dependency">Bước 10 — Dọn dẹp theo dependency</a></h2>
+<p>Thứ tự: disable distribution → chờ deployed → xóa distribution → xóa OAC → abort multipart → xóa mọi version/delete marker → xóa bucket.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code># 1. Disable distribution (bắt buộc trước khi xóa)
+ETAG=$(aws cloudfront get-distribution-config --id &quot;${DIST_ID}&quot; --query ETag --output text)
+aws cloudfront get-distribution-config --id &quot;${DIST_ID}&quot; --query DistributionConfig --output json \
+  | jq '.Enabled = false' &gt; cf-disable.json
+aws cloudfront update-distribution --id &quot;${DIST_ID}&quot; --if-match &quot;${ETAG}&quot; \
+  --distribution-config file://cf-disable.json &gt;/dev/null
+aws cloudfront wait distribution-deployed --id &quot;${DIST_ID}&quot;   # 5–15 phút
+
+# 2. Xóa distribution với ETag mới
+ETAG=$(aws cloudfront get-distribution-config --id &quot;${DIST_ID}&quot; --query ETag --output text)
+aws cloudfront delete-distribution --id &quot;${DIST_ID}&quot; --if-match &quot;${ETAG}&quot;
+
+# 3. Xóa OAC (chỉ được khi không còn distribution nào dùng)
+OAC_ETAG=$(aws cloudfront get-origin-access-control --id &quot;${OAC_ID}&quot; --query ETag --output text)
+aws cloudfront delete-origin-access-control --id &quot;${OAC_ID}&quot; --if-match &quot;${OAC_ETAG}&quot;
+
+# 4. Abort multipart upload dở dang
+aws s3api list-multipart-uploads --bucket &quot;${BUCKET_NAME}&quot; \
+  --query 'Uploads[].[Key,UploadId]' --output text |
+while read -r KEY UID_; do
+  [ -n &quot;${UID_}&quot; ] &amp;&amp; aws s3api abort-multipart-upload --bucket &quot;${BUCKET_NAME}&quot; --key &quot;${KEY}&quot; --upload-id &quot;${UID_}&quot;
+done
+
+# 5. Xóa mọi version và delete marker (mỗi lô tối đa 1.000), rồi xóa bucket
+for KIND in Versions DeleteMarkers; do
+  while :; do
+    BATCH=$(aws s3api list-object-versions --bucket &quot;${BUCKET_NAME}&quot; --max-items 1000 --output json \
+      --query &quot;{Objects: ${KIND}[].{Key:Key,VersionId:VersionId}, Quiet: \`true\`}&quot;)
+    [ &quot;$(echo &quot;${BATCH}&quot; | jq '.Objects | length')&quot; -gt 0 ] || break
+    aws s3api delete-objects --bucket &quot;${BUCKET_NAME}&quot; --delete &quot;${BATCH}&quot; &gt;/dev/null
+  done
+done
+aws s3api delete-bucket --bucket &quot;${BUCKET_NAME}&quot;
+
+# 6. File tạm
+deactivate 2&gt;/dev/null; cd ~ &amp;&amp; rm -rf &quot;${LAB_DIR}&quot;</code></pre></div>
+<p><code>aws s3 rm --recursive</code> trên bucket có versioning chỉ tạo thêm delete marker, không xóa version cũ; vì vậy phải xóa theo <code>VersionId</code> như trên.</p>
+<h3 id="kiểm-tra-inventory-sau-cleanup"><a class="anchor" href="#kiểm-tra-inventory-sau-cleanup">Kiểm tra inventory sau cleanup</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>echo &quot;== Bucket&quot;;       aws s3api head-bucket --bucket &quot;${BUCKET_NAME}&quot; 2&gt;&amp;1 | grep -oE '404|Not Found' || echo &quot;VẪN CÒN&quot;
+echo &quot;== Distribution&quot;; aws cloudfront list-distributions --query &quot;DistributionList.Items[?Comment=='aws-lab-06'].Id&quot; --output text
+echo &quot;== OAC&quot;;          aws cloudfront list-origin-access-controls --query &quot;OriginAccessControlList.Items[?Name=='lab06-oac'].Id&quot; --output text
+echo &quot;== Certificate&quot;;  aws acm list-certificates --region us-east-1 --query &quot;CertificateSummaryList[?starts_with(DomainName,'assets.')].CertificateArn&quot; --output text</code></pre></div>
+<p><em>Kỳ vọng:</em> bucket in <code>404</code>/<code>Not Found</code>; ba mục còn lại rỗng. Billing có độ trễ, nên inventory qua API mới là bằng chứng cleanup.</p>
+<h3 id="nếu-lab-dừng-giữa-chừng-hoặc-mất-shell"><a class="anchor" href="#nếu-lab-dừng-giữa-chừng-hoặc-mất-shell">Nếu lab dừng giữa chừng hoặc mất shell</a></h3>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export AWS_PROFILE=&quot;aws-lab&quot; AWS_REGION=&quot;ap-southeast-1&quot;
+export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+export BUCKET_NAME=&quot;lab06-order-assets-${ACCOUNT_ID}&quot;
+export LAB_DIR=$(mktemp -d) &amp;&amp; cd &quot;${LAB_DIR}&quot;
+DIST_ID=$(aws cloudfront list-distributions --query &quot;DistributionList.Items[?Comment=='aws-lab-06'].Id | [0]&quot; --output text)
+OAC_ID=$(aws cloudfront list-origin-access-controls --query &quot;OriginAccessControlList.Items[?Name=='lab06-oac'].Id | [0]&quot; --output text)
+echo &quot;DIST_ID=${DIST_ID} OAC_ID=${OAC_ID}&quot;</code></pre></div>
+<p>Sau đó chạy lại Bước 10. Nếu <code>DIST_ID</code> là <code>None</code>, bỏ qua mục 1–2; nếu distribution đã <code>Enabled=false</code> thì bỏ qua <code>update-distribution</code>. Lệnh nào báo <code>NoSuchDistribution</code>, <code>NoSuchOriginAccessControl</code>, <code>NoSuchBucket</code> nghĩa là tài nguyên đã được xóa.</p>
+<hr>
+<h2 id="checklist-hoàn-thành"><a class="anchor" href="#checklist-hoàn-thành">Checklist hoàn thành</a></h2>
+<ul>
+<li><input type="checkbox"> Bucket có tag <code>Project=aws-lab-06</code>, 4 cờ BPA <code>true</code>, versioning <code>Enabled</code>.</li>
+<li><input type="checkbox"> Upload thành công bằng presigned PUT ký bởi SDK; giải thích được vì sao <code>aws s3 presign</code> không dùng được cho PUT.</li>
+<li><input type="checkbox"> Thấy <code>SignatureDoesNotMatch</code> khi đổi <code>Content-Type</code>, <code>Request has expired</code> khi URL hết hạn.</li>
+<li><input type="checkbox"> Checksum SHA-256 local và trên S3 khớp; checksum sai bị từ chối.</li>
+<li><input type="checkbox"> Preflight từ origin được phép trả <code>Access-Control-Allow-Origin</code>; origin lạ bị <code>403</code>.</li>
+<li><input type="checkbox"> Thấy multipart upload dở dang không hiện trong <code>aws s3 ls</code> nhưng có trong <code>list-multipart-uploads</code>.</li>
+<li><input type="checkbox"> S3 direct <code>403</code>, CloudFront <code>200</code>; quan sát được <code>Miss</code> → <code>Hit</code> và header <code>age</code>.</li>
+<li><input type="checkbox"> Thấy nội dung cũ trước invalidation và nội dung mới sau invalidation; versioned filename có hiệu lực ngay.</li>
+<li><input type="checkbox"> Cleanup xong; inventory rỗng (bucket, distribution, OAC, certificate nếu làm nhánh tùy chọn).</li>
+</ul>
+<hr>
+<h2 id="troubleshooting-nhanh"><a class="anchor" href="#troubleshooting-nhanh">Troubleshooting nhanh</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Triệu chứng</th>
+<th>Nguyên nhân khả dĩ</th>
+<th>Bằng chứng / Khắc phục</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>CloudFront trả <code>403</code> cho mọi file</td>
+<td>Bucket policy sai <code>AWS:SourceArn</code>, distribution chưa gắn OAC, hoặc origin là website endpoint</td>
+<td><code>aws s3api get-bucket-policy</code>; <code>get-distribution-config --query &#39;DistributionConfig.Origins.Items[0].[DomainName,OriginAccessControlId]&#39;</code>; domain phải là <code>&lt;bucket&gt;.s3.&lt;region&gt;.amazonaws.com</code></td>
+</tr>
+<tr>
+<td>CloudFront <code>403</code> chỉ với một file</td>
+<td>Key không tồn tại hoặc sai chữ hoa/thường</td>
+<td><code>aws s3api head-object --bucket ... --key ...</code>; nhớ không có <code>s3:ListBucket</code> thì key thiếu cũng ra 403</td>
+</tr>
+<tr>
+<td>Object mã hóa SSE-KMS bị <code>403</code> qua CloudFront</td>
+<td>Key policy KMS chưa cho <code>cloudfront.amazonaws.com</code> <code>kms:Decrypt</code></td>
+<td>Lab dùng SSE-S3 mặc định nên không gặp; với SSE-KMS thêm statement vào key policy kèm <code>AWS:SourceArn</code></td>
+</tr>
+<tr>
+<td>Presigned PUT trả <code>SignatureDoesNotMatch</code></td>
+<td><code>Content-Type</code> gửi lên khác lúc ký, hoặc URL bị sửa/escape sai</td>
+<td>Gửi đúng header đã ký; đặt URL trong dấu nháy kép</td>
+</tr>
+<tr>
+<td>Presigned trả <code>AccessDenied</code> dù chưa hết hạn</td>
+<td>Người ký không có <code>s3:PutObject</code>/<code>GetObject</code>, hoặc session đã hết hạn</td>
+<td><code>aws sts get-caller-identity</code>; ký lại sau khi đăng nhập lại</td>
+</tr>
+<tr>
+<td>Presigned URL bị redirect <code>307</code></td>
+<td>Bucket mới, URL dùng global endpoint</td>
+<td>Ký với <code>region_name</code> đúng như script (regional endpoint)</td>
+</tr>
+<tr>
+<td>Trình duyệt báo lỗi CORS</td>
+<td>Origin/method/header không có trong rule</td>
+<td>Chạy hàm <code>preflight</code> với đúng <code>Origin</code> và header; so với <code>get-bucket-cors</code></td>
+</tr>
+<tr>
+<td>Vẫn thấy nội dung cũ</td>
+<td>Còn trong TTL của edge hoặc trình duyệt</td>
+<td>Xem <code>x-cache</code>, <code>age</code>; invalidation đúng path (phân biệt <code>/index.html</code> và <code>/</code>); kiểm tra <code>Cache-Control</code> của object</td>
+</tr>
+<tr>
+<td><code>delete-distribution</code> báo <code>DistributionNotDisabled</code></td>
+<td>Chưa disable hoặc chưa deploy xong</td>
+<td><code>get-distribution --query &#39;Distribution.[Status,DistributionConfig.Enabled]&#39;</code> phải là <code>Deployed False</code></td>
+</tr>
+<tr>
+<td><code>delete-bucket</code> báo <code>BucketNotEmpty</code></td>
+<td>Còn version, delete marker</td>
+<td>Chạy lại mục 5 của Bước 10; <code>list-object-versions --max-items 5</code> để xem còn gì</td>
+</tr>
+</tbody></table>
+</div>
+<hr>
+<h2 id="tiếp-theo"><a class="anchor" href="#tiếp-theo">Tiếp theo</a></h2>
+<p>Bạn đã phục vụ nội dung từ bucket private qua CDN và cho client upload trực tiếp mà không mở quyền. Bài tiếp theo: <strong><a href="../../notes/07-databases-and-cache.html">Bài 07 — Database và cache: RDS, Aurora, DynamoDB, ElastiCache</a></strong>.</p>
+
+<footer>Sinh tự động từ <code>labs/06-storage-and-content-delivery/README.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

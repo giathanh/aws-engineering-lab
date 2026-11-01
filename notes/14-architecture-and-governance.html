@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bài 14 — Kiến trúc và quản trị nâng cao: AWS Organizations, SCP, Control Tower, AWS WAF và Well-Architected Framework</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="01-foundations.html">01. Lý thuyết</a><a href="../labs/01-foundations/README.html">01. Lab</a><a href="02-identity-and-access.html">02. Lý thuyết</a><a href="../labs/02-identity-and-access/README.html">02. Lab</a><a href="03-cost-management.html">03. Lý thuyết</a><a href="../labs/03-cost-management/README.html">03. Lab</a><a href="04-networking.html">04. Lý thuyết</a><a href="../labs/04-networking/README.html">04. Lab</a><a href="05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../labs/05-compute-and-load-balancing/README.html">05. Lab</a><a href="06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../labs/06-storage-and-content-delivery/README.html">06. Lab</a><a href="07-databases-and-cache.html">07. Lý thuyết</a><a href="../labs/07-databases-and-cache/README.html">07. Lab</a><a href="08-containers.html">08. Lý thuyết</a><a href="../labs/08-containers/README.html">08. Lab</a><a href="09-serverless.html">09. Lý thuyết</a><a href="../labs/09-serverless/README.html">09. Lab</a><a href="10-observability-and-application-security.html">10. Lý thuyết</a><a href="../labs/10-observability-and-application-security/README.html">10. Lab</a><a href="11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../labs/11-messaging-and-workflows/README.html">11. Lab</a><a href="12-iac-and-cicd.html">12. Lý thuyết</a><a href="../labs/12-iac-and-cicd/README.html">12. Lab</a><a href="13-reliability-and-performance.html">13. Lý thuyết</a><a href="../labs/13-reliability-and-performance/README.html">13. Lab</a><a href="14-architecture-and-governance.html" class="active">14. Lý thuyết</a><a href="../labs/14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#mục-tiêu">Mục tiêu</a></li><li><a href="#phần-1--multi-account-vì-sao-một-account-thường-không-đủ-45-phút">Phần 1 — Multi-account: vì sao một account thường không đủ (45 phút)</a></li><li><a href="#phần-2--aws-organizations-và-service-control-policy-55-phút">Phần 2 — AWS Organizations và Service Control Policy (55 phút)</a></li><li><a href="#phần-3--aws-control-tower-landing-zone-controls-và-vòng-đời-account-45-phút">Phần 3 — AWS Control Tower: landing zone, controls và vòng đời account (45 phút)</a></li><li><a href="#phần-4--bảo-vệ-tầng-ứng-dụng-với-aws-waf-50-phút">Phần 4 — Bảo vệ tầng ứng dụng với AWS WAF (50 phút)</a></li><li><a href="#phần-5--review-sáu-trụ-cột-well-architected-và-adr-50-phút">Phần 5 — Review sáu trụ cột Well-Architected và ADR (50 phút)</a></li><li><a href="#phần-6--giới-thiệu-bài-thực-hành-lab-14">Phần 6 — Giới thiệu bài thực hành (Lab 14)</a></li><li><a href="#phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi phổ biến (25 phút)</a></li><li><a href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></li><li><a href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></li><li><a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></li><li><a href="#đáp-án-gợi-ý">Đáp án gợi ý</a></li></ol></aside>
+<main>
+<h1 id="bài-14--kiến-trúc-và-quản-trị-nâng-cao-aws-organizations-scp-control-tower-aws-waf-và-well-architected-framework"><a class="anchor" href="#bài-14--kiến-trúc-và-quản-trị-nâng-cao-aws-organizations-scp-control-tower-aws-waf-và-well-architected-framework">Bài 14 — Kiến trúc và quản trị nâng cao: AWS Organizations, SCP, Control Tower, AWS WAF và Well-Architected Framework</a></h1>
+<blockquote>
+<p><strong>Đối tượng:</strong> developer có kinh nghiệm nhưng mới học AWS.
+<strong>Thời lượng:</strong> khoảng 5–7 giờ, chia hai buổi. Buổi 1 gồm phần 1–3: multi-account, Organizations và SCP, Control Tower. Buổi 2 gồm phần 4–7: WAF, Well-Architected và ADR, cùng <a href="../labs/14-architecture-and-governance/README.html">lab thực hành</a>.
+<strong>Kế hoạch gốc:</strong> <a href="../plans/14-architecture-and-governance.md">plans/14-architecture-and-governance.md</a>
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Xem <a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a> ở cuối bài.</p>
+</blockquote>
+<h2 id="mục-tiêu"><a class="anchor" href="#mục-tiêu">Mục tiêu</a></h2>
+<p>Sau bài này, bạn có thể:</p>
+<ol>
+<li>Thiết kế <strong>chiến lược multi-account</strong>. Bạn sẽ biết khi nào tách account tốt hơn chỉ tách VPC (ranh giới IAM, quota, blast radius, chi phí), và biết cách tổ chức <strong>Organizational Unit (OU)</strong> theo môi trường và chức năng.</li>
+<li>Dùng <strong>AWS Organizations</strong> và <strong>Service Control Policy (SCP)</strong>. Bạn sẽ hiểu SCP là trần quyền chứ không cấp quyền, SCP thừa kế qua OU, và các ngoại lệ của SCP (management account, service-linked role). Bạn cũng sẽ biết <strong>delegated administration</strong> là gì và cách thiết kế <strong>break-glass</strong> để tránh khóa quyền.</li>
+<li>Đánh giá <strong>AWS Control Tower</strong>: landing zone, ba loại control (preventive, detective, proactive), vòng đời account, drift, chi phí, và những gì Control Tower <strong>không</strong> làm thay bạn.</li>
+<li>Vận hành <strong>AWS WAF</strong>. Bạn sẽ phân biệt web ACL, rule, rule group và label, và biết quy trình tuning từ <strong>Count</strong> sang <strong>Block</strong> có tiêu chí rõ ràng. Bạn cũng sẽ đọc được sampled request và log, và hiểu vì sao WAF không thay authentication.</li>
+<li>Review một kiến trúc theo <strong>sáu trụ cột Well-Architected</strong>, lập lộ trình cải tiến và viết <strong>Architecture Decision Record (ADR)</strong> có phương án thay thế.</li>
+</ol>
+<hr>
+<h2 id="phần-1--multi-account-vì-sao-một-account-thường-không-đủ-45-phút"><a class="anchor" href="#phần-1--multi-account-vì-sao-một-account-thường-không-đủ-45-phút">Phần 1 — Multi-account: vì sao một account thường không đủ (45 phút)</a></h2>
+<p>Khi mới bắt đầu, nhiều nhóm gom dev, staging và prod vào một account AWS, ngăn cách bằng VPC hoặc IAM group. Cách này chạy được cho tới khi một policy viết sai, một bài load test hay một lỗi cấu hình ở dev chạm vào prod.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Ví dụ cây OU cho một tổ chức nhỏ:
+                          ┌────────────────────────┐
+                          │ Management account     │  (chỉ billing, Organizations, Identity Center;
+                          │ (nằm ở Root)           │   KHÔNG chạy workload)
+                          └───────────┬────────────┘
+         ┌────────────────────────────┼────────────────────────────┐
+         ▼                            ▼                            ▼
+┌──────────────────┐         ┌──────────────────┐         ┌──────────────────┐
+│ Security OU      │         │ Infrastructure OU│         │ Workloads OU     │
+│ - Log Archive    │         │ - Network shared │         │ ├ NonProd OU     │
+│ - Security       │         │   (TGW, DNS)     │         │ │  dev, staging  │
+│   Tooling        │         │                  │         │ └ Prod OU        │
+│   (delegated     │         │                  │         │    prod          │
+│    admin)        │         │                  │         │                  │
+└──────────────────┘         └──────────────────┘         └──────────────────┘
+        + Sandbox OU (thử nghiệm, budget thấp)   + Suspended OU (account chờ đóng)</code></pre></div>
+<h3 id="account-là-ranh-giới-gì"><a class="anchor" href="#account-là-ranh-giới-gì">Account là ranh giới gì?</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Ranh giới</th>
+<th>Trong một account (tách bằng VPC/tag)</th>
+<th>Tách account</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>IAM</td>
+<td>Một policy <code>Resource: &quot;*&quot;</code> viết sai có thể chạm mọi môi trường</td>
+<td>Principal của dev mặc định không có quyền gì ở prod. Quyền chéo phải được cấp rõ ràng qua trust policy hoặc resource policy.</td>
+</tr>
+<tr>
+<td>Quota</td>
+<td>Dev và prod dùng chung quota theo account và Region. Ví dụ Lambda concurrency mặc định 1.000, hay throttle mặc định của API Gateway. Phần lớn là soft quota tăng được, nhưng vẫn <strong>dùng chung</strong>.</td>
+<td>Mỗi account có quota riêng</td>
+</tr>
+<tr>
+<td>Blast radius</td>
+<td>Credential lộ ở dev là đủ để thử với prod</td>
+<td>Credential lộ chỉ trong account đó, <strong>trừ khi</strong> có trust cross-account viết lỏng</td>
+</tr>
+<tr>
+<td>Chi phí</td>
+<td>Chỉ tách được bằng tag, mà tag dễ thiếu</td>
+<td>Consolidated billing vẫn là một hóa đơn, nhưng có chi tiết theo account</td>
+</tr>
+<tr>
+<td>Guardrail</td>
+<td>Chỉ có IAM</td>
+<td>Có thêm SCP/RCP theo OU</td>
+</tr>
+</tbody></table>
+</div>
+<p>Tách VPC vẫn đủ khi: dự án nhỏ, một team, không có dữ liệu nhạy cảm, và bạn chấp nhận rủi ro dùng chung IAM và quota. Cái giá của multi-account là thêm networking giữa account, pipeline đa account, quản lý đăng nhập và chia sẻ tài nguyên qua resource policy.</p>
+<hr>
+<h2 id="phần-2--aws-organizations-và-service-control-policy-55-phút"><a class="anchor" href="#phần-2--aws-organizations-và-service-control-policy-55-phút">Phần 2 — AWS Organizations và Service Control Policy (55 phút)</a></h2>
+<p><strong>AWS Organizations</strong> gom nhiều account vào một cây OU, có consolidated billing và các loại policy quản trị. Loại quan trọng nhất cho bảo mật là <strong>SCP</strong>.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Quyền hiệu lực của một principal trong member account:
+┌────────────────────────────────────────────────────────┐
+│ SCP (mọi tầng từ Root → OU → account đều phải cho phép)│
+│  ┌──────────────────────────────────────────────────┐  │
+│  │ Identity policy (+ permissions boundary nếu có)  │  │
+│  │  ┌────────────────────────────────────────────┐  │  │
+│  │  │ QUYỀN HIỆU LỰC = giao của các lớp          │  │  │
+│  │  │ (và không có Deny tường minh ở lớp nào)    │  │  │
+│  │  └────────────────────────────────────────────┘  │  │
+│  └──────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────┘</code></pre></div>
+<blockquote>
+<p>[!IMPORTANT]
+<strong>SCP không cấp quyền.</strong> SCP chỉ đặt trần quyền (guardrail).</p>
+<ul>
+<li>Request thành công khi identity policy (hoặc resource policy) cho phép, <strong>và</strong> SCP ở mọi tầng có Allow cho action đó, <strong>và</strong> không có Deny tường minh ở lớp nào.</li>
+<li><code>Allow</code> trong SCP không tự cho ai làm gì. Mặc định mọi OU có <code>FullAWSAccess</code> (Allow <code>*</code>). Đó là lý do chiến lược phổ biến là <strong>deny list</strong>: giữ <code>FullAWSAccess</code> rồi thêm các Deny.</li>
+<li>Gỡ <code>FullAWSAccess</code> khỏi một OU mà không thay bằng Allow khác thì <strong>mọi thứ</strong> ở OU đó bị implicit deny. Đây là cách lockout dễ gây ra nhất.</li>
+</ul>
+</blockquote>
+<h3 id="1-thừa-kế-và-phạm-vi-áp-dụng"><a class="anchor" href="#1-thừa-kế-và-phạm-vi-áp-dụng">1. Thừa kế và phạm vi áp dụng</a></h3>
+<ul>
+<li>SCP gắn ở Root hoặc ở một OU áp dụng cho mọi OU con và mọi account bên dưới. Deny ở <strong>bất kỳ</strong> tầng nào cũng thắng, và tầng dưới không mở lại được.</li>
+<li>Với chiến lược <strong>allow list</strong> (gỡ <code>FullAWSAccess</code>, chỉ Allow vài dịch vụ), action phải được Allow ở <strong>mọi tầng</strong> từ Root tới account.</li>
+<li>SCP <strong>có</strong> áp dụng cho root user của member account. Đây là điểm khác với IAM policy thông thường.</li>
+<li>Mỗi SCP tối đa 5.120 ký tự, và số SCP gắn trên mỗi target có giới hạn. Kiểm tra quota hiện hành trước khi thiết kế nhiều SCP nhỏ.</li>
+</ul>
+<h3 id="2-ngoại-lệ-theo-tài-liệu"><a class="anchor" href="#2-ngoại-lệ-theo-tài-liệu">2. Ngoại lệ theo tài liệu</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Trường hợp</th>
+<th>SCP có tác dụng không?</th>
+<th>Hệ quả thiết kế</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>User/role trong <strong>management account</strong></td>
+<td>Không</td>
+<td>Management account là đường gỡ lockout, nhưng cũng là account nguy hiểm nhất. Cần ít người, MFA, không workload.</td>
+</tr>
+<tr>
+<td><strong>Service-linked role</strong></td>
+<td>Không</td>
+<td>Không cần (và không nên) viết ngoại lệ SLR trong SCP</td>
+</tr>
+<tr>
+<td>Principal từ <strong>account khác</strong> (ngoài org) truy cập resource của bạn</td>
+<td>SCP của bạn không giới hạn họ</td>
+<td>Dùng resource policy, hoặc <strong>Resource Control Policy (RCP)</strong> để đặt trần quyền trên resource</td>
+</tr>
+</tbody></table>
+</div>
+<h3 id="3-delegated-administration"><a class="anchor" href="#3-delegated-administration">3. Delegated administration</a></h3>
+<p>Nhiều dịch vụ bảo mật (GuardDuty, Security Hub, IAM Access Analyzer, Config, Firewall Manager...) cho phép <strong>ủy quyền quản trị</strong> cho một member account, thường là Security Tooling. Lợi ích là đội security làm việc hằng ngày mà không cần đăng nhập management account. Mục tiêu là <strong>thu nhỏ</strong> số người và số việc cần đến management account.</p>
+<h3 id="4-break-glass"><a class="anchor" href="#4-break-glass">4. Break-glass</a></h3>
+<p>Break-glass là đường vào khẩn cấp khi đường bình thường hỏng, chẳng hạn khi IAM Identity Center hoặc IdP ngừng hoạt động, hoặc khi một SCP cấu hình sai.</p>
+<ul>
+<li>Một role, ví dụ <code>BreakGlassEmergencyAdminRole</code>, có trong mỗi account. Role này chỉ assume được từ vài principal định danh có MFA.</li>
+<li>Ngoại lệ trong SCP dựa theo ARN:<div class="code"><span class="lang">json</span><button type="button">Copy</button><pre><code>&quot;Condition&quot;: {
+  &quot;ArnNotLike&quot;: {
+    &quot;aws:PrincipalArn&quot;: &quot;arn:aws:iam::*:role/BreakGlassEmergencyAdminRole&quot;
+  }
+}</code></pre></div>
+</li>
+<li><strong>Bảo vệ chính role đó.</strong> Nếu ai cũng tạo được role trùng tên, ngoại lệ trở thành cửa sau. SCP phải Deny <code>iam:CreateRole</code>, <code>UpdateAssumeRolePolicy</code>, <code>Attach/PutRolePolicy</code>... trên ARN của role này với mọi principal khác (xem lab Bước 2.1).</li>
+<li><strong>Phát hiện:</strong> mỗi lần assume role break-glass phải gửi cảnh báo. Diễn tập định kỳ để biết đường này còn dùng được.</li>
+</ul>
+<hr>
+<h2 id="phần-3--aws-control-tower-landing-zone-controls-và-vòng-đời-account-45-phút"><a class="anchor" href="#phần-3--aws-control-tower-landing-zone-controls-và-vòng-đời-account-45-phút">Phần 3 — AWS Control Tower: landing zone, controls và vòng đời account (45 phút)</a></h2>
+<p><strong>Control Tower</strong> dựng và duy trì một <strong>landing zone</strong>, tức một môi trường multi-account có baseline sẵn. Landing zone gồm Organizations với OU Security, account Log Archive và Audit, CloudTrail cấp organization, AWS Config, và tùy chọn IAM Identity Center.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Control Tower (chạy từ management account, có &quot;home Region&quot;)
+ ├─ Organizations + OU Security (Log Archive, Audit)
+ ├─ CloudTrail org trail ──▶ Log Archive
+ ├─ AWS Config ở các &quot;governed Region&quot;
+ ├─ Controls: preventive / detective / proactive
+ └─ Account Factory (Service Catalog) hoặc AFT (Terraform)
+      tạo account → đặt vào OU → áp baseline + controls của OU</code></pre></div>
+<h3 id="ba-loại-control"><a class="anchor" href="#ba-loại-control">Ba loại control</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Loại</th>
+<th>Cơ chế</th>
+<th>Khi nào tác dụng</th>
+<th>Ví dụ</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Preventive</td>
+<td>SCP; một số control dùng RCP hoặc declarative policy</td>
+<td>Lúc gọi API: bị chặn</td>
+<td>Không cho xóa log archive, không cho chạy ngoài Region</td>
+</tr>
+<tr>
+<td>Detective</td>
+<td>AWS Config rule</td>
+<td>Sau khi tài nguyên đã tồn tại: đánh dấu <code>NON_COMPLIANT</code></td>
+<td>Security group mở port 22 ra <code>0.0.0.0/0</code></td>
+</tr>
+<tr>
+<td>Proactive</td>
+<td>CloudFormation hook</td>
+<td>Lúc CloudFormation provision tài nguyên: từ chối nếu vi phạm</td>
+<td>Bucket S3 tạo bằng CloudFormation mà không bật mã hóa</td>
+</tr>
+</tbody></table>
+</div>
+<p>Proactive control chỉ thấy tài nguyên đi qua <strong>CloudFormation</strong>. Tài nguyên tạo bằng CLI/SDK hay Terraform gọi API trực tiếp thì không đi qua hook. Nếu muốn kiểm tra từ CI/CD, bạn phải tự chạy công cụ như <code>cfn-guard</code> hoặc <code>checkov</code> trong pipeline. Đó là việc riêng của bạn, không phải proactive control.</p>
+<h3 id="prerequisite-vòng-đời-và-chi-phí"><a class="anchor" href="#prerequisite-vòng-đời-và-chi-phí">Prerequisite, vòng đời và chi phí</a></h3>
+<ul>
+<li><strong>Home Region</strong> chọn lúc thiết lập và không đổi được sau đó. <strong>Governed Region</strong> là các Region Control Tower áp baseline; có thể chọn tập nhỏ.</li>
+<li><strong>Account sẵn có</strong> có thể enroll, nhưng phải xử lý trước các xung đột như Config recorder hoặc trail đã tồn tại.</li>
+<li><strong>Drift:</strong> sửa SCP, OU hay role do Control Tower quản lý từ bên ngoài sẽ làm landing zone hoặc account bị drift, và phải repair hoặc re-register.</li>
+<li><strong>Chi phí:</strong> Control Tower không thu phí riêng, nhưng bạn trả cho dịch vụ nó bật. Lớn nhất thường là Config, tính theo configuration item và nhân với số account × governed Region. Ngoài ra còn S3, CloudWatch Logs, và KMS nếu dùng.</li>
+</ul>
+<blockquote>
+<p>[!WARNING]
+<strong>Control Tower không bảo đảm compliance hay an toàn ứng dụng.</strong> Nó cung cấp baseline quản trị: log tập trung, guardrail, account chuẩn hóa. Các việc sau vẫn là trách nhiệm của team theo shared responsibility model:</p>
+<ul>
+<li>Đáp ứng một chuẩn cụ thể (PCI, ISO...).</li>
+<li>Phân quyền trong ứng dụng, chống SQL injection, vá thư viện.</li>
+<li>Review IAM của workload.</li>
+</ul>
+<p>&quot;Mọi control đều xanh&quot; chỉ có nghĩa là các control <strong>đang bật</strong> không phát hiện vi phạm.</p>
+</blockquote>
+<hr>
+<h2 id="phần-4--bảo-vệ-tầng-ứng-dụng-với-aws-waf-50-phút"><a class="anchor" href="#phần-4--bảo-vệ-tầng-ứng-dụng-với-aws-waf-50-phút">Phần 4 — Bảo vệ tầng ứng dụng với AWS WAF (50 phút)</a></h2>
+<p>Security group và network ACL làm việc ở tầng 3/4 (IP, port). Request chứa SQL injection gửi tới port 443 hợp lệ thì vẫn qua được chúng. <strong>AWS WAF</strong> soi request HTTP(S) ở tầng 7: URI, query string, header, body, IP.</p>
+<p>WAF gắn được vào các resource như ALB, API Gateway <strong>REST API</strong>, CloudFront, AppSync, Cognito user pool, App Runner và Verified Access. Danh sách đầy đủ xem trong tài liệu. API Gateway <strong>HTTP API</strong> (Lab 09) <strong>không</strong> gắn web ACL trực tiếp được. Nếu cần WAF, đặt CloudFront phía trước.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Request ─▶ Web ACL (đánh giá rule theo Priority, số nhỏ trước)
+             P0  Rule group AWSManagedRulesSQLiRuleSet
+             P1  Rule group AWSManagedRulesCommonRuleSet (CRS)
+             P2  Rate-based rule (giới hạn theo IP hoặc khóa tùy chọn, trong cửa sổ đánh giá)
+             ...
+           Rule match với action Block/Allow ─▶ dừng ngay (terminating)
+           Rule match với action Count       ─▶ ghi nhận + gắn label, đánh giá tiếp
+           Không rule nào kết thúc           ─▶ Default action của web ACL (thường Allow)
+             │
+     Block ─▶ 403 (mặc định; có thể tùy chỉnh response)     Allow ─▶ ALB / API / CloudFront</code></pre></div>
+<h3 id="khái-niệm-cần-nắm"><a class="anchor" href="#khái-niệm-cần-nắm">Khái niệm cần nắm</a></h3>
+<ul>
+<li><strong>Web ACL:</strong> tập rule có thứ tự, kèm default action. Mỗi web ACL có <strong>WCU</strong> (capacity unit). Vượt ngưỡng cơ bản thì phải trả thêm phí.</li>
+<li><strong>Rule group:</strong> nhóm rule. <strong>AWS Managed Rules</strong> được AWS cập nhật; ví dụ CRS cho các mẫu tấn công phổ biến kiểu OWASP, và SQLi rule set. Một số rule group như Bot Control hay ATP có phí riêng.</li>
+<li><strong>Override:</strong> đặt cả rule group về Count bằng <code>OverrideAction: Count</code>, hoặc chỉ một rule con bằng <code>RuleActionOverrides</code>.</li>
+<li><strong>Label:</strong> rule match sẽ gắn label như <code>awswaf:managed:aws:core-rule-set:...</code>. Rule phía sau có thể dựa vào label để quyết định. Đây là cách tuning hẹp nhất.</li>
+<li><strong>Giới hạn soi body:</strong> với ALB, WAF chỉ nhận phần đầu của body (8 KB). CRS có rule chặn body lớn hơn giới hạn đó (<code>SizeRestrictions_BODY</code>), và đây là nguồn false positive rất phổ biến với API upload hoặc ghi chú dài.</li>
+<li><strong>Quan sát:</strong><ul>
+<li>Metric CloudWatch theo rule (<code>AllowedRequests</code>, <code>BlockedRequests</code>, <code>CountedRequests</code>).</li>
+<li><strong>Sampled requests:</strong> chỉ là <strong>mẫu</strong>, trong khoảng tối đa 3 giờ gần nhất.</li>
+<li><strong>Logging</strong> đầy đủ tới CloudWatch Logs, S3 hoặc Firehose. Tên log group hoặc bucket bắt buộc có tiền tố <code>aws-waf-logs-</code>.</li>
+</ul>
+</li>
+</ul>
+<h3 id="count-trước-block-sau-với-tiêu-chí-thoát"><a class="anchor" href="#count-trước-block-sau-với-tiêu-chí-thoát">Count trước, Block sau, với tiêu chí thoát</a></h3>
+<p>Bật mọi rule ở Block ngay ngày đầu thì khách hàng hợp lệ có thể bị chặn chỉ vì ghi chú dài, hoặc vì địa chỉ chứa chuỗi giống SQL như <code>1=1</code>.</p>
+<ol>
+<li><strong>Count + logging:</strong> rule chỉ ghi nhận và gắn label, request vẫn đi qua.</li>
+<li><strong>Phân loại:</strong> với mỗi rule con có match, dùng log để xác định đó là tấn công thật (true positive) hay dữ liệu nghiệp vụ (false positive). Theo dõi đủ một chu kỳ nghiệp vụ, ví dụ một tuần có ngày cao điểm, không chỉ vài giờ.</li>
+<li><strong>Sửa ở phạm vi nhỏ nhất:</strong> override đúng rule con về Count; thêm <strong>scope-down statement</strong> để rule group không áp cho một path cụ thể; hoặc viết rule dựa trên label (chỉ cho body lớn ở <code>POST /orders</code>).</li>
+<li><strong>Block</strong> khi mọi match còn lại là true positive. Theo dõi <code>BlockedRequests</code> theo rule, và giữ sẵn lệnh rollback về Count trong runbook.</li>
+</ol>
+<blockquote>
+<p>[!WARNING]
+<strong>WAF không thay authentication, authorization hay việc sửa lỗ hổng ứng dụng.</strong> WAF không biết ai được làm gì. Request không có token tới <code>/admin</code> vẫn đi qua nếu không khớp mẫu tấn công (lab Bước 8). WAF cũng có thể bị vượt bằng biến thể payload. Ứng dụng vẫn phải dùng parameterized query, validate input và kiểm tra quyền.</p>
+</blockquote>
+<hr>
+<h2 id="phần-5--review-sáu-trụ-cột-well-architected-và-adr-50-phút"><a class="anchor" href="#phần-5--review-sáu-trụ-cột-well-architected-và-adr-50-phút">Phần 5 — Review sáu trụ cột Well-Architected và ADR (50 phút)</a></h2>
+<p>Well-Architected Framework là bộ câu hỏi giúp tìm rủi ro một cách có hệ thống. Nó không phải checklist để &quot;đạt điểm&quot;. Một bản review tốt cần ba thứ:</p>
+<ul>
+<li><strong>Bằng chứng</strong>, chẳng hạn số đo, cấu hình hay runbook đã chạy.</li>
+<li><strong>Rủi ro</strong> được xếp hạng.</li>
+<li><strong>Lộ trình cải tiến</strong> có owner.</li>
+</ul>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Trụ cột</th>
+<th>Câu hỏi then chốt</th>
+<th>Bằng chứng ví dụ trong lộ trình</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Operational excellence</td>
+<td>Thay đổi có được deploy/rollback an toàn và lặp lại được không? Sự cố có runbook không?</td>
+<td>Change set, rollback (Lab 12); runbook đã chạy lại (Lab 13)</td>
+</tr>
+<tr>
+<td>Security</td>
+<td>Quyền tối thiểu? Secret và mã hóa? Ai làm gì có được ghi lại không?</td>
+<td>KMS, Secrets Manager, CloudTrail (Lab 10); OIDC (Lab 12); SCP, WAF (Lab 14)</td>
+</tr>
+<tr>
+<td>Reliability</td>
+<td>Chịu được mất AZ hay Region không? RTO/RPO <strong>đo được</strong> chưa? Retry có kiểm soát không?</td>
+<td>Multi-AZ (Lab 07); restore drill, retry budget (Lab 13)</td>
+</tr>
+<tr>
+<td>Performance efficiency</td>
+<td>Có SLO và baseline trước khi tối ưu không? Chọn tài nguyên dựa trên số đo?</td>
+<td>p95 kèm sample size (Lab 13); index (Lab 07)</td>
+</tr>
+<tr>
+<td>Cost optimization</td>
+<td>Ai sở hữu chi phí? Có budget, tag, và dọn tài nguyên idle không?</td>
+<td>Budget (Lab 03); tag <code>Project</code>; cleanup có inventory</td>
+</tr>
+<tr>
+<td>Sustainability</td>
+<td>Có dùng vừa đủ tài nguyên, giảm tài nguyên idle và dữ liệu giữ không cần thiết không?</td>
+<td>arm64/Graviton (Lab 08, 09); lifecycle S3 (Lab 06); retention log ngắn</td>
+</tr>
+</tbody></table>
+</div>
+<p>Các trụ cột thường <strong>đánh đổi</strong> lẫn nhau. Multi-Region tăng reliability nhưng tăng cost; WAF tăng security nhưng có thể làm hỏng trải nghiệm nếu tuning ẩu. Một kiến trúc an toàn hơn nhưng đắt hơn được chấp nhận khi rủi ro nó giảm có giá trị lớn hơn chi phí tăng thêm. Đánh giá giá trị đó theo xác suất × thiệt hại, yêu cầu pháp lý và cam kết với khách hàng. Quyết định đó phải được ghi lại trong ADR, kèm điều kiện để xem lại.</p>
+<h3 id="architecture-decision-record-adr"><a class="anchor" href="#architecture-decision-record-adr">Architecture Decision Record (ADR)</a></h3>
+<p>ADR ghi lại <strong>vì sao</strong> một quyết định được đưa ra, để người đến sau không phải đoán và không phải tranh luận lại từ đầu.</p>
+<ul>
+<li><strong>Tiêu đề:</strong> quyết định ngắn gọn, ví dụ <em>ADR-004: Dùng DynamoDB thay Aurora cho dịch vụ giỏ hàng</em>.</li>
+<li><strong>Trạng thái:</strong> Proposed → Accepted → Superseded (ghi rõ ADR nào thay thế).</li>
+<li><strong>Bối cảnh:</strong> vấn đề, ràng buộc, số đo hiện có.</li>
+<li><strong>Quyết định:</strong> cụ thể, kiểm chứng được.</li>
+<li><strong>Phương án đã cân nhắc:</strong> cái bị loại và <strong>lý do</strong>.</li>
+<li><strong>Hệ quả:</strong> cả tích cực lẫn đánh đổi, cộng điều kiện để xem lại.</li>
+</ul>
+<p>Tránh con số không có nguồn như &quot;giảm 99% rủi ro&quot; hay &quot;tiết kiệm 70%&quot;. Nếu chưa đo, ghi &quot;chưa đo&quot; và đặt việc đo làm điều kiện để chuyển sang Accepted.</p>
+<hr>
+<h2 id="phần-6--giới-thiệu-bài-thực-hành-lab-14"><a class="anchor" href="#phần-6--giới-thiệu-bài-thực-hành-lab-14">Phần 6 — Giới thiệu bài thực hành (Lab 14)</a></h2>
+<p>Lab mặc định là <strong>thiết kế</strong> và chỉ gọi các API đọc, miễn phí. Lab không bật Organizations và không attach SCP. Bạn sẽ:</p>
+<ol>
+<li>Thiết kế cây OU, account, owner, đường truy cập và break-glass trên giấy.</li>
+<li>Viết hai SCP mẫu (bảo vệ audit và break-glass; giới hạn Region), rồi kiểm tra bằng IAM Access Analyzer <code>validate-policy</code>.</li>
+<li>Chạy <strong>test matrix</strong> allowed/denied bằng IAM policy simulator, trong đó SCP được mô phỏng bằng permissions boundary. Ghi rõ những trường hợp simulator không mô phỏng được. Sau đó phân tích nguy cơ lockout và lập kế hoạch rollout.</li>
+<li>Đánh giá Control Tower từ tài liệu.</li>
+<li><em>(Tùy chọn, có phí nhỏ)</em> Gắn WAF vào một ALB fixture, gửi traffic hợp lệ và tấn công giả lập ở chế độ Count, rồi phân loại false positive. Tiếp theo, bật Block để thấy false positive biến thành sự cố, sau đó tinh chỉnh một rule con. Cuối cùng chứng minh WAF không thay authentication.</li>
+<li>Review sáu trụ cột và viết ba ADR, rồi dọn dẹp và kiểm tra inventory.</li>
+</ol>
+<p>👉 Mở lab tại: <strong><a href="../labs/14-architecture-and-governance/README.html">labs/14-architecture-and-governance/README.md</a></strong>.</p>
+<hr>
+<h2 id="phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút"><a class="anchor" href="#phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi phổ biến (25 phút)</a></h2>
+<h3 id="1-bị-accessdenied-sau-khi-bật-guardrail"><a class="anchor" href="#1-bị-accessdenied-sau-khi-bật-guardrail">1. Bị <code>AccessDenied</code> sau khi bật guardrail</a></h3>
+<ul>
+<li><strong>Triệu chứng:</strong> một lệnh vốn chạy được nay bị từ chối, dù identity policy vẫn cho phép.</li>
+<li><strong>Giả thuyết:</strong><ul>
+<li>Một SCP ở account, ở OU, hoặc ở <strong>OU cha</strong> có Deny.</li>
+<li>OU thiếu <code>FullAWSAccess</code>.</li>
+<li>Điều kiện ngoại lệ sai ARN hoặc sai condition operator.</li>
+</ul>
+</li>
+<li><strong>Bằng chứng cần thu thập:</strong><ul>
+<li>Event CloudTrail tương ứng: <code>errorMessage</code> thường nêu rõ &quot;explicit deny in a service control policy&quot; hoặc &quot;no service control policy allows&quot;.</li>
+<li>Liệt kê SCP gắn ở từng tầng (<code>organizations list-policies-for-target</code> cho account và từng OU cha).</li>
+</ul>
+</li>
+<li><strong>Sửa phạm vi nhỏ:</strong><ul>
+<li>Sửa đúng statement gây lỗi, rồi chạy lại test matrix.</li>
+<li>Nếu lockout diện rộng, dùng management account (SCP không áp dụng ở đó) hoặc role break-glass đã thiết kế để detach hoặc sửa SCP.</li>
+<li><strong>Không</strong> gỡ cả bộ guardrail nếu không cần.</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-waf-chặn-nhầm-khách-hàng-hợp-lệ"><a class="anchor" href="#2-waf-chặn-nhầm-khách-hàng-hợp-lệ">2. WAF chặn nhầm khách hàng hợp lệ</a></h3>
+<ul>
+<li><strong>Triệu chứng:</strong> khách hàng nhận 403 từ ALB hoặc CloudFront; ứng dụng không có log request đó.</li>
+<li><strong>Bằng chứng cần thu thập:</strong><ul>
+<li>Trong log WAF hoặc sampled request, tìm <code>terminatingRuleId</code>, rule con (<code>RuleNameWithinRuleGroup</code>) và label.</li>
+<li>Xem phần nào của request đã match: body, query hay header.</li>
+<li>Kiểm tra <strong>priority</strong> (có rule nào chặn trước rule bạn nghĩ không) và <strong>scope</strong> (web ACL có gắn nhầm vào resource khác không).</li>
+</ul>
+</li>
+<li><strong>Sửa phạm vi nhỏ:</strong><ul>
+<li>Override đúng rule con về Count bằng <code>RuleActionOverrides</code>.</li>
+<li>Hoặc thêm scope-down statement cho path cụ thể.</li>
+<li>Hoặc viết rule dựa trên label (ví dụ chỉ cho body lớn ở <code>POST /orders</code>).</li>
+<li><strong>Không</strong> chuyển cả rule group về Count vĩnh viễn, và không tắt WAF.</li>
+</ul>
+</li>
+</ul>
+<h3 id="3-chi-phí-governance-tăng-sau-khi-bật-landing-zone"><a class="anchor" href="#3-chi-phí-governance-tăng-sau-khi-bật-landing-zone">3. Chi phí governance tăng sau khi bật landing zone</a></h3>
+<ul>
+<li><strong>Nguyên nhân thường gặp:</strong><ul>
+<li>AWS Config ghi configuration item ở <strong>mỗi account × mỗi governed Region</strong>. Tài nguyên thay đổi nhiều (ví dụ autoscaling, ENI của Lambda trong VPC) sinh nhiều item.</li>
+<li>Có người thêm <strong>data event</strong> vào trail. Control Tower không tự bật data event; org trail của nó ghi management event.</li>
+<li>Log không có retention hoặc lifecycle.</li>
+</ul>
+</li>
+<li><strong>Bằng chứng cần thu thập:</strong><ul>
+<li>Cost Explorer lọc theo service và linked account. Dữ liệu billing có độ trễ, nên đừng dùng nó làm bằng chứng duy nhất.</li>
+<li>Đếm số governed Region.</li>
+<li>Xem event selector của trail và kích thước, retention của log group/bucket.</li>
+</ul>
+</li>
+<li><strong>Sửa phạm vi nhỏ:</strong><ul>
+<li>Bỏ các Region không dùng khỏi danh sách governed Region.</li>
+<li>Đặt lifecycle cho bucket log, ví dụ chuyển sang lớp lưu trữ rẻ hơn sau một thời gian theo yêu cầu lưu giữ.</li>
+<li>Gỡ data event không cần thiết.</li>
+<li><strong>Không</strong> tắt tay Config hoặc trail do Control Tower quản lý, vì sẽ gây drift.</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2 id="câu-hỏi-tự-kiểm-tra"><a class="anchor" href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></h2>
+<ol>
+<li>Khi nào tách account tốt hơn chỉ tách VPC? Nêu ít nhất bốn ranh giới mà account cung cấp và VPC thì không, cùng một trường hợp mà tách VPC là đủ.</li>
+<li>IAM policy cho <code>Action: &quot;*&quot;, Resource: &quot;*&quot;</code>, còn SCP trên OU có <code>Deny ec2:*</code>. Người dùng có tạo được EC2 không? Nếu thay Deny bằng một SCP chỉ có <code>Allow s3:*</code> và <strong>gỡ</strong> <code>FullAWSAccess</code> thì sao?</li>
+<li>SCP có áp dụng cho management account, cho service-linked role, cho root user của member account không? Mỗi câu trả lời dẫn tới quyết định thiết kế gì?</li>
+<li>Trình bày quy trình tuning WAF từ Count sang Block. Nêu tiêu chí để thoát giai đoạn Count, và cách sửa một false positive mà không tắt cả rule group.</li>
+<li>ADR gồm những phần nào? Vì sao phần &quot;phương án đã cân nhắc&quot; quan trọng?</li>
+<li>SCP <code>Allow</code> có cấp quyền gọi API không?</li>
+<li>Làm sao triển khai một guardrail mới mà hạn chế nguy cơ lockout?</li>
+<li>Một kiến trúc an toàn hơn nhưng đắt hơn có được chấp nhận không? Bạn dùng tiêu chí gì và ghi quyết định ở đâu?</li>
+<li>Web ACL đã chặn được SQLi trên <code>/orders</code>. Vì sao endpoint <code>/admin</code> vẫn có thể bị truy cập trái phép?</li>
+</ol>
+<hr>
+<h2 id="tài-liệu-tham-khảo-chính-thức"><a class="anchor" href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></h2>
+<ul>
+<li><a href="https://docs.aws.amazon.com/organizations/latest/userguide/" target="_blank" rel="noopener">AWS Organizations User Guide</a>, mục SCP, ví dụ SCP, delegated administrator</li>
+<li><a href="https://docs.aws.amazon.com/controltower/latest/userguide/" target="_blank" rel="noopener">AWS Control Tower User Guide</a>, mục controls, drift, governed Region</li>
+<li><a href="https://docs.aws.amazon.com/waf/latest/developerguide/" target="_blank" rel="noopener">AWS WAF Developer Guide</a>, mục managed rule groups, labels, logging, sampled requests, giới hạn soi body</li>
+<li><a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-policy-validation.html" target="_blank" rel="noopener">IAM Access Analyzer policy validation</a></li>
+<li><a href="https://docs.aws.amazon.com/wellarchitected/latest/framework/" target="_blank" rel="noopener">AWS Well-Architected Framework</a></li>
+<li><a href="https://docs.aws.amazon.com/whitepapers/latest/organizing-your-aws-environment/organizing-your-aws-environment.html" target="_blank" rel="noopener">Organizing Your AWS Environment Using Multiple Accounts</a></li>
+<li><a href="https://docs.aws.amazon.com/decision-guides/" target="_blank" rel="noopener">AWS Decision Guides</a></li>
+</ul>
+<h2 id="trạng-thái-kiểm-chứng"><a class="anchor" href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></h2>
+<ul>
+<li><strong>Đã đối chiếu với tài liệu AWS ngày 2026-10-31:</strong><ul>
+<li>SCP: không cấp quyền, thừa kế qua OU, <code>FullAWSAccess</code>, giới hạn 5.120 ký tự, áp dụng cho root user của member account.</li>
+<li>Các ngoại lệ: management account, service-linked role, principal ngoài org; RCP.</li>
+<li>Ba loại control của Control Tower, home và governed Region, drift.</li>
+<li>Managed rule groups của WAF, label, logging (tiền tố <code>aws-waf-logs-</code>), sampled requests, giới hạn soi body với ALB.</li>
+<li>Sáu trụ cột Well-Architected.</li>
+</ul>
+</li>
+<li><strong>Đã kiểm tra cục bộ:</strong> cú pháp JSON của hai SCP và của bộ rule WAF sinh bằng <code>jq</code> trong lab.</li>
+<li><strong>Chưa chạy trên AWS:</strong> lab chưa được chạy trên account thật. Output của simulator và WAF trong lab là minh họa; tên rule con và label có thể khác theo phiên bản rule group.</li>
+<li><strong>Chi phí:</strong> phần thiết kế miễn phí. Nhánh WAF có phí (ALB, IPv4 public, web ACL, rule), ước tính dưới $0,15 nếu dọn ngay. Quên dọn một tháng tốn khoảng $32. Không có cam kết Free Tier. Giá là minh họa, tra lại trang pricing theo Region của bạn.</li>
+</ul>
+<hr>
+<h2 id="đáp-án-gợi-ý"><a class="anchor" href="#đáp-án-gợi-ý">Đáp án gợi ý</a></h2>
+<details>
+<summary>Mở để xem đáp án</summary>
+
+<ol>
+<li><strong>Account và VPC:</strong><ul>
+<li>Account cho ranh giới <strong>IAM</strong>: principal ở dev không có quyền ở prod nếu không được cấp rõ.</li>
+<li>Account có <strong>quota</strong> riêng.</li>
+<li>Account thu hẹp <strong>blast radius</strong> khi lộ credential.</li>
+<li>Account có <strong>chi phí</strong> theo account và <strong>SCP</strong> theo OU.</li>
+<li>Tách VPC là đủ khi dự án nhỏ, một team, không dữ liệu nhạy cảm và chấp nhận dùng chung IAM/quota.</li>
+<li>Lưu ý: tách account không tự chặn mọi đường. Trust policy cross-account viết lỏng vẫn nối dev với prod.</li>
+</ul>
+</li>
+<li><strong>SCP và IAM:</strong><ul>
+<li>Trường hợp đầu: <strong>không</strong> tạo được, vì Deny tường minh trong SCP thắng mọi Allow.</li>
+<li>Trường hợp sau: SCP chỉ có <code>Allow s3:*</code> và đã gỡ <code>FullAWSAccess</code>, nên EC2 bị <strong>implicit deny</strong>: không tầng SCP nào cho phép <code>ec2:*</code>. Người dùng vẫn chỉ làm được với S3 trong phạm vi IAM cho phép.</li>
+</ul>
+</li>
+<li><strong>Phạm vi áp dụng:</strong><ul>
+<li>Management account: SCP <strong>không</strong> áp dụng. Vì vậy cần ít người, MFA và không workload; đây cũng là đường gỡ lockout.</li>
+<li>Service-linked role: SCP <strong>không</strong> áp dụng, nên không cần viết ngoại lệ.</li>
+<li>Root user của member account: SCP <strong>có</strong> áp dụng, nên SCP là cách đặt trần cho cả root của member account.</li>
+</ul>
+</li>
+<li><strong>Tuning WAF:</strong><ul>
+<li>Quy trình: Count + logging → phân loại từng rule con có match → sửa hẹp → Block → theo dõi <code>BlockedRequests</code>, có sẵn rollback.</li>
+<li>Tiêu chí thoát Count: đủ lưu lượng đại diện (ít nhất một chu kỳ nghiệp vụ), và mọi match còn lại là tấn công thật.</li>
+<li>Sửa false positive: <code>RuleActionOverrides</code> cho đúng rule con, scope-down statement, hoặc rule dựa trên label.</li>
+<li>Rủi ro nếu Block ngay: chặn khách hàng hợp lệ, gây gián đoạn kinh doanh.</li>
+</ul>
+</li>
+<li><strong>ADR:</strong><ul>
+<li>Các phần: tiêu đề, trạng thái, bối cảnh, quyết định, phương án đã cân nhắc, hệ quả.</li>
+<li>Phần phương án cho người đến sau biết lựa chọn khác <strong>đã được xem xét</strong> và vì sao bị loại. Nhờ vậy họ không mở lại tranh luận cũ, và biết khi nào bối cảnh đổi thì nên xem lại.</li>
+</ul>
+</li>
+<li><strong>SCP Allow:</strong> <strong>không</strong> cấp quyền. Nó chỉ xác định trần quyền. Quyền phải đến từ identity policy hoặc resource policy.</li>
+<li><strong>Hạn chế lockout:</strong><ul>
+<li>Validate bằng <code>validate-policy</code> và chạy test matrix (simulator, rồi lệnh thật ở sandbox).</li>
+<li>Rollout từ Sandbox → NonProd → Prod; <strong>không</strong> attach lần đầu ở Root.</li>
+<li>Có ngoại lệ break-glass được bảo vệ và có cảnh báo.</li>
+<li>Không gỡ <code>FullAWSAccess</code> khi dùng chiến lược deny list.</li>
+<li>Theo dõi CloudTrail <code>AccessDenied</code> do SCP sau mỗi bước, và biết sẵn cách detach từ management account.</li>
+</ul>
+</li>
+<li><strong>An toàn hơn nhưng đắt hơn:</strong><ul>
+<li>Được chấp nhận khi rủi ro giảm đi (xác suất × thiệt hại, yêu cầu pháp lý, cam kết khách hàng) có giá trị lớn hơn chi phí tăng thêm, và không có phương án rẻ hơn đạt cùng mức giảm rủi ro.</li>
+<li>Ghi trong ADR kèm phương án bị loại và điều kiện xem lại, ví dụ khi lưu lượng hoặc yêu cầu RPO thay đổi.</li>
+</ul>
+</li>
+<li><strong>WAF và <code>/admin</code>:</strong><ul>
+<li>WAF soi <strong>mẫu tấn công</strong>, không xác thực danh tính và không phân quyền.</li>
+<li>Request hợp lệ về cú pháp nhưng không có quyền vẫn đi qua.</li>
+<li><code>/admin</code> phải được bảo vệ bằng authentication và authorization ở ứng dụng hoặc ở lớp xác thực (Cognito, ALB authenticate, JWT authorizer).</li>
+</ul>
+</li>
+</ol>
+</details>
+
+<footer>Sinh tự động từ <code>notes/14-architecture-and-governance.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

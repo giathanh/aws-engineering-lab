@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bài 12 — Hạ tầng dưới dạng Mã nguồn (IaC) và CI/CD: CloudFormation, AWS CDK, Terraform và GitHub Actions OIDC</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="01-foundations.html">01. Lý thuyết</a><a href="../labs/01-foundations/README.html">01. Lab</a><a href="02-identity-and-access.html">02. Lý thuyết</a><a href="../labs/02-identity-and-access/README.html">02. Lab</a><a href="03-cost-management.html">03. Lý thuyết</a><a href="../labs/03-cost-management/README.html">03. Lab</a><a href="04-networking.html">04. Lý thuyết</a><a href="../labs/04-networking/README.html">04. Lab</a><a href="05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../labs/05-compute-and-load-balancing/README.html">05. Lab</a><a href="06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../labs/06-storage-and-content-delivery/README.html">06. Lab</a><a href="07-databases-and-cache.html">07. Lý thuyết</a><a href="../labs/07-databases-and-cache/README.html">07. Lab</a><a href="08-containers.html">08. Lý thuyết</a><a href="../labs/08-containers/README.html">08. Lab</a><a href="09-serverless.html">09. Lý thuyết</a><a href="../labs/09-serverless/README.html">09. Lab</a><a href="10-observability-and-application-security.html">10. Lý thuyết</a><a href="../labs/10-observability-and-application-security/README.html">10. Lab</a><a href="11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../labs/11-messaging-and-workflows/README.html">11. Lab</a><a href="12-iac-and-cicd.html" class="active">12. Lý thuyết</a><a href="../labs/12-iac-and-cicd/README.html">12. Lab</a><a href="13-reliability-and-performance.html">13. Lý thuyết</a><a href="../labs/13-reliability-and-performance/README.html">13. Lab</a><a href="14-architecture-and-governance.html">14. Lý thuyết</a><a href="../labs/14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#mục-tiêu">Mục tiêu</a></li><li><a href="#phần-1--khái-niệm-cốt-lõi-của-iac-desired-state-dependency-graph-và-drift-45-phút">Phần 1 — Khái niệm Cốt lõi của IaC: Desired State, Dependency Graph và Drift (45 phút)</a></li><li><a href="#phần-2--so-sánh-công-cụ-aws-cloudformation-aws-cdk-và-hashicorp-terraform-50-phút">Phần 2 — So sánh Công cụ: AWS CloudFormation, AWS CDK và HashiCorp Terraform (50 phút)</a></li><li><a href="#phần-3--cấu-trúc-module-tham-số-hóa-và-tham-chiếu-bí-mật-an-toàn-50-phút">Phần 3 — Cấu trúc Module, Tham số hóa và Tham chiếu Bí mật An toàn (50 phút)</a></li><li><a href="#phần-4--tự-động-hóa-cicd-không-mật-khẩu-github-actions-và-aws-oidc-55-phút">Phần 4 — Tự động hóa CI/CD không Mật khẩu: GitHub Actions và AWS OIDC (55 phút)</a></li><li><a href="#phần-5--quản-lý-rủi-ro-rollback-hạ-tầng-vs-rollback-dữ-liệu-45-phút">Phần 5 — Quản lý Rủi ro: Rollback Hạ tầng vs Rollback Dữ liệu (45 phút)</a></li><li><a href="#phần-6--giới-thiệu-bài-thực-hành-lab-12">Phần 6 — Giới thiệu bài thực hành (Lab 12)</a></li><li><a href="#phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi phổ biến (25 phút)</a></li><li><a href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></li><li><a href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></li><li><a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></li><li><a href="#đáp-án-gợi-ý">Đáp án gợi ý</a></li></ol></aside>
+<main>
+<h1 id="bài-12--hạ-tầng-dưới-dạng-mã-nguồn-iac-và-cicd-cloudformation-aws-cdk-terraform-và-github-actions-oidc"><a class="anchor" href="#bài-12--hạ-tầng-dưới-dạng-mã-nguồn-iac-và-cicd-cloudformation-aws-cdk-terraform-và-github-actions-oidc">Bài 12 — Hạ tầng dưới dạng Mã nguồn (IaC) và CI/CD: CloudFormation, AWS CDK, Terraform và GitHub Actions OIDC</a></h1>
+<blockquote>
+<p><strong>Đối tượng:</strong> developer có kinh nghiệm nhưng mới học AWS.
+<strong>Thời lượng:</strong> khoảng 6–8 giờ, chia hai buổi. Buổi 1 gồm phần 1–3 (Bản chất IaC, So sánh CloudFormation/CDK vs Terraform, Quản trị Cấu hình &amp; Secrets). Buổi 2 gồm phần 4–7 (Tự động hóa CI/CD không mật khẩu với GitHub Actions OIDC, Quản lý Rủi ro Rollback và <a href="../labs/12-iac-and-cicd/README.html">lab thực hành</a>).
+<strong>Kế hoạch gốc:</strong> <a href="../plans/12-iac-and-cicd.md">plans/12-iac-and-cicd.md</a>
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Xem <a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a> ở cuối bài.</p>
+</blockquote>
+<h2 id="mục-tiêu"><a class="anchor" href="#mục-tiêu">Mục tiêu</a></h2>
+<p>Sau bài này, bạn có thể:</p>
+<ol>
+<li>Nắm vững tư duy <strong>Hạ tầng dưới dạng Mã nguồn (Infrastructure as Code - IaC)</strong>: trạng thái mong muốn (<strong>Desired State</strong>), đồ thị phụ thuộc (<strong>Dependency Graph</strong>), cơ chế xem trước thay đổi (<strong>Plan / Change Set</strong>) và phát hiện độ lệch cấu hình (<strong>Drift Detection</strong>).</li>
+<li>Lựa chọn chuẩn xác giữa hệ sinh thái của AWS (<strong>AWS CloudFormation, AWS CDK</strong>) và công cụ trung lập (<strong>HashiCorp Terraform</strong>); làm chủ vòng đời và cách bảo vệ tệp trạng thái (<strong>State File Management</strong> và <strong>State Locking</strong>).</li>
+<li>Thiết kế kiến trúc module hóa: chia tách Stack theo môi trường (Dev/Staging/Prod), tham số hóa (<strong>Parameters &amp; Outputs</strong>), và tham chiếu bí mật an toàn (<strong>Dynamic References</strong>) từ AWS Secrets Manager và Systems Manager Parameter Store.</li>
+<li>Xây dựng đường ống <strong>CI/CD hiện đại không dùng Access Key tĩnh (Zero-Secret Pipeline)</strong> bằng <strong>OpenID Connect (OIDC)</strong> giữa GitHub Actions và AWS STS; làm chủ các thuộc tính xác thực <strong>Subject (<code>sub</code>)</strong> và <strong>Audience (<code>aud</code>)</strong>.</li>
+<li>Kiểm soát quy trình <strong>Rollback</strong> hạ tầng, giải thích rõ tại sao rollback hạ tầng không thể tự động đảo ngược cấu trúc dữ liệu (<strong>Schema / Data Migration</strong>), và xử lý an toàn các xung đột tương tranh khi hủy tài nguyên (<strong>Destroy</strong>).</li>
+</ol>
+<hr>
+<h2 id="phần-1--khái-niệm-cốt-lõi-của-iac-desired-state-dependency-graph-và-drift-45-phút"><a class="anchor" href="#phần-1--khái-niệm-cốt-lõi-của-iac-desired-state-dependency-graph-và-drift-45-phút">Phần 1 — Khái niệm Cốt lõi của IaC: Desired State, Dependency Graph và Drift (45 phút)</a></h2>
+<p>Phương pháp tạo tài nguyên thủ công qua giao diện Console (&quot;ClickOps&quot;) tiềm ẩn rủi ro rất lớn: không thể tái lập môi trường chính xác (Environment Parity), thiếu lịch sử kiểm toán phiên bản (Version Control), và dễ dẫn đến thảm họa do thao tác nhầm của con người.</p>
+<p><strong>Infrastructure as Code (IaC)</strong> biến toàn bộ tài nguyên đám mây thành các tệp mã nguồn được quản lý bằng Git:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Quy trình Vận hành của Khung Khái niệm IaC:
+┌─────────────────────┐       ┌──────────────────────┐       ┌─────────────────────┐
+│  Mã nguồn IaC       │ ────&gt; │ Plan / Change Set    │ ────&gt; │ Thực thi Đồng bộ    │
+│  (Mô tả trạng thái  │       │ (So sánh Trạng thái  │       │ (Apply / Execute)   │
+│   mong muốn: Desired)│       │  Hiện tại vs Mong đợi│       │ Đạt Actual State    │
+└─────────────────────┘       └──────────────────────┘       └─────────────────────┘
+                                                                        │
+                                                                        ▼
+                                                             ┌─────────────────────┐
+                                                             │ Phát hiện Lệch      │
+                                                             │ (Drift Detection)   │
+                                                             │ Nếu ai đó sửa tay!  │
+                                                             └─────────────────────┘</code></pre></div>
+<h3 id="1-trạng-thái-mong-muốn-desired-state-vs-mệnh-lệnh-imperative"><a class="anchor" href="#1-trạng-thái-mong-muốn-desired-state-vs-mệnh-lệnh-imperative">1. Trạng thái Mong muốn (Desired State) vs Mệnh lệnh (Imperative)</a></h3>
+<ul>
+<li><strong>Mô hình Mệnh lệnh (Imperative):</strong> Bạn viết một kịch bản bash/Python chỉ rõ từng bước: <code>1. Tạo VPC</code>, <code>2. Tạo Subnet</code>, <code>3. Đợi subnet sẵn sàng...</code>. Nếu bước 2 bị lỗi giữa chừng và bạn chạy lại, script sẽ cố tạo lại VPC thứ hai hoặc ném lỗi trùng lặp.</li>
+<li><strong>Mô hình Khai báo (Declarative / Desired State):</strong> Bạn chỉ mô tả mục tiêu cuối cùng: <em>&quot;Tôi muốn có 1 VPC với dải IP 10.0.0.0/16 và 2 Subnets&quot;</em>. Động cơ IaC (CloudFormation hoặc Terraform) sẽ tự động kiểm tra xem tài nguyên nào đã có, tài nguyên nào thiếu hoặc cần cập nhật để đưa hạ tầng thực tế khớp hoàn toàn với bản khai báo.</li>
+</ul>
+<h3 id="2-đồ-thị-phụ-thuộc-tài-nguyên-resource-dependency-graph"><a class="anchor" href="#2-đồ-thị-phụ-thuộc-tài-nguyên-resource-dependency-graph">2. Đồ thị Phụ thuộc Tài nguyên (Resource Dependency Graph)</a></h3>
+<p>Động cơ IaC tự động phân tích quan hệ giữa các tài nguyên để xây dựng <strong>Directed Acyclic Graph (DAG)</strong>:</p>
+<ul>
+<li>Nếu Subnet cần <code>VpcId</code>, VPC sẽ được tạo trước.</li>
+<li>Các tài nguyên độc lập (ví dụ hai Subnet ở hai Availability Zones khác nhau) sẽ được tạo <strong>song song</strong> để tối ưu thời gian triển khai.</li>
+<li>Bạn có thể can thiệp thứ tự bằng thuộc tính phụ thuộc tường minh (<code>DependsOn</code> trong CloudFormation hoặc <code>depends_on</code> trong Terraform).</li>
+</ul>
+<h3 id="3-change-set-và-độ-lệch-hạ-tầng-configuration-drift"><a class="anchor" href="#3-change-set-và-độ-lệch-hạ-tầng-configuration-drift">3. Change Set và Độ lệch Hạ tầng (Configuration Drift)</a></h3>
+<ul>
+<li><strong>Change Set / Plan:</strong> Trước khi tác động lên hạ tầng thật, bạn luôn phải tạo một bản xem trước thay đổi. Change Set sẽ chỉ rõ chính xác: Tài nguyên nào sẽ được tạo mới (<code>Add</code>), tài nguyên nào sẽ cập nhật tại chỗ (<code>Modify</code>), và đặc biệt là tài nguyên nào sẽ bị <strong>xóa và tạo lại (Destroy &amp; Recreate)</strong> — rủi ro gây mất dữ liệu với Database!</li>
+<li><strong>Drift Detection:</strong> Khi một kỹ sư đăng nhập Console để sửa tạm một Security Group mà không cập nhật vào Git, hạ tầng thực tế đã bị lệch (<strong>Drift</strong>). Tính năng Drift Detection của CloudFormation và lệnh <code>terraform plan</code> cho phép quét và hiển thị chi tiết các điểm sai lệch này để đội ngũ đưa cấu hình trở về trạng thái chuẩn hóa.</li>
+</ul>
+<hr>
+<h2 id="phần-2--so-sánh-công-cụ-aws-cloudformation-aws-cdk-và-hashicorp-terraform-50-phút"><a class="anchor" href="#phần-2--so-sánh-công-cụ-aws-cloudformation-aws-cdk-và-hashicorp-terraform-50-phút">Phần 2 — So sánh Công cụ: AWS CloudFormation, AWS CDK và HashiCorp Terraform (50 phút)</a></h2>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>So sánh 3 Công cụ IaC Phổ biến nhất trên AWS:
+┌─────────────────────────┬────────────────────────────┬────────────────────────────┐
+│ Đặc tính                │ AWS CloudFormation / CDK   │ HashiCorp Terraform        │
+├─────────────────────────┼────────────────────────────┼────────────────────────────┤
+│ Hệ sinh thái            │ Native AWS                 │ Đa nền tảng (Multi-Cloud)  │
+│                         │ (Hỗ trợ 100% tính năng mới)│ AWS, Azure, GCP, Datadog   │
+├─────────────────────────┼────────────────────────────┼────────────────────────────┤
+│ Ngôn ngữ định nghĩa     │ JSON/YAML (CloudFormation) │ HCL (HashiCorp             │
+│                         │ TypeScript/Python/Go (CDK) │ Configuration Language)    │
+├─────────────────────────┼────────────────────────────┼────────────────────────────┤
+│ Quản lý Trạng thái      │ Quản lý tự động bởi AWS    │ Tệp `terraform.tfstate`    │
+│ (State Management)      │ (Người dùng không cần lưu  │ Bắt buộc lưu trên S3       │
+│                         │ hay khóa state)            │ kết hợp DynamoDB Locking   │
+├─────────────────────────┼────────────────────────────┼────────────────────────────┤
+│ Cơ chế Rollback         │ Tự động rollback khi deploy│ Không tự rollback; giữ     │
+│                         │ thất bại (Atomic Stack)    │ trạng thái tại điểm lỗi    │
+└─────────────────────────┴────────────────────────────┴────────────────────────────┘</code></pre></div>
+<h3 id="1-aws-cloudformation-và-aws-cdk-cloud-development-kit"><a class="anchor" href="#1-aws-cloudformation-và-aws-cdk-cloud-development-kit">1. AWS CloudFormation và AWS CDK (Cloud Development Kit)</a></h3>
+<ul>
+<li><strong>CloudFormation:</strong> Là công cụ gốc của AWS. Mọi tài nguyên được gom thành các <strong>Stacks</strong>. Toàn bộ lịch sử triển khai, trạng thái và rollback được AWS quản lý ngầm an toàn tuyệt đối.</li>
+<li><strong>AWS CDK:</strong> Cho phép kỹ sư sử dụng các ngôn ngữ lập trình thực thụ (TypeScript, Python, Java, C#, Go) để định nghĩa hạ tầng:<ul>
+<li><strong>L1 Constructs:</strong> Ánh xạ 1:1 trực tiếp với các tài nguyên thô của CloudFormation (<code>CfnBucket</code>).</li>
+<li><strong>L2 Constructs:</strong> Các lớp trừu tượng thông minh có sẵn cấu hình bảo mật mặc định tối ưu của AWS (ví dụ: <code>s3.Bucket</code> tự động bật mã hóa và chặn public access).</li>
+<li><strong>L3 Constructs (Patterns):</strong> Gom nhóm kiến trúc hoàn chỉnh chỉ trong vài dòng code (ví dụ: <code>ApplicationLoadBalancedFargateService</code>).</li>
+<li>Lệnh <code>cdk synth</code> biên dịch code bậc cao thành các mẫu JSON/YAML CloudFormation thuần túy để AWS triển khai.</li>
+<li><strong>Bootstrap:</strong> <code>cdk bootstrap</code> tạo stack <code>CDKToolkit</code> gồm bucket/ECR repo chứa asset và các role (deploy, file-publishing, lookup, <strong>CloudFormation execution role</strong>). Mặc định execution role được gắn <code>AdministratorAccess</code>; nên truyền <code>--cloudformation-execution-policies</code> với policy hẹp hơn và review các role này như mọi role khác. Khi dọn môi trường, bucket asset của bootstrap thường bị giữ lại và tính phí lưu trữ.</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-hashicorp-terraform-state-file-và-rủi-ro-lộ-bí-mật"><a class="anchor" href="#2-hashicorp-terraform-state-file-và-rủi-ro-lộ-bí-mật">2. HashiCorp Terraform: State File và Rủi ro Lộ Bí mật</a></h3>
+<p>Terraform là công cụ của HashiCorp (không phải dịch vụ AWS): nó gọi AWS API qua provider, chạy trên máy bạn hoặc CI, và dùng tệp <code>terraform.tfstate</code> để lưu bản đồ ánh xạ giữa mã nguồn HCL và tài nguyên thực tế trên AWS:</p>
+<blockquote>
+<p>[!CAUTION]
+<strong>Rủi ro rò rỉ bí mật trong Terraform State:</strong>
+Tệp <code>terraform.tfstate</code> lưu toàn bộ giá trị plaintext của các tham số đầu vào, bao gồm cả mật khẩu Database hoặc Access Keys!</p>
+<ul>
+<li><strong>Tuyệt đối KHÔNG BAO GIỜ commit <code>terraform.tfstate</code> vào Git repository!</strong></li>
+<li>Luôn cấu hình <strong>Remote Backend</strong> trên S3 có bật mã hóa KMS phía máy chủ và chặn truy cập công khai.</li>
+<li>Bật <strong>state locking</strong> để hai người/pipeline không cùng <code>apply</code>: backend S3 từ Terraform 1.10 hỗ trợ khóa bằng chính S3 (<code>use_lockfile = true</code>); cách cũ dùng bảng DynamoDB đã bị đánh dấu deprecated. Kiểm tra tài liệu phiên bản Terraform bạn dùng.</li>
+<li>Bật <strong>versioning</strong> cho bucket state để khôi phục khi state hỏng.</li>
+</ul>
+</blockquote>
+<hr>
+<h2 id="phần-3--cấu-trúc-module-tham-số-hóa-và-tham-chiếu-bí-mật-an-toàn-50-phút"><a class="anchor" href="#phần-3--cấu-trúc-module-tham-số-hóa-và-tham-chiếu-bí-mật-an-toàn-50-phút">Phần 3 — Cấu trúc Module, Tham số hóa và Tham chiếu Bí mật An toàn (50 phút)</a></h2>
+<p>Một kiến trúc IaC chuẩn doanh nghiệp phải tách biệt ranh giới trách nhiệm và tuyệt đối không bao giờ ghi cứng (hardcode) dữ liệu nhạy cảm.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Kiến trúc Phân tầng Stacks &amp; Tham chiếu Bí mật Động:
+┌────────────────────────────────────────────────────────┐
+│ Mạng &amp; Hạ tầng Nền tảng (Networking Stack)             │
+│ - VPC, Subnets, Route Tables                           │
+│ - Outputs: VpcId, PrivateSubnetIds                     │
+└───────────────────────────┬────────────────────────────┘
+                            │ Cross-Stack Reference
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│ Ứng dụng &amp; Dịch vụ (Application Stack)                 │
+│ - ECS Service / Lambda / RDS Database                  │
+│                                                        │
+│  Tham chiếu Bí mật Động (Dynamic Reference)            │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │ &quot;{{resolve:secretsmanager:prod/db:SecretString}}&quot;│  │
+│  └────────────────────────┬─────────────────────────┘  │
+└───────────────────────────┼────────────────────────────┘
+                            │ Lấy mật khẩu an toàn lúc chạy
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│ AWS Secrets Manager (prod/db)                          │
+│ (Không bao giờ xuất hiện mật khẩu thô trong Git/YAML)  │
+└────────────────────────────────────────────────────────┘</code></pre></div>
+<h3 id="1-phân-tầng-stack-theo-chu-kỳ-thay-đổi"><a class="anchor" href="#1-phân-tầng-stack-theo-chu-kỳ-thay-đổi">1. Phân tầng Stack theo Chu kỳ Thay đổi</a></h3>
+<p>Đừng bao giờ gom toàn bộ hệ thống vào một Stack duy nhất:</p>
+<ul>
+<li><strong>Tầng Nền tảng (Networking / VPC):</strong> Rất ít khi thay đổi (vài tháng một lần). Nên nằm ở một Stack riêng biệt.</li>
+<li><strong>Tầng Dữ liệu (Database / Storage):</strong> Thay đổi theo chu kỳ bảo trì, cần cấu hình bảo vệ xóa (<code>DeletionPolicy: Retain</code>).</li>
+<li><strong>Tầng Ứng dụng (App / Compute):</strong> Thay đổi liên tục theo mỗi bản phát hành (nhiều lần mỗi ngày). Stack này import các thông tin đầu ra (<strong>Outputs / Export</strong>) từ tầng Mạng.</li>
+</ul>
+<h3 id="2-tham-chiếu-động-dynamic-references-trong-cloudformation"><a class="anchor" href="#2-tham-chiếu-động-dynamic-references-trong-cloudformation">2. Tham chiếu Động (Dynamic References) trong CloudFormation</a></h3>
+<p>Thay vì truyền mật khẩu qua biến Parameters (vốn có nguy cơ bị in ra trong lịch sử CloudFormation Events hoặc Console), hãy sử dụng cơ chế Dynamic References:</p>
+<div class="code"><span class="lang">yaml</span><button type="button">Copy</button><pre><code>Resources:
+  MyDatabase:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceClass: db.t4g.micro
+      AllocatedStorage: 20
+      MasterUsername: admin
+      # Tham chiếu trực tiếp tới Secrets Manager tại thời điểm tạo:
+      MasterUserPassword: '{{resolve:secretsmanager:app/db/credentials:SecretString:password}}'</code></pre></div>
+<p>CloudFormation resolve giá trị lúc deploy và không hiển thị nó trong template, event hay console. Với RDS, cách tốt hơn nữa là <code>ManageMasterUserPassword: true</code> để RDS tự sinh và rotate mật khẩu trong Secrets Manager (Bài 07). Tránh <code>NoEcho</code> parameter cho secret: giá trị vẫn đi qua tay người deploy và lịch sử CLI.</p>
+<hr>
+<h2 id="phần-4--tự-động-hóa-cicd-không-mật-khẩu-github-actions-và-aws-oidc-55-phút"><a class="anchor" href="#phần-4--tự-động-hóa-cicd-không-mật-khẩu-github-actions-và-aws-oidc-55-phút">Phần 4 — Tự động hóa CI/CD không Mật khẩu: GitHub Actions và AWS OIDC (55 phút)</a></h2>
+<p>Phương pháp truyền thống để pipeline CI/CD deploy lên AWS là tạo một IAM User với Access Key / Secret Key dài hạn, sau đó dán vào GitHub Secrets. </p>
+<blockquote>
+<p>[!WARNING]
+<strong>Mối nguy từ Static Long-Lived Credentials:</strong>
+Nếu GitHub Secrets bị rò rỉ hoặc nhân viên rời bỏ dự án có quyền xem secret, kẻ tấn công có thể nắm giữ chìa khóa truy cập vĩnh viễn vào tài khoản AWS của bạn.</p>
+</blockquote>
+<h3 id="chuẩn-mực-hiện-đại-openid-connect-oidc-federation"><a class="anchor" href="#chuẩn-mực-hiện-đại-openid-connect-oidc-federation">Chuẩn Mực Hiện Đại: OpenID Connect (OIDC) Federation</a></h3>
+<p>Với OIDC, GitHub Actions không cần lưu bất kỳ Access Key nào. Thay vào đó, nó xác thực thông qua trao đổi mã thông báo JWT ngắn hạn với AWS Security Token Service (STS):</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Luồng Xác thực Không Mật khẩu (GitHub Actions OIDC Federation):
+1. Kích hoạt Workflow
+┌──────────────────┐
+│ GitHub Actions   │
+│ Runner           │
+└────────┬─────────┘
+         │ 2. Yêu cầu OIDC Token
+         ▼
+┌──────────────────┐
+│ GitHub OIDC      │ ────&gt; Ký Token JWT (Chứa repo, branch, actor)
+│ Provider         │
+└────────┬─────────┘
+         │ 3. Gửi JWT Token + Gọi AssumeRoleWithWebIdentity
+         ▼
+┌──────────────────┐
+│ AWS STS          │ ────&gt; Xác thực chữ ký OIDC từ GitHub
+│ (Token Service)  │       Kiểm tra Trust Policy (Đúng repo? Đúng main branch?)
+└────────┬─────────┘
+         │ 4. Cấp Temporary AWS Credentials (Hạn 15 phút - 1 giờ)
+         ▼
+┌──────────────────┐
+│ GitHub Runner    │ ────&gt; 5. Thực hiện deploy CloudFormation / Terraform
+└──────────────────┘</code></pre></div>
+<h3 id="trust-policy-giới-hạn-nghiêm-ngặt-least-privilege-trust-claims"><a class="anchor" href="#trust-policy-giới-hạn-nghiêm-ngặt-least-privilege-trust-claims">Trust Policy Giới hạn Nghiêm ngặt (Least Privilege Trust Claims)</a></h3>
+<p>Để đảm bảo một repository khác của ai đó trên GitHub không thể chiếm đoạt Role của bạn, Trust Policy <strong>bắt buộc phải kiểm tra hai điều kiện cốt lõi</strong>:</p>
+<ol>
+<li><strong><code>aud</code> (Audience):</strong> Phải là <code>sts.amazonaws.com</code>.</li>
+<li><strong><code>sub</code> (Subject):</strong> Phải trỏ chính xác vào tổ chức, repository và ngữ cảnh được phép. Dạng claim phụ thuộc workflow: job có <code>environment: prod</code> → <code>repo:&lt;org&gt;/&lt;repo&gt;:environment:prod</code>; không có environment, chạy trên branch → <code>repo:&lt;org&gt;/&lt;repo&gt;:ref:refs/heads/main</code>; pull request → <code>repo:&lt;org&gt;/&lt;repo&gt;:pull_request</code>. Dùng <code>environment</code> kèm protection rule (branch được phép, reviewer) là cách giới hạn chặt nhất.</li>
+<li>Dùng <code>StringEquals</code> cho giá trị cụ thể. <code>StringLike</code> với <code>repo:&lt;org&gt;/*</code> hoặc thiếu điều kiện <code>sub</code> cho phép <strong>mọi</strong> repo (thậm chí mọi repo GitHub, nếu chỉ kiểm tra <code>aud</code>) assume role.</li>
+<li><strong>Tách quyền:</strong> role của pipeline chỉ cần quyền CloudFormation trên stack của nó và <code>iam:PassRole</code> cho một <strong>CloudFormation execution role</strong>; quyền tạo tài nguyên nằm ở execution role. Pipeline bị chiếm cũng không làm được gì ngoài phạm vi stack.</li>
+<li>IAM không còn cần thumbprint để tin provider của GitHub (dùng thư viện CA tin cậy); <code>--thumbprint-list</code> có thể bỏ với CLI hiện hành. Pin action (<code>aws-actions/configure-aws-credentials</code>) theo commit SHA đã review.</li>
+</ol>
+<div class="code"><span class="lang">json</span><button type="button">Copy</button><pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Principal&quot;: {
+        &quot;Federated&quot;: &quot;arn:aws:iam::&lt;YOUR_ACCOUNT_ID&gt;:oidc-provider/token.actions.githubusercontent.com&quot;
+      },
+      &quot;Action&quot;: &quot;sts:AssumeRoleWithWebIdentity&quot;,
+      &quot;Condition&quot;: {
+        &quot;StringEquals&quot;: {
+          &quot;token.actions.githubusercontent.com:aud&quot;: &quot;sts.amazonaws.com&quot;,
+          &quot;token.actions.githubusercontent.com:sub&quot;: &quot;repo:my-company/order-service:environment:prod&quot;
+        }
+      }
+    }
+  ]
+}</code></pre></div>
+<hr>
+<h2 id="phần-5--quản-lý-rủi-ro-rollback-hạ-tầng-vs-rollback-dữ-liệu-45-phút"><a class="anchor" href="#phần-5--quản-lý-rủi-ro-rollback-hạ-tầng-vs-rollback-dữ-liệu-45-phút">Phần 5 — Quản lý Rủi ro: Rollback Hạ tầng vs Rollback Dữ liệu (45 phút)</a></h2>
+<p>Một trong những sai lầm nguy hiểm nhất của kỹ sư là ngộ nhận rằng: <em>&quot;Khi bản cập nhật bị lỗi, CloudFormation sẽ tự động rollback nên mọi thứ sẽ trở về nguyên vẹn như trước.&quot;</em></p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Sự Khác biệt Cốt lõi giữa Rollback Hạ tầng và Dữ liệu:
+┌─────────────────────────────────┬─────────────────────────────────┐
+│ Rollback Hạ tầng (Infrastructure│ Rollback Dữ liệu (Data / Schema │
+│ Rollback - Tự động bởi AWS)     │ Migration - Thủ công bởi Dev)   │
+├─────────────────────────────────┼─────────────────────────────────┤
+│ - Hủy các tài nguyên EC2/ECS mới│ - Bảng Database đã bị thêm hoặc │
+│ - Đưa cấu hình Load Balancer    │   sửa đổi cột (Columns)         │
+│   trở lại target group cũ       │ - Dữ liệu đơn hàng mới đã ghi   │
+│ - Khôi phục Route 53 DNS        │   theo định dạng mới            │
+│                                 │                                 │
+│ =&gt; Hạ tầng khôi phục an toàn    │ =&gt; CloudFormation KHÔNG THỂ     │
+│    trong vài phút               │    tự đảo ngược dữ liệu đã ghi! │
+└─────────────────────────────────┴─────────────────────────────────┘</code></pre></div>
+<h3 id="1-tại-sao-rollback-hạ-tầng-không-thể-rollback-schema-database"><a class="anchor" href="#1-tại-sao-rollback-hạ-tầng-không-thể-rollback-schema-database">1. Tại sao Rollback Hạ tầng không thể Rollback Schema Database?</a></h3>
+<p>CloudFormation chỉ quản lý tài nguyên ở tầng AWS Control Plane (tạo máy chủ RDS, gán IP, mở Security Group). Nó <strong>hoàn toàn không có quyền can thiệp hay hiểu được logic dữ liệu bên trong database</strong>.</p>
+<ul>
+<li>Nếu pipeline của bạn chạy script <code>ALTER TABLE orders ADD COLUMN vat_rate INT</code> trước khi deploy app, và sau đó bước deploy app thất bại kích hoạt rollback hạ tầng:<ul>
+<li>Máy chủ ứng dụng được đưa về phiên bản cũ.</li>
+<li>Nhưng cơ sở dữ liệu vẫn mang cấu trúc mới! Nếu ứng dụng cũ không tương thích với bảng đã sửa, toàn bộ hệ thống sẽ sập vĩnh viễn.</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-quy-tắc-expand--contract-two-phase-database-migrations"><a class="anchor" href="#2-quy-tắc-expand--contract-two-phase-database-migrations">2. Quy tắc Expand &amp; Contract (Two-Phase Database Migrations)</a></h3>
+<p>Để ứng dụng an toàn tuyệt đối trước mọi kịch bản rollback:</p>
+<ul>
+<li><strong>Phase 1 (Expand):</strong> Luôn chỉ thêm mới cột hoặc bảng, cho phép giá trị <code>NULL</code> hoặc có <code>DEFAULT</code>. Cả ứng dụng cũ và ứng dụng mới đều có thể hoạt động song song.</li>
+<li><strong>Phase 2 (Contract):</strong> Sau khi phiên bản mới đã chạy ổn định trên production vài ngày, chạy một script riêng biệt để dọn dẹp các cột cũ không còn dùng nữa.</li>
+</ul>
+<h3 id="3-chính-sách-bảo-vệ-dữ-liệu-deletionpolicy-và-updatereplacepolicy"><a class="anchor" href="#3-chính-sách-bảo-vệ-dữ-liệu-deletionpolicy-và-updatereplacepolicy">3. Chính sách Bảo vệ Dữ liệu: <code>DeletionPolicy</code> và <code>UpdateReplacePolicy</code></a></h3>
+<p>Mặc định, nếu bạn xóa một tài nguyên khỏi CloudFormation template hoặc cập nhật một thuộc tính bắt buộc phải tạo mới (replacement), tài nguyên cũ sẽ bị xóa (<code>Delete</code>). Ngoại lệ đáng nhớ: một số resource RDS (ví dụ <code>AWS::RDS::DBCluster</code>, <code>AWS::RDS::DBInstance</code> không thuộc cluster) mặc định <code>Snapshot</code>.</p>
+<ul>
+<li>Đặt <code>DeletionPolicy: Retain</code> (hoặc <code>Snapshot</code>) <strong>và</strong> <code>UpdateReplacePolicy</code> tương ứng cho RDS, DynamoDB Table, S3 Bucket mang dữ liệu thật. <code>DeletionPolicy</code> chỉ bảo vệ khi xóa; replacement do đổi thuộc tính được điều khiển bởi <code>UpdateReplacePolicy</code>.</li>
+<li>Change set có cột <code>Replacement: True</code> là tín hiệu phải dừng lại đọc kỹ.</li>
+<li>Tài nguyên <code>Retain</code> vẫn tồn tại (và tính phí) sau khi xóa stack: ghi vào danh sách retained resources.</li>
+</ul>
+<hr>
+<h2 id="phần-6--giới-thiệu-bài-thực-hành-lab-12"><a class="anchor" href="#phần-6--giới-thiệu-bài-thực-hành-lab-12">Phần 6 — Giới thiệu bài thực hành (Lab 12)</a></h2>
+<p>Trong bài thực hành đính kèm, bạn sẽ trực tiếp triển khai:</p>
+<ol>
+<li>Template CloudFormation: SNS → SQS (+DLQ) và alarm, có <code>Parameters</code>/<code>Outputs</code>; lint/validate, đọc change set trước khi deploy.</li>
+<li>Deploy qua <strong>CloudFormation execution role</strong> giới hạn quyền; kiểm chứng chức năng (publish SNS → nhận ở SQS), vì <code>CREATE_COMPLETE</code> chưa phải bằng chứng.</li>
+<li>Negative case: update có xung đột thật → <code>UPDATE_ROLLBACK_COMPLETE</code>; tìm event lỗi đầu tiên; thấy thay đổi hợp lệ cùng đợt cũng bị hoàn tác.</li>
+<li>Drift detection sau khi sửa tay một thuộc tính.</li>
+<li>OIDC provider và role cho GitHub Actions: trust kiểm tra <code>aud</code> và <code>sub</code> theo environment, quyền chỉ đủ để chạy change set; token giả bị từ chối; tùy chọn chạy workflow thật và negative case đổi environment.</li>
+<li>Cleanup đúng thứ tự (stack trước execution role), chỉ xóa OIDC provider nếu lab tạo.</li>
+</ol>
+<p>👉 Mở bài hướng dẫn chi tiết tại: <strong><a href="../labs/12-iac-and-cicd/README.html">labs/12-iac-and-cicd/README.md</a></strong>.</p>
+<hr>
+<h2 id="phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút"><a class="anchor" href="#phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi phổ biến (25 phút)</a></h2>
+<h3 id="1-lỗi-not-authorized-to-perform-stsassumerolewithwebidentity-trong-cicd"><a class="anchor" href="#1-lỗi-not-authorized-to-perform-stsassumerolewithwebidentity-trong-cicd">1. Lỗi <code>Not authorized to perform sts:AssumeRoleWithWebIdentity</code> trong CI/CD</a></h3>
+<ul>
+<li><strong>Nguyên nhân 1:</strong> Chuỗi <code>token.actions.githubusercontent.com:sub</code> trong Trust Policy không khớp chính xác với ngữ cảnh thực thi của GitHub (lưu ý: phân biệt chữ hoa/thường, kiểm tra lại cú pháp <code>repo:&lt;org&gt;/&lt;repo&gt;:ref:refs/heads/&lt;branch&gt;</code>).</li>
+<li><strong>Nguyên nhân 2:</strong> Trường <code>token.actions.githubusercontent.com:aud</code> bị thiếu hoặc khai báo khác với <code>sts.amazonaws.com</code>.</li>
+<li><strong>Nguyên nhân 3:</strong> Workflow thiếu <code>permissions: id-token: write</code>, nên không xin được token.</li>
+<li><strong>Cách khắc phục:</strong> Xác định claim <code>sub</code> thực tế (phụ thuộc <code>environment</code>, branch, sự kiện <code>pull_request</code>) rồi sửa trust policy cho khớp <strong>giá trị cụ thể</strong>. Không nới trust bằng <code>StringLike</code> với <code>*</code> để &quot;debug&quot;: trong thời gian đó role mở cho repo khác.</li>
+</ul>
+<h3 id="2-cloudformation-stack-rơi-vào-trạng-thái-rollback_complete-hoặc-update_rollback_failed"><a class="anchor" href="#2-cloudformation-stack-rơi-vào-trạng-thái-rollback_complete-hoặc-update_rollback_failed">2. CloudFormation Stack rơi vào trạng thái <code>ROLLBACK_COMPLETE</code> hoặc <code>UPDATE_ROLLBACK_FAILED</code></a></h3>
+<ul>
+<li><strong>Nguyên nhân:</strong> Một tài nguyên trong template gặp lỗi khi khởi tạo (ví dụ: tên S3 bucket đã bị trùng trên toàn cầu, hoặc Security Group tham chiếu tới VPC không tồn tại). CloudFormation tự động hủy các tài nguyên đã tạo để đưa stack về trạng thái ban đầu.</li>
+<li><strong>Cách khắc phục:</strong> Không tìm lỗi ở các event dọn dẹp. <code>describe-stack-events</code> trả event <strong>mới nhất trước</strong>, nên đảo ngược danh sách và lấy event <code>*_FAILED</code> <strong>sớm nhất</strong> của lần deploy đó, rồi đọc <code>ResourceStatusReason</code>. Stack <code>ROLLBACK_COMPLETE</code> (tạo lần đầu thất bại) không update được: xóa và tạo lại. <code>UPDATE_ROLLBACK_FAILED</code>: sửa nguyên nhân rồi <code>continue-update-rollback</code>.</li>
+</ul>
+<h3 id="3-terraform-state-bị-khóa-chết-error-acquiring-the-state-lock"><a class="anchor" href="#3-terraform-state-bị-khóa-chết-error-acquiring-the-state-lock">3. Terraform State bị khóa chết (<code>Error acquiring the state lock</code>)</a></h3>
+<ul>
+<li><strong>Nguyên nhân:</strong> Một tiến trình CI/CD trước đó bị crash hoặc bị hủy giữa chừng, để lại lock (file <code>.tflock</code> trên S3 hoặc bản ghi <code>LockID</code> trong DynamoDB với cấu hình cũ), <strong>hoặc</strong> thật sự có một run khác đang chạy.</li>
+<li><strong>Cách khắc phục:</strong> Tuyệt đối không dùng lệnh <code>terraform force-unlock</code> ngay lập tức! Đầu tiên phải kiểm tra xem có đồng nghiệp hoặc pipeline nào khác đang thực sự chạy hay không. Chỉ khi đã chắc chắn không có tiến trình nào đang ghi state, mới sử dụng <code>terraform force-unlock &lt;LOCK_ID&gt;</code> để giải phóng khóa.</li>
+</ul>
+<hr>
+<h2 id="câu-hỏi-tự-kiểm-tra"><a class="anchor" href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></h2>
+<ol>
+<li>Phân biệt sự khác biệt cơ bản giữa phương pháp định nghĩa hạ tầng Mệnh lệnh (Imperative) và Khai báo (Declarative). Tại sao các công cụ IaC hiện đại đều ưu tiên mô hình Khai báo?</li>
+<li>Tại sao việc lưu trữ tệp <code>terraform.tfstate</code> trên Git repository là một lỗ hổng bảo mật nghiêm trọng? Mô tả cách thức bảo vệ state file chuẩn của Terraform trên AWS.</li>
+<li>Giải thích cơ chế xác thực của GitHub Actions OIDC với AWS IAM. Lợi ích vượt trội của OIDC so với việc lưu trữ IAM User Access Key trong GitHub Secrets là gì?</li>
+<li>Nếu một kỹ sư thay đổi thủ công một Security Group trên AWS Console, hiện tượng gì sẽ xảy ra với mã nguồn IaC? Công cụ IaC giúp phát hiện và xử lý tình huống này như thế nào?</li>
+<li>Một pipeline CI/CD thực hiện rollback tự động hạ tầng CloudFormation khi deploy thất bại. Tại sao các kỹ sư phần mềm vẫn phải thiết kế kỹ lưỡng chiến lược di chuyển dữ liệu (Database Schema Migration) theo mô hình Two-Phase (Expand &amp; Contract)?</li>
+</ol>
+<hr>
+<h2 id="tài-liệu-tham-khảo-chính-thức"><a class="anchor" href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></h2>
+<ul>
+<li><a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/" target="_blank" rel="noopener">AWS CloudFormation User Guide</a></li>
+<li><a href="https://docs.aws.amazon.com/cdk/v2/guide/" target="_blank" rel="noopener">AWS Cloud Development Kit (AWS CDK) v2 Developer Guide</a></li>
+<li><a href="https://registry.terraform.io/providers/hashicorp/aws/latest/docs" target="_blank" rel="noopener">HashiCorp Terraform AWS Provider Documentation</a></li>
+<li><a href="https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services" target="_blank" rel="noopener">GitHub Actions: Configuring OpenID Connect in Amazon Web Services</a></li>
+<li><a href="https://aws.amazon.com/blogs/security/use-iam-roles-to-connect-github-actions-to-actions-in-aws/" target="_blank" rel="noopener">AWS Security Blog: Use IAM roles to connect GitHub Actions to actions in AWS</a></li>
+</ul>
+<h2 id="trạng-thái-kiểm-chứng"><a class="anchor" href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></h2>
+<ul>
+<li><strong>Đối chiếu tài liệu (2026-10-31):</strong> dạng claim <code>sub</code> của GitHub OIDC (environment/ref/pull_request); IAM không cần thumbprint cho GitHub; CloudFormation execution role (<code>--role-arn</code>), change set, drift detection, <code>DeletionPolicy</code>/<code>UpdateReplacePolicy</code>; CDK bootstrap; Terraform S3 native locking (<code>use_lockfile</code>).</li>
+<li><strong>Chưa chạy thử trên AWS/GitHub:</strong> lệnh và workflow trong lab chưa được thực thi; output là minh họa.</li>
+<li><strong>Chi phí:</strong> dưới $0.01 (CloudFormation không tính phí cho resource type AWS, SNS/SQS vài request, một alarm).</li>
+</ul>
+<hr>
+<h2 id="đáp-án-gợi-ý"><a class="anchor" href="#đáp-án-gợi-ý">Đáp án gợi ý</a></h2>
+<details>
+<summary>Mở để xem đáp án</summary>
+
+<ol>
+<li><strong>Imperative vs Declarative:</strong><ul>
+<li><strong>Mệnh lệnh (Imperative):</strong> Chỉ định chuỗi hành động cụ thể cần làm theo thứ tự. Rất khó xử lý khi gặp lỗi giữa chừng hoặc khi cần tái lập môi trường.</li>
+<li><strong>Khai báo (Declarative):</strong> Chỉ định kết quả mong muốn cuối cùng. Động cơ IaC tự động tính toán khoảng cách giữa hiện trạng và mục tiêu để thực thi các bước bù trừ tối ưu, có tính lũy kế (Idempotent) cao.</li>
+</ul>
+</li>
+<li><strong>Bảo mật Terraform State:</strong><ul>
+<li><code>terraform.tfstate</code> chứa toàn bộ thuộc tính của tài nguyên ở dạng bản rõ (plaintext), bao gồm cả mật khẩu RDS, secret keys, certificate private keys. Đưa lên Git sẽ làm lộ toàn bộ bí mật cho bất kỳ ai có quyền đọc repo.</li>
+<li>Bảo vệ chuẩn: Lưu state trên <strong>S3 Bucket riêng tư</strong> (bật mã hóa SSE-KMS, bật Versioning để phục hồi khi hỏng state, bật Block Public Access), giới hạn IAM chỉ pipeline/người vận hành đọc được, và bật state locking (S3 native <code>use_lockfile</code> với Terraform ≥ 1.10, hoặc DynamoDB với cấu hình cũ).</li>
+</ul>
+</li>
+<li><strong>Cơ chế GitHub Actions OIDC:</strong><ul>
+<li>Thay vì cấp chìa khóa tĩnh tồn tại mãi mãi, GitHub sinh ra một chữ ký số JWT ngắn hạn chứa danh tính của repository và branch. AWS STS xác thực chữ ký này và cấp quyền tạm thời (Temporary Credentials) chỉ có giá trị trong tối đa vài chục phút.</li>
+<li>Lợi ích: Triệt tiêu nguy cơ rò rỉ Access Key dài hạn; không cần quản trị vòng đời xoay vòng mật khẩu (No Key Rotation); kiểm soát quyền chặt chẽ tới từng nhánh (Branch-level authorization).</li>
+</ul>
+</li>
+<li><strong>Hiện tượng Configuration Drift:</strong><ul>
+<li>Khi ai đó sửa tay trên Console, hạ tầng thực tế đã bị lệch khỏi mã nguồn Git (<strong>Drift</strong>).</li>
+<li>Động cơ IaC hỗ trợ tính năng <strong>Drift Detection</strong>: Nó so sánh Actual State trên AWS với State lưu trong template để hiển thị chi tiết thuộc tính bị sai lệch. Kỹ sư có thể quyết định cập nhật ngược lại mã nguồn Git hoặc chạy Apply để ghi đè hạ tầng trở về cấu hình chuẩn mực.</li>
+</ul>
+</li>
+<li><strong>Expand &amp; Contract trong Database Migration:</strong><ul>
+<li>CloudFormation chỉ quản lý tài nguyên ảo ở tầng ngoài, hoàn toàn không thể và không được phép rollback dữ liệu bên trong database.</li>
+<li>Nếu bản deploy làm thay đổi schema database và sau đó hạ tầng bị rollback, code cũ sẽ sập vì không đọc được schema mới. Mô hình Expand &amp; Contract đảm bảo mọi thay đổi database luôn mang tính tương thích ngược (Backward-compatible) với ít nhất một phiên bản ứng dụng liền trước.</li>
+</ul>
+</li>
+</ol>
+</details>
+
+
+<footer>Sinh tự động từ <code>notes/12-iac-and-cicd.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

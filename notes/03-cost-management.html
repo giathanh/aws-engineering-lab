@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bài 03 — Quản lý chi phí: AWS Budgets và Cost Explorer</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top nav{max-width:1200px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top .brand{font-weight:650;margin-right:12px}
+header.top a{color:var(--muted);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:14px}
+header.top a:hover{color:var(--fg);background:var(--code-bg)}
+header.top a.active{color:var(--accent);background:var(--accent-bg);font-weight:600}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:72px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}}
+@media print{header.top,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<header class="top"><nav><span class="brand">AWS Engineering Lab</span><a href="01-foundations.html">01. Lý thuyết</a><a href="../labs/01-foundations/README.html">01. Lab</a><a href="02-identity-and-access.html">02. Lý thuyết</a><a href="../labs/02-identity-and-access/README.html">02. Lab</a><a href="03-cost-management.html" class="active">03. Lý thuyết</a><a href="../labs/03-cost-management/README.html">03. Lab</a><a href="04-networking.html">04. Lý thuyết</a><a href="../labs/04-networking/README.html">04. Lab</a><a href="05-compute-and-load-balancing.html">05. Lý thuyết</a><a href="../labs/05-compute-and-load-balancing/README.html">05. Lab</a><a href="06-storage-and-content-delivery.html">06. Lý thuyết</a><a href="../labs/06-storage-and-content-delivery/README.html">06. Lab</a><a href="07-databases-and-cache.html">07. Lý thuyết</a><a href="../labs/07-databases-and-cache/README.html">07. Lab</a><a href="08-containers.html">08. Lý thuyết</a><a href="../labs/08-containers/README.html">08. Lab</a><a href="09-serverless.html">09. Lý thuyết</a><a href="../labs/09-serverless/README.html">09. Lab</a><a href="10-observability-and-application-security.html">10. Lý thuyết</a><a href="../labs/10-observability-and-application-security/README.html">10. Lab</a><a href="11-messaging-and-workflows.html">11. Lý thuyết</a><a href="../labs/11-messaging-and-workflows/README.html">11. Lab</a><a href="12-iac-and-cicd.html">12. Lý thuyết</a><a href="../labs/12-iac-and-cicd/README.html">12. Lab</a><a href="13-reliability-and-performance.html">13. Lý thuyết</a><a href="../labs/13-reliability-and-performance/README.html">13. Lab</a><a href="14-architecture-and-governance.html">14. Lý thuyết</a><a href="../labs/14-architecture-and-governance/README.html">14. Lab</a></nav></header>
+<div class="layout">
+<aside class="toc"><div class="label">Mục lục</div><ol><li><a href="#mục-tiêu">Mục tiêu</a></li><li><a href="#phần-1--các-chiều-chi-phí-trên-aws-30-phút">Phần 1 — Các chiều chi phí trên AWS (30 phút)</a></li><li><a href="#phần-2--phạm-vi-thanh-toán-tags-và-cost-allocation-tags-35-phút">Phần 2 — Phạm vi thanh toán, Tags và Cost Allocation Tags (35 phút)</a></li><li><a href="#phần-3--aws-cost-explorer-phân-tích-và-dự-báo-35-phút">Phần 3 — AWS Cost Explorer: Phân tích và Dự báo (35 phút)</a></li><li><a href="#phần-4--aws-budgets-cảnh-báo-và-hành-động-tự-động-30-phút">Phần 4 — AWS Budgets: Cảnh báo và Hành động tự động (30 phút)</a></li><li><a href="#phần-5--kỹ-năng-ước-tính-trước-lab-và-truy-quét-tài-nguyên-ngầm-25-phút">Phần 5 — Kỹ năng ước tính trước lab và truy quét tài nguyên ngầm (25 phút)</a></li><li><a href="#phần-6--giới-thiệu-bài-thực-hành-lab-03">Phần 6 — Giới thiệu bài thực hành (Lab 03)</a></li><li><a href="#phần-7--troubleshooting-và-các-tình-huống-thực-tế-20-phút">Phần 7 — Troubleshooting và các tình huống thực tế (20 phút)</a></li><li><a href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></li><li><a href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></li><li><a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></li><li><a href="#đáp-án-gợi-ý">Đáp án gợi ý</a></li></ol></aside>
+<main>
+<h1 id="bài-03--quản-lý-chi-phí-aws-budgets-và-cost-explorer"><a class="anchor" href="#bài-03--quản-lý-chi-phí-aws-budgets-và-cost-explorer">Bài 03 — Quản lý chi phí: AWS Budgets và Cost Explorer</a></h1>
+<blockquote>
+<p><strong>Đối tượng:</strong> developer có kinh nghiệm nhưng mới học AWS.
+<strong>Thời lượng:</strong> khoảng 2–3 giờ. Buổi 1 gồm phần 1–5 (lý thuyết chi phí &amp; phân bổ). Buổi 2 gồm phần 6–7 và <a href="../labs/03-cost-management/README.html">lab thực hành</a>.
+<strong>Kế hoạch gốc:</strong> <a href="../plans/03-cost-management.md">plans/03-cost-management.md</a>
+<strong>Ngày đối chiếu tài liệu:</strong> 2026-10-31. Xem <a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a> ở cuối bài.</p>
+</blockquote>
+<h2 id="mục-tiêu"><a class="anchor" href="#mục-tiêu">Mục tiêu</a></h2>
+<p>Sau bài này, bạn có thể:</p>
+<ol>
+<li>Phân tích các chiều chi phí cốt lõi của ứng dụng cloud: Compute, Storage, Request/API và Data Transfer.</li>
+<li>Hiểu cấu trúc thanh toán: quan hệ giữa Management Account (Payer) và Member Account trong AWS Organizations.</li>
+<li>Thiết lập chiến lược gắn thẻ (Tagging) và kích hoạt <strong>Cost Allocation Tags</strong> để theo dõi chi phí theo môi trường, dự án và chủ sở hữu.</li>
+<li>Sử dụng thành thạo <strong>AWS Cost Explorer</strong> để lọc (filter), nhóm (group by), xem chi phí thực tế (actual) và dự báo xu hướng (forecast).</li>
+<li>Thiết lập <strong>AWS Budgets</strong> với các ngưỡng cảnh báo sớm (Actual &amp; Forecasted thresholds) qua Email/SNS; phân biệt thông báo cảnh báo với Budgets Actions.</li>
+<li>Hình thành tư duy &quot;ước tính trước khi tạo tài nguyên&quot; (Pre-lab estimation) và kỹ năng rà soát tài nguyên ngầm (hidden idle costs) để dọn dẹp triệt để.</li>
+</ol>
+<hr>
+<h2 id="phần-1--các-chiều-chi-phí-trên-aws-30-phút"><a class="anchor" href="#phần-1--các-chiều-chi-phí-trên-aws-30-phút">Phần 1 — Các chiều chi phí trên AWS (30 phút)</a></h2>
+<p>Khi chuyển từ on-premises lên cloud, mô hình tài chính chuyển từ <strong>CapEx</strong> (chi phí đầu tư mua sắm thiết bị ban đầu) sang <strong>OpEx</strong> (chi phí vận hành tính theo mức sử dụng thực tế). Bất kỳ dịch vụ nào trên AWS cũng được cấu thành từ 4 chiều chi phí chính:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>               ┌─────────────────────────────────────────┐
+               │         4 CHIỀU CHI PHÍ CỐT LÕI         │
+               └────────────────────┬────────────────────┘
+                                    │
+    ┌───────────────────┬───────────┴───────────┬───────────────────┐
+    ▼                   ▼                       ▼                   ▼
+┌───────────────┐ ┌───────────────┐     ┌───────────────┐   ┌───────────────┐
+│    Compute    │ │    Storage    │     │    Request    │   │ Data Transfer │
+│  (vCPU, RAM,  │ │  (GB/tháng,   │     │  (API calls,  │   │   (Egress,    │
+│  giờ hoạt động│ │ IOPS, Backup) │     │  HTTP status) │   │   Inter-AZ)   │
+└───────────────┘ └───────────────┘     └───────────────┘   └───────────────┘</code></pre></div>
+<h3 id="1-compute-máy-chủ-tính-toán"><a class="anchor" href="#1-compute-máy-chủ-tính-toán">1. Compute (Máy chủ tính toán)</a></h3>
+<ul>
+<li><strong>Đơn vị tính:</strong> Tính theo giây hoặc theo giờ máy chạy (Instance hours / vCPU hours).</li>
+<li><strong>Yếu tố ảnh hưởng:</strong> Kích thước instance (số vCPU, dung lượng RAM), họ kiến trúc (x86 vs AWS Graviton arm64 thường rẻ hơn tới 20%), và mô hình mua sắm (On-Demand linh hoạt, Spot Instances giảm tới 90% nhưng có thể bị thu hồi, Savings Plans / Reserved Instances cam kết 1–3 năm).</li>
+<li><em>Công thức:</em> chi phí/tháng ≈ giá On-Demand theo giờ × 730 giờ. Giá khác nhau theo Region và thay đổi theo thời gian: luôn tra <a href="https://aws.amazon.com/ec2/pricing/on-demand/" target="_blank" rel="noopener">trang giá EC2</a> hoặc <a href="https://calculator.aws/" target="_blank" rel="noopener">Pricing Calculator</a> cho đúng Region của bạn trước khi ước tính.</li>
+</ul>
+<blockquote>
+<p>[!NOTE]
+Các con số giá trong bài là <strong>giá minh họa</strong> để luyện cách tính, không phải báo giá. Cùng một instance type có thể đắt hơn 20–30% ở Singapore so với <code>us-east-1</code>.</p>
+</blockquote>
+<h3 id="2-storage-lưu-trữ-khối-lượng-và-tệp"><a class="anchor" href="#2-storage-lưu-trữ-khối-lượng-và-tệp">2. Storage (Lưu trữ khối lượng và tệp)</a></h3>
+<ul>
+<li><strong>Đơn vị tính:</strong> GB-tháng (GB-month), IOPS dự phòng (Provisioned IOPS), và throughput băng thông.</li>
+<li><strong>Điểm cần lưu ý:</strong><ul>
+<li>Ổ đĩa <strong>EBS Volume</strong> gắn vào EC2 được tính tiền <strong>ngay cả khi EC2 bị STOPPED</strong>. Miễn là volume còn tồn tại, AWS vẫn phải giữ block dung lượng vật lý cho bạn.</li>
+<li>Snapshot của EBS hay backup của RDS lưu trên S3 cũng tính phí theo dung lượng lưu trữ gia tăng tích lũy.</li>
+</ul>
+</li>
+</ul>
+<h3 id="3-request--api-calls-yêu-cầu-xử-lý"><a class="anchor" href="#3-request--api-calls-yêu-cầu-xử-lý">3. Request / API Calls (Yêu cầu xử lý)</a></h3>
+<ul>
+<li><strong>Đơn vị tính:</strong> Số lượt gọi API (per 1,000 hoặc 1,000,000 requests).</li>
+<li><strong>Ví dụ:</strong> S3 tính phí cho nhóm <code>PUT</code>, <code>COPY</code>, <code>POST</code>, <code>LIST</code> đắt hơn nhóm <code>GET</code>. Ngay cả API quản lý cũng có thể tính phí: mỗi request tới Cost Explorer API (<code>aws ce ...</code>) tốn khoảng $0.01. DynamoDB tính phí theo Read/Write Capacity Unit (RCU/WCU) hoặc On-Demand Request Units.</li>
+</ul>
+<h3 id="4-data-transfer-lưu-lượng-mạng--kẻ-vô-hình-nguy-hiểm-nhất"><a class="anchor" href="#4-data-transfer-lưu-lượng-mạng--kẻ-vô-hình-nguy-hiểm-nhất">4. Data Transfer (Lưu lượng mạng) — &quot;Kẻ vô hình&quot; nguy hiểm nhất</a></h3>
+<p>Lưu lượng mạng thường là nguồn gốc của các hóa đơn bất ngờ nếu lập trình viên không hiểu rõ kiến trúc:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Loại lưu lượng</th>
+<th>Quy tắc tính phí điển hình (giá minh họa)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Data Inbound</strong> (từ Internet vào AWS)</td>
+<td>Thường <strong>miễn phí</strong>.</td>
+</tr>
+<tr>
+<td><strong>Data Outbound</strong> (Internet egress, từ AWS ra internet)</td>
+<td><strong>Có phí</strong> theo GB, bậc thang giảm dần; cỡ ~$0.09–0.12/GB tùy Region.</td>
+</tr>
+<tr>
+<td><strong>Inter-AZ</strong> (giữa 2 AZ trong cùng Region)</td>
+<td><strong>Có phí cả 2 chiều</strong> (cỡ ~$0.01/GB mỗi chiều).</td>
+</tr>
+<tr>
+<td><strong>Intra-AZ</strong> (trong cùng 1 AZ qua private IP)</td>
+<td><strong>Miễn phí</strong>.</td>
+</tr>
+<tr>
+<td><strong>NAT Gateway</strong></td>
+<td>Phí theo giờ tồn tại + phí theo GB dữ liệu xử lý (cỡ ~$0.05–0.06 mỗi loại), <strong>cộng thêm</strong> phí transfer thông thường.</td>
+</tr>
+<tr>
+<td><strong>Public IPv4</strong></td>
+<td>Từ 02/2024, <strong>mọi</strong> public IPv4 (EIP, auto-assigned public IP, IP của ALB/NAT) tính phí theo giờ (cỡ ~$0.005/giờ/IP, tức ~$3.6/tháng), <strong>dù đang gắn hay không</strong>.</td>
+</tr>
+</tbody></table>
+</div>
+<hr>
+<h2 id="phần-2--phạm-vi-thanh-toán-tags-và-cost-allocation-tags-35-phút"><a class="anchor" href="#phần-2--phạm-vi-thanh-toán-tags-và-cost-allocation-tags-35-phút">Phần 2 — Phạm vi thanh toán, Tags và Cost Allocation Tags (35 phút)</a></h2>
+<h3 id="cấu-trúc-aws-organizations-và-phân-quyền-billing"><a class="anchor" href="#cấu-trúc-aws-organizations-và-phân-quyền-billing">Cấu trúc AWS Organizations và Phân quyền Billing</a></h3>
+<p>Trong môi trường chuyên nghiệp, tài khoản AWS thường nằm trong một <strong>AWS Organization</strong>:</p>
+<ul>
+<li><strong>Management Account (Payer Account):</strong> Tài khoản gốc, nhận hóa đơn tổng thể (Consolidated Billing) của toàn bộ doanh nghiệp.</li>
+<li><strong>Member Accounts (Linked Accounts):</strong> Tài khoản độc lập dùng cho môi trường (Dev, Staging, Prod) hoặc team dự án.</li>
+<li><strong>Phân quyền truy cập Billing:</strong> IAM user/role muốn xem Billing và Cost Explorer cần <strong>cả hai điều kiện</strong>:<ol>
+<li>Root user <strong>của chính account đó</strong> đã bật <strong>&quot;IAM user and role access to Billing information&quot;</strong> (trong Account settings). Mỗi account bật riêng.</li>
+<li>Identity có quyền tương ứng: <code>ce:*</code> cho Cost Explorer, <code>budgets:*</code> cho Budgets, các action <code>billing:</code>/<code>account:</code> cho trang Billing.</li>
+</ol>
+</li>
+<li><strong>Phạm vi dữ liệu:</strong> Management account thấy chi phí của toàn Organization. Member account mặc định chỉ thấy chi phí của chính mình, và management account có thể tắt quyền xem Cost Explorer của member account.</li>
+</ul>
+<h3 id="chiến-lược-tagging-và-cost-allocation-tags"><a class="anchor" href="#chiến-lược-tagging-và-cost-allocation-tags">Chiến lược Tagging và Cost Allocation Tags</a></h3>
+<p>Một hệ thống có hàng ngàn tài nguyên (EC2, S3, RDS, Lambda). Nếu không gắn nhãn, cuối tháng bạn chỉ nhận được một con số chung: <em>&quot;Tổng tiền EC2 là $5,000&quot;</em>, mà không thể biết microservice nào hay team nào tiêu tốn nhiều nhất.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Tài nguyên AWS (EC2 / S3 / DynamoDB)
+    │
+    ├── Tag: Environment = &quot;staging&quot;
+    ├── Tag: Service     = &quot;order-api&quot;
+    └── Tag: Owner       = &quot;team-backend&quot;</code></pre></div>
+<p>AWS chia thẻ chi phí làm hai loại:</p>
+<ol>
+<li><strong>AWS-Generated Cost Allocation Tags:</strong> Bắt đầu bằng tiền tố <code>aws:</code>. Ví dụ: <code>aws:createdBy</code> (cho biết IAM user/role nào đã tạo ra tài nguyên).</li>
+<li><strong>User-Defined Cost Allocation Tags:</strong> Do lập trình viên tự quy định (ví dụ: <code>Environment</code>, <code>Project</code>, <code>CostCenter</code>).</li>
+</ol>
+<blockquote>
+<p>[!IMPORTANT]
+<strong>Quy tắc vàng về kích hoạt Thẻ chi phí:</strong></p>
+<ul>
+<li>Gắn tag vào tài nguyên <strong>chưa đủ</strong> để xem trên báo cáo chi phí. Bạn bắt buộc phải vào <strong>Billing Console → Cost Allocation Tags</strong> và nhấn <strong>Activate</strong> cho các key tag mong muốn.</li>
+<li>Chỉ <strong>management account</strong> (hoặc account độc lập) mới kích hoạt được cost allocation tag.</li>
+<li><strong>Độ trễ:</strong> tag key mới thường mất đến 24 giờ mới xuất hiện trong danh sách để kích hoạt, và thêm đến 24 giờ sau khi kích hoạt mới dùng được trong Cost Explorer.</li>
+<li><strong>Hồi tố có điều kiện:</strong> mặc định, chi phí trước thời điểm kích hoạt <strong>không</strong> được gắn nhãn. Bạn có thể yêu cầu <strong>backfill</strong> tối đa 12 tháng trước trong trang Cost Allocation Tags, nhưng backfill chỉ gắn được chi phí của tài nguyên <strong>đã mang tag đó vào thời điểm phát sinh chi phí</strong>. Gắn tag muộn cho tài nguyên thì không backfill được phần quá khứ.</li>
+</ul>
+</blockquote>
+<hr>
+<h2 id="phần-3--aws-cost-explorer-phân-tích-và-dự-báo-35-phút"><a class="anchor" href="#phần-3--aws-cost-explorer-phân-tích-và-dự-báo-35-phút">Phần 3 — AWS Cost Explorer: Phân tích và Dự báo (35 phút)</a></h2>
+<p><strong>AWS Cost Explorer</strong> là công cụ trực quan hóa chi phí và mức sử dụng với giao diện đồ họa mạnh mẽ.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>┌────────────────────────────────────────────────────────────────────────┐
+│ AWS Cost Explorer                                                      │
+│ Range: Last 3 Months | Granularity: Monthly | Group By: Service        │
+├────────────────────────────────────────────────────────────────────────┤
+│  ($)                                                                   │
+│ 100 │                 ┌───┐                                            │
+│  80 │                 │   │                                            │
+│  60 │         ┌───┐   │   │     ┌ ─ ─ ┐ ◄─── Forecast (Dự báo cuối kỳ) │
+│  40 │ ┌───┐   │   │   │   │     │     │                            │
+│  20 │ │   │   │   │   │   │     │     │                            │
+│   0 └─┴───┴───┴───┴───┴───┴─────┴─ ─ ─┴──                              │
+│       Tháng 8 Tháng 9 Tháng 10  Tháng 11                               │
+└────────────────────────────────────────────────────────────────────────┘</code></pre></div>
+<h3 id="các-tính-năng-phân-tích-chủ-chốt"><a class="anchor" href="#các-tính-năng-phân-tích-chủ-chốt">Các tính năng phân tích chủ chốt:</a></h3>
+<ol>
+<li><strong>Độ phân giải (Granularity):</strong><ul>
+<li><strong>Monthly:</strong> Quan sát xu hướng chi tiêu dài hạn qua các tháng.</li>
+<li><strong>Daily:</strong> Phát hiện các đột biến chi phí bất thường theo ngày (ví dụ: một batch job chạy lỗi loop vô tận vào thứ Ba).</li>
+<li><strong>Hourly:</strong> Yêu cầu bật tính năng Hourly and Resource Level Data (có tính phí bổ sung).</li>
+</ul>
+</li>
+<li><strong>Group By (Nhóm theo):</strong><ul>
+<li>Nhóm theo <code>Service</code>: Biết dịch vụ nào tiêu tốn nhiều tiền nhất (EC2 vs RDS vs S3).</li>
+<li>Nhóm theo <code>Tag</code> (sau khi kích hoạt): Phân bổ chi phí theo <code>Environment</code> (Dev vs Prod).</li>
+<li>Nhóm theo <code>Usage Type</code>: Đi sâu vào chi tiết kỹ thuật (ví dụ <code>APSE1-BoxUsage:t4g.small</code> vs <code>APSE1-DataTransfer-Out-Bytes</code>).</li>
+</ul>
+</li>
+<li><strong>Actual vs Forecast (Thực tế và Dự báo):</strong><ul>
+<li><strong>Actual Cost:</strong> Số tiền đã ghi nhận tính tới thời điểm hiện tại.</li>
+<li><strong>Forecast:</strong> AWS dùng mô hình machine learning để ước tính tổng chi phí đến cuối kỳ dựa trên lịch sử chi tiêu. Account mới hoặc ít dữ liệu có thể chưa có forecast hoặc forecast kém tin cậy.</li>
+</ul>
+</li>
+<li><strong>Lần đầu sử dụng:</strong> Account mới phải mở Cost Explorer trên console một lần để bật tính năng; dữ liệu có thể mất đến 24 giờ mới sẵn sàng cho cả console lẫn API.</li>
+</ol>
+<hr>
+<h2 id="phần-4--aws-budgets-cảnh-báo-và-hành-động-tự-động-30-phút"><a class="anchor" href="#phần-4--aws-budgets-cảnh-báo-và-hành-động-tự-động-30-phút">Phần 4 — AWS Budgets: Cảnh báo và Hành động tự động (30 phút)</a></h2>
+<p>Nếu Cost Explorer dùng để <strong>nhìn lại quá khứ</strong>, thì <strong>AWS Budgets</strong> là lá chắn bảo vệ để <strong>chủ động phòng ngừa trong hiện tại</strong>.</p>
+<h3 id="các-loại-budget"><a class="anchor" href="#các-loại-budget">Các loại Budget:</a></h3>
+<ul>
+<li><strong>Cost Budget:</strong> Theo dõi số tiền chi tiêu (USD).</li>
+<li><strong>Usage Budget:</strong> Theo dõi số lượng đơn vị sử dụng (ví dụ: cảnh báo khi số giờ chạy EC2 vượt 500 giờ).</li>
+<li><strong>Savings Plans / RI Budgets:</strong> Theo dõi tỷ lệ phủ (coverage) và mức sử dụng cam kết.</li>
+</ul>
+<h3 id="cơ-chế-ngưỡng-thresholds-actual-vs-forecasted"><a class="anchor" href="#cơ-chế-ngưỡng-thresholds-actual-vs-forecasted">Cơ chế Ngưỡng (Thresholds): Actual vs Forecasted</a></h3>
+<p>Khi tạo một Cost Budget trị giá <strong>$100/tháng</strong>, bạn có thể cấu hình hai loại cảnh báo:</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Mốc ngân sách: $100
+
+1. Ngưỡng Forecasted (80% = $80):
+   Giữa tháng, nếu dự báo cuối tháng vượt $80 ──► Gửi email cảnh báo
+   (Bạn còn thời gian tắt bớt tài nguyên trước khi vượt thật).
+
+2. Ngưỡng Actual (100% = $100):
+   Khi chi phí đã ghi nhận chạm $100 ──► Gửi email.</code></pre></div>
+<blockquote>
+<p>[!IMPORTANT]</p>
+<ul>
+<li><strong>Budget không phải hard cap.</strong> Vượt budget thì AWS chỉ gửi thông báo; tài nguyên vẫn chạy và vẫn tính tiền. Muốn tự động can thiệp phải cấu hình Budgets Actions (xem bên dưới).</li>
+<li><strong>Không theo thời gian thực.</strong> Budgets cập nhật dữ liệu vài lần mỗi ngày (dựa trên dữ liệu billing vốn đã trễ), nên cảnh báo có thể đến sau nhiều giờ.</li>
+<li><strong>Forecast cần lịch sử.</strong> AWS cần khoảng <strong>5 tuần</strong> dữ liệu sử dụng mới tạo được forecast cho budget. Account học tập mới tạo sẽ chưa nhận được cảnh báo <code>FORECASTED</code>; hãy luôn kèm một ngưỡng <code>ACTUAL</code>.</li>
+</ul>
+</blockquote>
+<blockquote>
+<p>[!CAUTION]
+<strong>Phân biệt Budget Alerts với Budgets Actions:</strong></p>
+<ul>
+<li><strong>Budget Alert:</strong> Chỉ gửi email hoặc thông báo qua SNS / Slack. <strong>Hoàn toàn an toàn</strong>, không can thiệp vào tài nguyên đang chạy.</li>
+<li><strong>Budgets Action:</strong> Dùng một IAM execution role để tự động (hoặc sau khi được duyệt) thực hiện một trong ba loại hành động: gắn IAM policy hạn chế quyền, gắn SCP (trong Organization), hoặc <strong>stop</strong> EC2/RDS instance được chỉ định. Budgets Actions <strong>không terminate/xóa</strong> tài nguyên. <strong>Hết sức cẩn trọng:</strong> cấu hình nhầm trên production có thể stop máy chủ quan trọng hoặc khóa quyền của cả đội vận hành.</li>
+</ul>
+</blockquote>
+<hr>
+<h2 id="phần-5--kỹ-năng-ước-tính-trước-lab-và-truy-quét-tài-nguyên-ngầm-25-phút"><a class="anchor" href="#phần-5--kỹ-năng-ước-tính-trước-lab-và-truy-quét-tài-nguyên-ngầm-25-phút">Phần 5 — Kỹ năng ước tính trước lab và truy quét tài nguyên ngầm (25 phút)</a></h2>
+<p>Một senior engineer chuyên nghiệp không bao giờ click tạo tài nguyên trên AWS mà không biết nó sẽ tiêu tốn bao nhiêu tiền.</p>
+<h3 id="bảng-tính-ước-tính-trước-lab-pre-lab-estimation-mẫu"><a class="anchor" href="#bảng-tính-ước-tính-trước-lab-pre-lab-estimation-mẫu">Bảng tính ước tính trước lab (Pre-lab Estimation) mẫu</a></h3>
+<p>Giả sử bạn chuẩn bị làm lab triển khai dịch vụ Order API:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tài nguyên</th>
+<th>Quy mô</th>
+<th>Đơn giá minh họa</th>
+<th>3 giờ chạy lab</th>
+<th>Quên 1 tháng (730 giờ)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1x EC2 <code>t4g.nano</code></td>
+<td>2 vCPU, 0.5 GB RAM</td>
+<td>~$0.0053 / giờ</td>
+<td>~$0.02</td>
+<td>~$3.9</td>
+</tr>
+<tr>
+<td>1x EBS gp3</td>
+<td>20 GB root disk</td>
+<td>~$0.096 / GB-tháng</td>
+<td>~$0.01</td>
+<td>~$1.9</td>
+</tr>
+<tr>
+<td>1x Application Load Balancer</td>
+<td>1 ALB, tải rất nhỏ (~1 LCU)</td>
+<td>~$0.0252 / giờ + ~$0.008 / LCU-giờ</td>
+<td>~$0.10</td>
+<td>~$24.2</td>
+</tr>
+<tr>
+<td>Public IPv4</td>
+<td>2 IP của ALB + 1 IP của EC2</td>
+<td>~$0.005 / giờ / IP</td>
+<td>~$0.05</td>
+<td>~$11.0</td>
+</tr>
+<tr>
+<td>S3 Storage &amp; Requests</td>
+<td>100 objects (&lt; 10 MB)</td>
+<td>—</td>
+<td>&lt; $0.01</td>
+<td>&lt; $0.01</td>
+</tr>
+<tr>
+<td><strong>Tổng ước tính</strong></td>
+<td></td>
+<td></td>
+<td><strong>~$0.18</strong></td>
+<td><strong>~$41</strong></td>
+</tr>
+</tbody></table>
+</div>
+<p><em>Kết luận:</em> Lab chỉ tốn vài nghìn đồng nếu bạn <strong>dọn dẹp ngay sau 3 giờ</strong>. Nếu <strong>quên xóa</strong> trong 1 tháng, chi phí lên khoảng $40. Để ý rằng public IPv4 là khoản dễ bị bỏ sót nhất trong bảng.</p>
+<p>Trước mỗi lab có tính phí, hãy tự lập bảng này với <strong>giá tra cứu cho Region của bạn</strong>, ghi ngày tra cứu, và đặt điều kiện dừng (ví dụ: &quot;xóa toàn bộ nếu lab kéo dài quá 4 giờ&quot;).</p>
+<h3 id="rà-soát-tài-nguyên-ngầm-hidden-idle-costs"><a class="anchor" href="#rà-soát-tài-nguyên-ngầm-hidden-idle-costs">Rà soát tài nguyên ngầm (Hidden Idle Costs)</a></h3>
+<p>Sau khi làm lab, rất nhiều developer chỉ vào giao diện EC2 và nhấn &quot;Terminate Instance&quot;, nhưng hóa đơn cuối tháng vẫn phát sinh tiền vì những tài nguyên ngầm sau:</p>
+<ol>
+<li><strong>Unattached EBS Volumes:</strong> Ổ cứng phụ được tách ra khỏi EC2 nhưng chưa bị xóa.</li>
+<li><strong>Public IPv4 / Elastic IP:</strong> Mọi public IPv4 đều tính phí theo giờ, kể cả đang gắn. EIP đã allocate mà không gắn vào đâu là lãng phí thuần túy; instance đã stop nhưng còn giữ EIP cũng vẫn bị tính phí IP.</li>
+<li><strong>NAT Gateway:</strong> Vẫn đang tồn tại và tính phí theo từng giờ dù không có byte dữ liệu nào đi qua.</li>
+<li><strong>Old Snapshots &amp; Custom AMIs:</strong> Các bản sao lưu EBS tích lũy qua từng ngày.</li>
+</ol>
+<hr>
+<h2 id="phần-6--giới-thiệu-bài-thực-hành-lab-03"><a class="anchor" href="#phần-6--giới-thiệu-bài-thực-hành-lab-03">Phần 6 — Giới thiệu bài thực hành (Lab 03)</a></h2>
+<p>Trong bài thực hành đi kèm:</p>
+<ul>
+<li>Bạn sẽ học cách tra cứu thông tin chi phí qua CLI và Console.</li>
+<li>Lập bảng ước tính chi phí trước cho một kiến trúc microservice đơn giản.</li>
+<li>Khởi tạo một <strong>AWS Cost Budget</strong> trị giá $10 với ba ngưỡng cảnh báo gửi về email của chính bạn: 50% Actual, 100% Actual và 80% Forecasted.</li>
+<li>Thử một negative test có kiểm soát (tạo budget trùng tên) và quan sát lỗi.</li>
+<li>Sử dụng AWS CLI để kiểm tra trạng thái ngân sách và kích hoạt quy trình dọn dẹp an toàn.</li>
+</ul>
+<p>👉 Mở bài hướng dẫn chi tiết tại: <strong><a href="../labs/03-cost-management/README.html">labs/03-cost-management/README.md</a></strong>.</p>
+<hr>
+<h2 id="phần-7--troubleshooting-và-các-tình-huống-thực-tế-20-phút"><a class="anchor" href="#phần-7--troubleshooting-và-các-tình-huống-thực-tế-20-phút">Phần 7 — Troubleshooting và các tình huống thực tế (20 phút)</a></h2>
+<h3 id="1-không-truy-cập-được-trang-billing-hoặc-cost-explorer"><a class="anchor" href="#1-không-truy-cập-được-trang-billing-hoặc-cost-explorer">1. Không truy cập được trang Billing hoặc Cost Explorer</a></h3>
+<ul>
+<li><strong>Hiện tượng:</strong> <code>You need permissions. You don&#39;t have permission to access billing data</code>.</li>
+<li><strong>Nguyên nhân:</strong> (1) identity thiếu quyền <code>ce:*</code>/<code>budgets:*</code>; (2) root user của <strong>chính account này</strong> chưa bật &quot;IAM user and role access to Billing information&quot;; (3) account là member và management account đã tắt quyền xem Cost Explorer của member.</li>
+<li><strong>Bằng chứng cần thu thập:</strong> thông báo lỗi chính xác, ARN của identity (<code>aws sts get-caller-identity</code>), account là standalone hay member.</li>
+<li><strong>Khắc phục:</strong> nhờ người quản trị cấp đúng quyền billing (không xin <code>AdministratorAccess</code>), hoặc nhờ root user bật cờ truy cập billing. Nếu không có quyền, làm lab theo nhánh dữ liệu minh họa.</li>
+</ul>
+<h3 id="2-dữ-liệu-trên-cost-explorer-không-khớp-với-thời-gian-thực"><a class="anchor" href="#2-dữ-liệu-trên-cost-explorer-không-khớp-với-thời-gian-thực">2. Dữ liệu trên Cost Explorer không khớp với thời gian thực</a></h3>
+<ul>
+<li><strong>Hiện tượng:</strong> Vừa xóa máy ảo lúc 10h sáng nhưng 11h sáng Cost Explorer vẫn chưa hiển thị chi phí của ngày hôm nay.</li>
+<li><strong>Nguyên nhân:</strong> Dữ liệu billing chỉ được cập nhật ít nhất mỗi 24 giờ; chi phí của hôm nay thường chưa đầy đủ.</li>
+<li><strong>Khắc phục:</strong> Không dùng Cost Explorer làm công cụ giám sát tức thời (real-time metrics). Muốn xem tức thời, hãy kiểm tra danh sách tài nguyên đang active qua EC2/VPC console.</li>
+</ul>
+<h3 id="3-đã-xóa-hết-ec2-nhưng-tiền-vẫn-tiếp-tục-tăng"><a class="anchor" href="#3-đã-xóa-hết-ec2-nhưng-tiền-vẫn-tiếp-tục-tăng">3. Đã xóa hết EC2 nhưng tiền vẫn tiếp tục tăng</a></h3>
+<ul>
+<li><strong>Nguyên nhân:</strong> Rà soát ngay: public IPv4/Elastic IP, EBS volume ở trạng thái <code>available</code>, NAT Gateway, Load Balancer, snapshot/AMI, CloudWatch Logs, và backup RDS.</li>
+<li><strong>Bằng chứng cần thu thập:</strong> trong Cost Explorer, group by <code>Usage Type</code> để biết chính xác khoản nào đang tăng (ví dụ <code>PublicIPv4:InUseAddress</code>, <code>NatGateway-Hours</code>), rồi tìm tài nguyên tương ứng bằng API <code>describe-*</code> ở <strong>mọi Region</strong> đã dùng.</li>
+</ul>
+<hr>
+<h2 id="câu-hỏi-tự-kiểm-tra"><a class="anchor" href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></h2>
+<ol>
+<li>Tại sao một instance EC2 ở trạng thái <code>STOPPED</code> vẫn tiếp tục phát sinh chi phí hàng ngày?</li>
+<li>Lưu lượng mạng truyền giữa hai EC2 instance ở hai Availability Zone khác nhau trong cùng một Region có miễn phí không? Vì sao?</li>
+<li>Nếu bạn kích hoạt Cost Allocation Tag <code>Environment</code> vào ngày 15 của tháng, bạn có thể xem biểu đồ chi phí của tag này từ ngày 1 đến ngày 14 không? Vì sao?</li>
+<li>Sự khác biệt cốt lõi giữa ngưỡng cảnh báo <strong>Actual</strong> và ngưỡng cảnh báo <strong>Forecasted</strong> trong AWS Budgets là gì?</li>
+<li>Một kiến trúc sư đề xuất thiết lập Budgets Action để tự động stop các instance trong môi trường Production khi chi phí vượt 120% ngân sách. Đánh giá của bạn về đề xuất này?</li>
+<li>Budget $10/tháng của bạn bị vượt vào ngày 20. Điều gì tự động xảy ra, và điều gì <strong>không</strong> xảy ra?</li>
+</ol>
+<hr>
+<h2 id="tài-liệu-tham-khảo-chính-thức"><a class="anchor" href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></h2>
+<ul>
+<li><a href="https://docs.aws.amazon.com/cost-management/latest/userguide/what-is-costmanagement.html" target="_blank" rel="noopener">AWS Cost Management User Guide</a></li>
+<li><a href="https://aws.amazon.com/vpc/pricing/" target="_blank" rel="noopener">Public IPv4 address pricing (VPC pricing)</a></li>
+<li><a href="https://docs.aws.amazon.com/cost-management/latest/userguide/ce-what-is.html" target="_blank" rel="noopener">Analyzing your costs with AWS Cost Explorer</a></li>
+<li><a href="https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html" target="_blank" rel="noopener">Managing your costs with AWS Budgets</a></li>
+<li><a href="https://docs.aws.amazon.com/cost-management/latest/userguide/cost-alloc-tags.html" target="_blank" rel="noopener">Using Cost Allocation Tags</a></li>
+<li><a href="https://aws.amazon.com/ec2/pricing/on-demand/" target="_blank" rel="noopener">Amazon EC2 On-Demand Pricing</a></li>
+<li><a href="https://calculator.aws/" target="_blank" rel="noopener">AWS Pricing Calculator</a></li>
+</ul>
+<h2 id="trạng-thái-kiểm-chứng"><a class="anchor" href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></h2>
+<ul>
+<li><strong>Đối chiếu tài liệu (2026-10-31):</strong> phí public IPv4 (áp dụng từ 02/2024), cost allocation tag activation và backfill, yêu cầu lịch sử cho budget forecast, các loại Budgets Actions, cú pháp <code>aws budgets</code> và <code>aws ce</code>.</li>
+<li><strong>Giá là minh họa:</strong> mọi đơn giá trong bài chỉ để luyện cách tính. Tra lại trang giá chính thức cho Region của bạn trước khi dùng.</li>
+<li><strong>Chưa chạy thử trên AWS:</strong> lệnh trong lab chưa được thực thi trên account thật; output là minh họa.</li>
+<li><strong>An toàn tài chính:</strong> chỉ dùng notification-only budget, không bật Budgets Actions.</li>
+</ul>
+<hr>
+<h2 id="đáp-án-gợi-ý"><a class="anchor" href="#đáp-án-gợi-ý">Đáp án gợi ý</a></h2>
+<details>
+<summary>Mở để xem đáp án</summary>
+
+<ol>
+<li>Instance stopped không tính phí compute, nhưng các tài nguyên gắn kèm vẫn tồn tại và vẫn tính phí: <strong>EBS volume</strong> (theo GB-tháng, cho đến khi volume bị xóa) và <strong>Elastic IP</strong> nếu instance đang giữ EIP.</li>
+<li><strong>Không miễn phí.</strong> Traffic inter-AZ tính phí ở cả hai chiều (ra khỏi AZ nguồn và vào AZ đích). Đây là lý do kiến trúc multi-AZ có &quot;chi phí ẩn&quot; khi các service gọi nhau chéo AZ nhiều.</li>
+<li><strong>Mặc định là không</strong>, vì chi phí trước thời điểm kích hoạt không được gắn nhãn. Tuy nhiên bạn có thể yêu cầu <strong>backfill</strong> (tối đa 12 tháng) trong trang Cost Allocation Tags. Backfill chỉ có tác dụng nếu tài nguyên <strong>đã được gắn tag <code>Environment</code> từ ngày 1–14</strong>; nếu tag chỉ được gắn lên tài nguyên vào ngày 15 thì phần trước đó vẫn không có nhãn.</li>
+<li><ul>
+<li><strong>Actual Threshold:</strong> Cảnh báo kích hoạt khi số tiền <em>đã thực sự tiêu</em> chạm tới ngưỡng (nhìn về những gì đã xảy ra).</li>
+<li><strong>Forecasted Threshold:</strong> Cảnh báo kích hoạt khi thuật toán dự báo thấy rằng <em>với tốc độ tiêu hiện tại, đến cuối chu kỳ thanh toán bạn chắc chắn sẽ vượt ngưỡng</em> (nhìn về tương lai để bạn kịp thời can thiệp trước khi tiền bị trừ).</li>
+</ul>
+</li>
+<li><strong>Rủi ro cao, không phù hợp cho Production.</strong> Tự động stop máy chủ production khi vượt budget gây downtime cho người dùng, và chi phí vượt có thể là do tải thật tăng (tin tốt). Với production, nên dùng cảnh báo cho người chịu trách nhiệm điều tra; nếu cần action thì chọn loại ít phá hủy (ví dụ gắn policy chặn tạo tài nguyên mới) và bật chế độ <strong>yêu cầu phê duyệt</strong> thay vì tự động. Ngoài ra, Budgets Actions chỉ stop được instance, không terminate.</li>
+<li><strong>Tự động xảy ra:</strong> AWS gửi thông báo tới subscriber của ngưỡng <code>ACTUAL</code> 100% (có thể trễ vài giờ). <strong>Không xảy ra:</strong> tài nguyên không bị dừng, không có giới hạn chi tiêu nào được áp dụng, hóa đơn vẫn tăng. Budget không phải hard cap trừ khi bạn chủ động cấu hình Budgets Actions.</li>
+</ol>
+</details>
+
+
+<footer>Sinh tự động từ <code>notes/03-cost-management.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>
