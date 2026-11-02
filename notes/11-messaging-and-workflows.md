@@ -432,3 +432,17 @@ Trong bài thực hành đính kèm, bạn sẽ trực tiếp triển khai:
 
 </details>
 
+
+---
+
+## Bổ sung — Laravel Queue và EventBridge Scheduler
+
+[ExportReport](../examples/laravel-order-app/app/Jobs/ExportReport.php) cùng [Reports/outbox](../examples/laravel-order-app/app/Services/Reports.php) là đường thực hành Laravel. Bảng unique(owner,idempotency_key), snapshot và row lock bảo vệ kết quả; duplicate delivery vẫn có thể xảy ra sau crash giữa gửi queue và xóa outbox.
+
+Scheduler có execution role gọi ECS RunTask với command `reports:tick <scheduled-time>`. UTC scheduled-time là business key giữ nguyên qua retry; timezone của lịch chỉ xác định lúc kích hoạt, không đổi timestamp của business key. Dùng `rate(5 minutes)` để thử; chuyển sang cron phải quyết định timezone và hành vi DST theo nghiệp vụ. Template có flexible window OFF, retry có trần và DLQ riêng.
+
+Quan trọng: một JSON `{order_id: ...}` gửi thẳng vào queue Laravel không phải serialized Laravel job. Chọn dispatcher trong app, hoặc viết consumer riêng xử lý schema JSON; không trộn hai loại payload trong cùng queue. Scheduler→RunTask thành công không đồng nghĩa command thành công: theo dõi ECS exit code và outbox age.
+
+[Lab bảy mốc](../labs/15-capstone-laravel/README.md) có retry/redrive và kiểm tra worker crash. SQS DLQ và Laravel failed_jobs là hai nơi khác nhau; số lần tries hữu hạn của Laravel có thể kết thúc job trước redrive policy. Chọn một cơ chế chính và viết expected result đúng với cấu hình.
+
+Bài tập: vì sao dùng execution-id làm idempotency key cho lịch retry chưa đủ? Đáp án: các lần thực thi của cùng lịch có thể mang ID khác; dùng identity của công việc (slot thời gian + owner) để bảo vệ side effect.

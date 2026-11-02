@@ -1,0 +1,831 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Order lab: network, relational data, identity, repositories. Billable sandbox.'
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+    - dev
+    - staging
+    - prod
+  AppOrigin:
+    Type: String
+    Description: Exact HTTPS origin, e.g. https://orders.example.com
+  CognitoPrefix:
+    Type: String
+    AllowedPattern: '[a-z0-9-]+'
+    Description: Globally unique hosted UI domain prefix
+  DBClass:
+    Type: String
+    Default: db.t4g.micro
+  CacheClass:
+    Type: String
+    Default: cache.t4g.micro
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.80.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+      - Key: Project
+        Value:
+          Fn::Sub: ${AWS::StackName}
+      - Key: Environment
+        Value:
+          Ref: Environment
+  IGW:
+    Type: AWS::EC2::InternetGateway
+    Properties: {}
+  Attach:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: VPC
+      InternetGatewayId:
+        Ref: IGW
+  PublicA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPC
+      CidrBlock: 10.80.1.0/24
+      AvailabilityZone:
+        Fn::Select:
+        - 0
+        - Fn::GetAZs: ''
+      MapPublicIpOnLaunch: true
+  PublicB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPC
+      CidrBlock: 10.80.2.0/24
+      AvailabilityZone:
+        Fn::Select:
+        - 1
+        - Fn::GetAZs: ''
+      MapPublicIpOnLaunch: true
+  PrivateA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPC
+      CidrBlock: 10.80.10.0/24
+      AvailabilityZone:
+        Fn::Select:
+        - 0
+        - Fn::GetAZs: ''
+      MapPublicIpOnLaunch: false
+  PrivateB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPC
+      CidrBlock: 10.80.20.0/24
+      AvailabilityZone:
+        Fn::Select:
+        - 1
+        - Fn::GetAZs: ''
+      MapPublicIpOnLaunch: false
+  PublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPC
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: PublicRT
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: IGW
+    DependsOn: Attach
+  EIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  NAT:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      SubnetId:
+        Ref: PublicA
+      AllocationId:
+        Fn::GetAtt:
+        - EIP
+        - AllocationId
+  PrivateRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPC
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: PrivateRT
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: NAT
+  PublicARoute:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicA
+      RouteTableId:
+        Ref: PublicRT
+  PublicBRoute:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicB
+      RouteTableId:
+        Ref: PublicRT
+  PrivateARoute:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PrivateA
+      RouteTableId:
+        Ref: PrivateRT
+  PrivateBRoute:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PrivateB
+      RouteTableId:
+        Ref: PrivateRT
+  S3Endpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Ref: VPC
+      ServiceName:
+        Fn::Sub: com.amazonaws.${AWS::Region}.s3
+      VpcEndpointType: Gateway
+      RouteTableIds:
+      - Ref: PrivateRT
+  AlbSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: HTTPS Internet to lab ALB
+      VpcId:
+        Ref: VPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 443
+        ToPort: 443
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+  AppSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ALB to app only
+      VpcId:
+        Ref: VPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 8080
+        ToPort: 8080
+        SourceSecurityGroupId:
+          Ref: AlbSG
+  DBSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Private application access
+      VpcId:
+        Ref: VPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 5432
+        ToPort: 5432
+        SourceSecurityGroupId:
+          Ref: AppSG
+  CacheSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Private application access
+      VpcId:
+        Ref: VPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 6379
+        ToPort: 6379
+        SourceSecurityGroupId:
+          Ref: AppSG
+  DBSubnets:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Private DB subnets
+      SubnetIds:
+      - Ref: PrivateA
+      - Ref: PrivateB
+  Database:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: postgres
+      DBName: orders
+      MasterUsername: orders
+      ManageMasterUserPassword: true
+      DBInstanceClass:
+        Ref: DBClass
+      AllocatedStorage: '20'
+      StorageType: gp3
+      StorageEncrypted: true
+      PubliclyAccessible: false
+      MultiAZ: false
+      BackupRetentionPeriod: 7
+      DBSubnetGroupName:
+        Ref: DBSubnets
+      VPCSecurityGroups:
+      - Ref: DBSG
+      CopyTagsToSnapshot: true
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+  AppKey:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      GenerateSecretString:
+        PasswordLength: 32
+        ExcludePunctuation: true
+  CacheKey:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      GenerateSecretString:
+        PasswordLength: 32
+        ExcludePunctuation: true
+  ProdCanary:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: Fake other-environment secret; app role must not read
+      GenerateSecretString:
+        PasswordLength: 32
+        ExcludePunctuation: true
+  CacheSubnets:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: Private cache
+      SubnetIds:
+      - Ref: PrivateA
+      - Ref: PrivateB
+  Cache:
+    Type: AWS::ElastiCache::ReplicationGroup
+    Properties:
+      ReplicationGroupDescription: Single-node lab cache, no HA claim
+      Engine: redis
+      CacheNodeType:
+        Ref: CacheClass
+      NumCacheClusters: 1
+      AutomaticFailoverEnabled: false
+      AtRestEncryptionEnabled: true
+      TransitEncryptionEnabled: true
+      AuthToken:
+        Fn::Sub: '{{resolve:secretsmanager:${CacheKey}:SecretString}}'
+      CacheSubnetGroupName:
+        Ref: CacheSubnets
+      SecurityGroupIds:
+      - Ref: CacheSG
+  Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      CorsConfiguration:
+        CorsRules:
+        - AllowedOrigins:
+          - Ref: AppOrigin
+          AllowedMethods:
+          - PUT
+          - GET
+          - HEAD
+          AllowedHeaders:
+          - content-type
+          MaxAge: 300
+          ExposedHeaders:
+          - ETag
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+  Artifacts:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+  OAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name:
+          Fn::Sub: ${AWS::StackName}-oac
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+  CDN:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Origins:
+        - Id: S3
+          DomainName:
+            Fn::GetAtt:
+            - Bucket
+            - RegionalDomainName
+          OriginAccessControlId:
+            Ref: OAC
+          S3OriginConfig:
+            OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: S3
+          ViewerProtocolPolicy: redirect-to-https
+          ForwardedValues:
+            QueryString: false
+          MinTTL: 0
+          DefaultTTL: 300
+          MaxTTL: 3600
+        PriceClass: PriceClass_100
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: Bucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action: s3:GetObject
+          Resource:
+            Fn::Sub: ${Bucket.Arn}/public/*
+          Condition:
+            StringEquals:
+              AWS:SourceArn:
+                Fn::Sub: arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${CDN}
+          Principal:
+            Service: cloudfront.amazonaws.com
+        - Effect: Deny
+          Principal: '*'
+          Action: s3:*
+          Resource:
+          - Fn::GetAtt:
+            - Bucket
+            - Arn
+          - Fn::Sub: ${Bucket.Arn}/*
+          Condition:
+            Bool:
+              aws:SecureTransport: 'false'
+  DLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600
+      SqsManagedSseEnabled: true
+  Queue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 180
+      ReceiveMessageWaitTimeSeconds: 20
+      SqsManagedSseEnabled: true
+      RedrivePolicy:
+        deadLetterTargetArn:
+          Fn::GetAtt:
+          - DLQ
+          - Arn
+        maxReceiveCount: 5
+  SchedulerDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600
+      SqsManagedSseEnabled: true
+  AppRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+      ImageTagMutability: IMMUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      LifecyclePolicy:
+        LifecyclePolicyText: '{"rules": [{"rulePriority": 1, "description": "expire untagged", "selection": {"tagStatus":
+          "untagged", "countType": "sinceImagePushed", "countUnit": "days", "countNumber": 7}, "action": {"type": "expire"}}]}'
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+  NginxRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+      ImageTagMutability: IMMUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      LifecyclePolicy:
+        LifecyclePolicyText: '{"rules": [{"rulePriority": 1, "description": "expire untagged", "selection": {"tagStatus":
+          "untagged", "countType": "sinceImagePushed", "countUnit": "days", "countNumber": 7}, "action": {"type": "expire"}}]}'
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+  TelemetryRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+      ImageTagMutability: IMMUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      LifecyclePolicy:
+        LifecyclePolicyText: '{"rules": [{"rulePriority": 1, "description": "expire untagged", "selection": {"tagStatus":
+          "untagged", "countType": "sinceImagePushed", "countUnit": "days", "countNumber": 7}, "action": {"type": "expire"}}]}'
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+  Pool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 12
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+  ResourceServer:
+    Type: AWS::Cognito::UserPoolResourceServer
+    Properties:
+      UserPoolId:
+        Ref: Pool
+      Identifier: orders
+      Name: Orders API
+      Scopes:
+      - ScopeName: api
+        ScopeDescription: Access own orders
+  Client:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId:
+        Ref: Pool
+      GenerateSecret: false
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+      - code
+      AllowedOAuthScopes:
+      - openid
+      - orders/api
+      SupportedIdentityProviders:
+      - COGNITO
+      CallbackURLs:
+      - Fn::Sub: ${AppOrigin}/
+      LogoutURLs:
+      - Fn::Sub: ${AppOrigin}/
+      EnableTokenRevocation: true
+      PreventUserExistenceErrors: ENABLED
+      ExplicitAuthFlows:
+      - ALLOW_REFRESH_TOKEN_AUTH
+    DependsOn: ResourceServer
+  Domain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId:
+        Ref: Pool
+      Domain:
+        Ref: CognitoPrefix
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterSettings:
+      - Name: containerInsights
+        Value: enabled
+  Logs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 7
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: ecs-tasks.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: AppData
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:GetObject
+            - s3:PutObject
+            Resource:
+            - Fn::Sub: ${Bucket.Arn}/uploads/*
+            - Fn::Sub: ${Bucket.Arn}/reports/*
+          - Effect: Allow
+            Action:
+            - sqs:SendMessage
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
+            - sqs:ChangeMessageVisibility
+            - sqs:GetQueueAttributes
+            Resource:
+              Fn::GetAtt:
+              - Queue
+              - Arn
+          - Effect: Allow
+            Action:
+            - xray:PutTraceSegments
+            - xray:PutTelemetryRecords
+            Resource: '*'
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: ecs-tasks.amazonaws.com
+          Action: sts:AssumeRole
+      ManagedPolicyArns:
+      - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+      - PolicyName: RuntimeSecrets
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action: secretsmanager:GetSecretValue
+            Resource:
+            - Ref: AppKey
+            - Ref: CacheKey
+            - Fn::GetAtt:
+              - Database
+              - MasterUserSecret.SecretArn
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: ec2.amazonaws.com
+          Action: sts:AssumeRole
+      ManagedPolicyArns:
+      - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+      - PolicyName: AppAndBootstrap
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:GetObject
+            - s3:PutObject
+            Resource:
+            - Fn::Sub: ${Bucket.Arn}/uploads/*
+            - Fn::Sub: ${Bucket.Arn}/reports/*
+          - Effect: Allow
+            Action:
+            - sqs:SendMessage
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
+            - sqs:ChangeMessageVisibility
+            - sqs:GetQueueAttributes
+            Resource:
+              Fn::GetAtt:
+              - Queue
+              - Arn
+          - Effect: Allow
+            Action:
+            - xray:PutTraceSegments
+            - xray:PutTelemetryRecords
+            Resource: '*'
+          - Effect: Allow
+            Action: secretsmanager:GetSecretValue
+            Resource:
+            - Ref: AppKey
+            - Ref: CacheKey
+            - Fn::GetAtt:
+              - Database
+              - MasterUserSecret.SecretArn
+          - Effect: Allow
+            Action: s3:GetObject
+            Resource:
+              Fn::Sub: ${Artifacts.Arn}/*
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+      - Ref: InstanceRole
+  QueueAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+      - Name: QueueName
+        Value:
+          Fn::GetAtt:
+          - DLQ
+          - QueueName
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+  Dashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardBody:
+        Fn::Sub: '{"widgets": [{"type": "metric", "x": 0, "y": 0, "width": 12, "height": 6, "properties": {"region": "${AWS::Region}",
+          "title": "Queue backlog", "metrics": [["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", "${Queue.QueueName}"],
+          ["AWS/SQS", "ApproximateAgeOfOldestMessage", "QueueName", "${Queue.QueueName}"]], "period": 60, "stat": "Maximum"}},
+          {"type": "metric", "x": 0, "y": 6, "width": 12, "height": 6, "properties": {"region": "${AWS::Region}", "title":
+          "Application latency and errors", "metrics": [["OrderLab/${AWS::StackName}", "LatencyMs", {"stat": "p95"}], ["OrderLab/${AWS::StackName}",
+          "Errors", {"stat": "Sum"}], ["OrderLab/${AWS::StackName}", "Requests", {"stat": "Sum"}]], "period": 60}}]}'
+  LatencyFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName:
+        Ref: Logs
+      FilterPattern: '{ $.message = "request" }'
+      MetricTransformations:
+      - MetricNamespace:
+          Fn::Sub: OrderLab/${AWS::StackName}
+        MetricName: LatencyMs
+        MetricValue: $.context.latency_ms
+  ErrorsFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName:
+        Ref: Logs
+      FilterPattern: '{ $.context.status >= 500 }'
+      MetricTransformations:
+      - MetricNamespace:
+          Fn::Sub: OrderLab/${AWS::StackName}
+        MetricName: Errors
+        MetricValue: '1'
+  RequestsFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName:
+        Ref: Logs
+      FilterPattern: '{ $.message = "request" }'
+      MetricTransformations:
+      - MetricNamespace:
+          Fn::Sub: OrderLab/${AWS::StackName}
+        MetricName: Requests
+        MetricValue: '1'
+Outputs:
+  VPC:
+    Value:
+      Ref: VPC
+  PublicA:
+    Value:
+      Ref: PublicA
+  PublicB:
+    Value:
+      Ref: PublicB
+  PrivateA:
+    Value:
+      Ref: PrivateA
+  PrivateB:
+    Value:
+      Ref: PrivateB
+  AlbSG:
+    Value:
+      Ref: AlbSG
+  AppSG:
+    Value:
+      Ref: AppSG
+  DBSG:
+    Value:
+      Ref: DBSG
+  DBSubnets:
+    Value:
+      Ref: DBSubnets
+  Database:
+    Value:
+      Ref: Database
+  Bucket:
+    Value:
+      Ref: Bucket
+  Artifacts:
+    Value:
+      Ref: Artifacts
+  Queue:
+    Value:
+      Ref: Queue
+  DLQ:
+    Value:
+      Ref: DLQ
+  SchedulerDLQ:
+    Value:
+      Ref: SchedulerDLQ
+  AppKey:
+    Value:
+      Ref: AppKey
+  CacheKey:
+    Value:
+      Ref: CacheKey
+  ProdCanary:
+    Value:
+      Ref: ProdCanary
+  Cluster:
+    Value:
+      Fn::GetAtt:
+      - Cluster
+      - Arn
+  Logs:
+    Value:
+      Ref: Logs
+  Pool:
+    Value:
+      Ref: Pool
+  Client:
+    Value:
+      Ref: Client
+  InstanceProfile:
+    Value:
+      Ref: InstanceProfile
+  TaskRole:
+    Value:
+      Fn::GetAtt:
+      - TaskRole
+      - Arn
+  ExecutionRole:
+    Value:
+      Fn::GetAtt:
+      - ExecutionRole
+      - Arn
+  InstanceRole:
+    Value:
+      Fn::GetAtt:
+      - InstanceRole
+      - Arn
+  AppRepo:
+    Value:
+      Fn::GetAtt:
+      - AppRepo
+      - RepositoryUri
+  NginxRepo:
+    Value:
+      Fn::GetAtt:
+      - NginxRepo
+      - RepositoryUri
+  TelemetryRepo:
+    Value:
+      Fn::GetAtt:
+      - TelemetryRepo
+      - RepositoryUri
+  DBHost:
+    Value:
+      Fn::GetAtt:
+      - Database
+      - Endpoint.Address
+  DBSecret:
+    Value:
+      Fn::GetAtt:
+      - Database
+      - MasterUserSecret.SecretArn
+  CacheHost:
+    Value:
+      Fn::GetAtt:
+      - Cache
+      - PrimaryEndPoint.Address
+  Issuer:
+    Value:
+      Fn::Sub: https://cognito-idp.${AWS::Region}.amazonaws.com/${Pool}
+  CognitoDomain:
+    Value:
+      Fn::Sub: https://${CognitoPrefix}.auth.${AWS::Region}.amazoncognito.com
+  CDN:
+    Value:
+      Fn::GetAtt:
+      - CDN
+      - DomainName
+  SchedulerDLQArn:
+    Value:
+      Fn::GetAtt:
+      - SchedulerDLQ
+      - Arn

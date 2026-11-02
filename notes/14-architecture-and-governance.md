@@ -379,3 +379,17 @@ Lab mặc định là **thiết kế** và chỉ gọi các API đọc, miễn p
    - `/admin` phải được bảo vệ bằng authentication và authorization ở ứng dụng hoặc ở lớp xác thực (Cognito, ALB authenticate, JWT authorizer).
 
 </details>
+
+---
+
+## Bổ sung — GuardDuty, Security Hub và ADR của dự án
+
+GuardDuty tạo finding phát hiện dấu hiệu đe dọa từ các nguồn dữ liệu được bật; Security Hub CSPM tổng hợp findings/kiểm tra posture theo cấu hình. Chúng không thay IAM, network control hoặc authorization. Phạm vi account/Region, delegated admin và nguồn dữ liệu phải rõ; bật một dịch vụ ở một Region không chứng minh toàn tổ chức đã được bao phủ.
+
+[Mini-lab finding](../labs/14-architecture-and-governance/findings.md) dùng dữ liệu giả để triage, không cần bật dịch vụ trả phí. Người học liên hệ resource ARN với owner, thời gian hoạt động, nguồn log và trạng thái kiểm chứng; severity của provider là đầu vào ưu tiên, không tự chứng minh exploit.
+
+GuardDuty có chức năng sample findings để kiểm tra routing/filter; sample không chứng minh detector đã phát hiện một cuộc tấn công thật. Security Hub có RecordState/Workflow/Compliance khác mục đích; đóng workflow không tự sửa cấu hình resource. [GuardDuty sample](https://docs.aws.amazon.com/guardduty/latest/ug/sample_findings.html), [ASFF attributes](https://docs.aws.amazon.com/securityhub/latest/userguide/asff-top-level-attributes.html), đối chiếu 2026-11-01.
+
+ADR dự án phải ghi: quyết định, phương án khác, bối cảnh tải/budget, evidence, failure mode còn lại và điều kiện xem xét lại. Đánh giá đủ sáu trụ cột Well-Architected; ví dụ một NAT giảm chi phí nhưng tạo điểm lỗi cho outbound, RDS Single-AZ tiết kiệm nhưng không đáp ứng AZ failover.
+
+Bài tập: finding được chuyển RESOLVED có đủ đóng incident không? Đáp án: không; cần bằng chứng containment/remediation, kiểm tra lại tài nguyên và theo dõi tái diễn. Sample finding chỉ nghiệm thu luồng triage/routing.

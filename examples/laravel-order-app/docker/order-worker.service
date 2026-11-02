@@ -1,0 +1,13 @@
+[Unit]
+Description=Laravel report worker
+After=network-online.target
+[Service]
+User=www-data
+WorkingDirectory=/var/www/app
+ExecStart=/usr/bin/php artisan queue:work --sleep=2 --timeout=60 --tries=0
+Restart=always
+RestartSec=5
+TimeoutStopSec=90
+KillSignal=SIGTERM
+[Install]
+WantedBy=multi-user.target

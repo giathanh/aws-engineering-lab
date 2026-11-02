@@ -116,3 +116,9 @@ Các trang dưới đây là điểm bắt đầu tra cứu, không thay cho ki�
 ## 11. Chỉ dẫn bàn giao cho mô hình tiếp theo
 
 > Dựa trên plan này, tạo bài học và lab tiếng Việt cho chủ đề “Máy chủ và cân bằng tải — EC2, EBS, ALB, Auto Scaling, Systems Manager” tại hai đường dẫn mục 1. Kiểm tra nội dung repository và hướng dẫn AGENTS.md trước khi sửa; giữ nguyên thay đổi của người khác. Tra cứu tài liệu hiện hành, cụ thể hóa quyền và lệnh, cung cấp expected output, đáp án, troubleshooting và cleanup. Chỉ biên soạn artifact; không tự chạy thao tác thay đổi AWS account, deploy hoặc gửi thông báo. Không mở rộng nhánh tùy chọn thành prerequisite bắt buộc. Ghi rõ nội dung đã đối chiếu tài liệu và phần thực sự đã kiểm thử.
+
+## 12. Phần bổ sung theo lộ trình Laravel
+
+Đọc [plan hoàn thiện lộ trình](15-roadmap-gap-completion.md) trước khi biên soạn tiếp. Phạm vi bổ sung cho chủ đề này: Mốc 1 và 3: Laravel trên Nginx/PHP-FPM, HTTPS, ALB/ASG; kiểm chứng state ngoài instance và lịch chạy chống trùng phối hợp mốc 4.
+
+Giữ lab dịch vụ hiện tại và liên kết tới nhánh dự án; áp dụng hợp đồng ứng dụng, kiểm chứng và cleanup trong plan bổ sung. Không đánh dấu hoàn thành yêu cầu thực hành chỉ bằng ví dụ Python/Node.js hoặc output minh họa.

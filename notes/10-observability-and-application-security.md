@@ -312,3 +312,17 @@ Trong bài thực hành đính kèm, bạn sẽ trực tiếp triển khai:
 
 </details>
 
+
+---
+
+## Bổ sung — Cognito và OpenTelemetry trong ứng dụng Laravel
+
+Đọc [bài dự án](15-capstone-laravel.md) và thực hành mốc 2, 5–6. Cognito user pool phát token người dùng; identity pool cấp AWS credentials theo cấu hình và không cần cho luồng presigned URL. Vue dùng authorization code + PKCE qua oidc-client-ts; không nhúng client secret vào browser.
+
+[Middleware Identity](../examples/laravel-order-app/app/Http/Middleware/Identity.php) verify chữ ký JWKS và access-token claims, rồi controller kiểm owner bằng DB. Thử token sai issuer/client/scope, hết hạn và ID token; đều phải 401. Token hợp lệ của user B đọc order user A phải 404. Unit test ký RSA giả chứng minh logic; live Cognito test mới chứng minh cấu hình hosted UI/callback/domain.
+
+OpenTelemetry manual spans bao HTTP, DB lookup, report.export và storage.put; carrier qua outbox/queue giữ quan hệ trace. Chỉ bật tracing của dịch vụ AWS không tự instrument PHP query. Collector loopback OTLP nhận span rồi xuất X-Ray; role chỉ cần PutTraceSegments/PutTelemetryRecords cho đường này.
+
+Secret test phải dùng đúng principal: EC2 role đọc AppKey được nhưng ProdCanary bị deny; ECS execution role inject secret, task role không được gọi Secrets Manager trực tiếp theo template. Đừng dùng credentials người deploy để tuyên bố app đã bị cô lập. Ghi allowed/denied và resource alias, không ghi secret value.
+
+Bài tập: WAF đã bật có bỏ owner check được không? Đáp án: không; WAF không hiểu quyền đọc đơn của từng user. Trace cũng không được chứa token hoặc presigned URL để tiện debug.

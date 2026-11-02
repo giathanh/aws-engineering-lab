@@ -659,3 +659,9 @@ Sau đó chạy lại Bước 11. Lệnh nào báo `NotFound`, `ServiceNotFoundE
 ## Tiếp theo
 
 Bạn đã đóng gói, deploy theo digest và chứng minh được rolling deploy, rollback và graceful shutdown bằng số liệu. Bài tiếp theo: **[Bài 09 — Serverless: Lambda, API Gateway](../../notes/09-serverless.md)**.
+
+---
+
+## Nhánh Laravel theo lộ trình gốc
+
+Lab dịch vụ ở trên được nối với [dự án Laravel + Vue](../15-capstone-laravel/README.md). Đọc phần bổ sung trong bài lý thuyết 08 và bảng mốc của dự án để chọn đúng prerequisite. Đầu ra bắt buộc gồm code/fixture, happy path, negative case và inventory sau cleanup; không dùng output minh họa làm bằng chứng đã chạy.

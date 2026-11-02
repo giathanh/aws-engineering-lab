@@ -64,7 +64,7 @@ Chặng 5 — Quản trị            14 Kiến trúc & quản trị nhiều acc
 | 13 | [SLO, load test, backup, DR](13-reliability-and-performance.md) · [Lab](../labs/13-reliability-and-performance/README.md) | Hệ thống tin cậy đến mức nào, phục hồi mất bao lâu? | 6–10 giờ | Thấp, có trần |
 | 14 | [Organizations, SCP, Control Tower, WAF](14-architecture-and-governance.md) · [Lab](../labs/14-architecture-and-governance/README.md) | Quản trị nhiều account và ghi lại quyết định kiến trúc ra sao? | 5–7 giờ | Phần lớn là thiết kế; nhánh WAF tính theo giờ |
 
-Tổng cộng khoảng **70–100 giờ**. Cột "Chi phí lab" chỉ mang tính định hướng; mỗi lab có bảng ước tính riêng với giá minh họa, và bạn phải tra lại giá cho Region của mình.
+Phần chủ đề 01–14 ban đầu khoảng **70–100 giờ**. Dự án Laravel bổ sung khoảng **28–43 giờ**, các chuyên đề bổ sung khoảng **4–8 giờ**; tổng dự kiến **102–151 giờ**, chưa tính chờ quyền/domain và debug phát sinh. Cột "Chi phí lab" chỉ mang tính định hướng; mỗi lab có bảng ước tính riêng với giá minh họa, và bạn phải tra lại giá cho Region của mình.
 
 ### Thứ tự học và các nhánh
 
@@ -88,7 +88,7 @@ Khi phù hợp, các bài dùng chung một ví dụ: **hệ thống đơn hàng
 4. Bài 10–11: có log, metric, alarm; xử lý đơn bất đồng bộ qua hàng đợi và workflow.
 5. Bài 12–14: toàn bộ được viết bằng IaC, deploy qua CI/CD, đo SLO và đặt trong mô hình nhiều account.
 
-Ví dụ chỉ giúp liên kết các bài lại với nhau. Mỗi lab vẫn có thể làm độc lập; nếu dùng lại tài nguyên từ lab trước, lab sẽ nói rõ.
+Các lab dịch vụ 01–14 vẫn độc lập. Đường hoàn thành mục tiêu Laravel + Vue nằm ở **[Bài 15 — Dự án xuyên suốt](15-capstone-laravel.md)** và **[Lab bảy mốc](../labs/15-capstone-laravel/README.md)**: có mã ứng dụng, IaC, pipeline, failure/recovery drill và sổ bằng chứng. Đọc bài 15 song song với 05–14 theo bảng prerequisite, không chờ học hết mới bắt đầu.
 
 ---
 
@@ -117,7 +117,7 @@ Chỉ sửa file Markdown, không sửa trực tiếp file HTML.
 2. **Buổi 2 — lab:** đọc lại phần còn lại, làm lab, ghi bằng chứng vào sổ tay của bạn.
 3. **Kết thúc:** chạy cleanup, kiểm kê tài nguyên còn lại, ghi lại một lỗi bạn đã tự chẩn đoán.
 
-Với nhịp hai buổi mỗi tuần, cả lộ trình mất khoảng 7–10 tuần.
+Với nhịp hai buổi mỗi tuần, riêng phần 01–14 gồm khoảng 28 buổi, tương đương 14 tuần; dự án cần thêm các buổi theo thời lượng thực tế của bạn.
 
 ### Cách đọc một lab
 
@@ -193,8 +193,9 @@ Hướng dẫn trong các lab viết cho macOS/zsh. Linux dùng được gần n
 | `jq` | 01 | Đọc và lọc JSON; macOS: `brew install jq` |
 | `curl` | 04 | Thường có sẵn |
 | Python 3 | 03 | Script phụ trợ nhỏ trong nhiều lab |
-| Node.js | 05 | Ứng dụng mẫu trong lab 05, 07, 08; cũng dùng để build HTML |
-| Docker | 08 | Build và push image |
+| Node.js | 08/dự án | Ứng dụng mẫu lab 08, Vue và build HTML |
+| PHP 8.3, Composer 2 | Dự án | Laravel, migration và test |
+| Docker | 08/dự án | Build/push image, PostgreSQL/Redis local |
 | `psql` | 07 | PostgreSQL client |
 | Terraform | 12 | Chỉ cho phần so sánh với CloudFormation |
 | Tài khoản GitHub | 12 | Chỉ cho nhánh chạy GitHub Actions thật |

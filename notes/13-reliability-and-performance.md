@@ -329,3 +329,15 @@ Trong bài thực hành đính kèm, bạn sẽ trực tiếp triển khai:
 
 </details>
 
+
+---
+
+## Bổ sung — Drill trên ứng dụng Laravel
+
+Mô phỏng retry storm của lab 13 vẫn hữu ích, nhưng yêu cầu thực hành dự án cần số đo trên API thật. [Mốc 7](../labs/15-capstone-laravel/README.md) dùng `scripts/load.py` với baseline/ramp/steady/recovery, trần concurrency và stop condition; ghi sample size, p95/p99 và error count.
+
+`/api/probe` bật riêng bằng LAB_FAULTS: PostgreSQL statement timeout, tối đa hai attempts, jitter, circuit mở 15 giây và một request probe qua cache lock. So sánh với đường không resilience. Sau cooldown, mode=ok đóng circuit; concurrent probes có thể nhận 429. Không tăng tải khi stop condition đã đạt để cố có biểu đồ đẹp.
+
+RDS recovery drill restore snapshot sang DB khác. Trước snapshot lưu tập UUID, sau snapshot tạo watermark; kiểm tra dữ liệu được phục hồi và mức mất watermark dự kiến trước khi smoke tạo dữ liệu mới. RTO kết thúc sau kiểm tra ứng dụng, không kết thúc khi API restore trả về. Ghi quyền secret mới của bản restore và cleanup bản phục hồi/snapshot.
+
+Bài tập: restore có đủ số row nhưng mất một đơn quan trọng và có một row thừa, count có phát hiện được không? Đáp án: không; cần so tập khóa/nội dung hoặc checksum theo fixture đã lưu, và kiểm thử luồng nghiệp vụ.

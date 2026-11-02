@@ -304,3 +304,15 @@ Trong bài thực hành đính kèm, bạn sẽ trực tiếp triển khai:
 
 </details>
 
+
+---
+
+## Bổ sung — Container Laravel API, worker và migration
+
+[Dự án Laravel](../examples/laravel-order-app/README.md) có Dockerfile multi-stage: Composer dependencies, Vue build, PHP-FPM image và Nginx image. API task có Nginx + FPM cùng network namespace; worker task dùng cùng image PHP với command queue:work. Worker không cần Nginx. Collector chạy sidecar riêng.
+
+Migration là one-off ECS task chạy trước rollout; không chạy trong entrypoint của mọi replica. `release.py` kiểm tra exit code rồi mới update service. Job timeout 60 giây, task stop timeout 90 giây, queue visibility 180 giây là cấu hình lab để đo graceful stop/redelivery. Giữ migration tương thích image cũ vì rollback image không undo schema.
+
+Thực hành mốc 6: deploy cùng database/bucket/queue của mốc EC2, chạy smoke nghiệp vụ; scale-in worker khi có job và kiểm tra report không tạo side effect trùng. Bản sai port phải làm deployment fail; bản health 200 nhưng report hỏng phải bị smoke test phát hiện. Phân biệt hai cơ chế rollback này.
+
+Bài tập: có thể đặt cron trong mỗi API task không? Đáp án: scaling sẽ nhân số lịch; dùng Scheduler gọi task với business key theo scheduled-time, hoặc một scheduler có khóa dùng chung được thiết kế rõ.

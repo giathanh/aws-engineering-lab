@@ -383,3 +383,27 @@ Trong bài thực hành đính kèm, bạn sẽ trực tiếp triển khai một
 
 </details>
 
+
+---
+
+## Bổ sung — EFS, upload Laravel và client Vue
+
+| Yêu cầu | S3 | EBS | EFS |
+|---|---|---|---|
+| Cách truy cập | Object API/HTTPS | Block device gắn vào compute | NFS filesystem dùng chung |
+| Upload từ web/mobile | Presigned URL phù hợp | Phải đi qua app | Phải đi qua app |
+| POSIX/shared directory | Không phải filesystem POSIX | Không mặc định chia sẻ giữa nhiều máy | Phù hợp ứng dụng cần shared filesystem |
+| Phạm vi cần cân nhắc | Bucket/Region, IAM/object key | Volume/AZ, snapshot | Regional hoặc One Zone, mount targets/SG |
+| Lỗi cần thử | Signature/ownership/version | Detach/instance loss | Mount/network/permission/throughput |
+
+EFS Regional và One Zone có phạm vi chịu lỗi khác nhau; mount nhiều máy không thay cho backup. Truy cập NFS cần network path/SG và quyền filesystem phù hợp. [AWS EFS](https://docs.aws.amazon.com/efs/latest/ug/whatisefs.html), đối chiếu 2026-11-01.
+
+Ví dụ Laravel trong dự án dùng S3 cho ảnh/báo cáo vì không cần POSIX. Nếu thư viện legacy bắt buộc ghi/đọc một shared directory giữa nhiều máy, cân nhắc EFS và đo latency/throughput. EBS phù hợp filesystem của một instance; không coi EBS snapshot là shared live storage.
+
+[Controller upload](../examples/laravel-order-app/app/Http/Controllers/Uploads.php) cấp URL sau xác thực owner, backend tự chọn key. [Vue client](../examples/laravel-order-app/web/src/App.vue) gửi PUT trực tiếp rồi gọi verify. CORS không thay authorization; client khai báo bytes không ngăn PUT một object lớn hơn. `verify` kiểm tra actual object và ảnh; original luôn private. Chỉ output đã xử lý/phê duyệt mới đưa vào `public/*` cho CloudFront.
+
+Bài tập: (1) ảnh sản phẩm cho mobile, (2) ổ boot EC2, (3) thư mục POSIX cho công cụ legacy chạy hai máy: chọn storage và nêu failure mode.
+
+<details><summary>Đáp án</summary>
+(1) S3 + CDN phù hợp; kiểm tra quyền và cache. (2) EBS; instance/volume/AZ và snapshot. (3) EFS nếu thực sự cần semantics filesystem; xem mount target, SG, UID/GID và throughput. Không ép upload Laravel lên EFS khi S3 đáp ứng đủ.
+</details>

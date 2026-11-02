@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mini-lab — S3, Lambda resize và lỗi từng phần SQS</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+a.back{display:inline-flex;align-items:center;gap:6px;margin-bottom:16px;padding:4px 12px;border:1px solid var(--line);border-radius:999px;color:var(--muted);text-decoration:none;font-size:14px}
+a.back:hover{color:var(--fg);background:var(--code-bg)}
+main > a.back{display:none}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:24px;align-self:start;max-height:calc(100vh - 48px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}main > a.back{display:inline-flex}}
+@media print{a.back,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="toc"><a class="back" href="../../notes/00-introduction.html">← Mở đầu</a><div class="label">Mục lục</div><ol><li><a href="#local-output-có-thể-kiểm-chứng">Local: output có thể kiểm chứng</a></li><li><a href="#build-và-deploy">Build và deploy</a></li><li><a href="#s3-happy-path-và-failure-destination">S3 happy path và failure destination</a></li><li><a href="#sqs-partial-batch">SQS partial batch</a></li><li><a href="#cleanup">Cleanup</a></li><li><a href="#đánh-giá">Đánh giá</a></li></ol></aside>
+<main>
+<a class="back" href="../../notes/00-introduction.html">← Mở đầu</a>
+<h1 id="mini-lab--s3-lambda-resize-và-lỗi-từng-phần-sqs"><a class="anchor" href="#mini-lab--s3-lambda-resize-và-lỗi-từng-phần-sqs">Mini-lab — S3, Lambda resize và lỗi từng phần SQS</a></h1>
+<p>Liên kết <a href="../../notes/09-serverless.html">bài 09</a>. Thời lượng 60–90 phút; chỉ dữ liệu giả. Code đã có test local, deploy AWS chưa chạy. Region/profile theo lab 01, quyền tạo ECR/CloudFormation/Lambda/S3/SQS/IAM role và PassRole cho Lambda role thuộc stack này. Docker build linux/amd64, CLI v2, Python 3.10+.</p>
+<h2 id="local-output-có-thể-kiểm-chứng"><a class="anchor" href="#local-output-có-thể-kiểm-chứng">Local: output có thể kiểm chứng</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>python3 -m venv /tmp/image-lab-venv
+. /tmp/image-lab-venv/bin/activate
+pip install -r examples/image-processor/requirements.txt
+python -m unittest discover -s examples/image-processor</code></pre></div>
+<p>Expected: resize 1024×800 → 512×400 JPEG, reject file hỏng/quá giới hạn, cùng key+version ra cùng output, version mới ra key khác; partial batch chỉ báo ID lỗi. Tests dùng client giả nên không chứng minh IAM hoặc S3 trigger.</p>
+<h2 id="build-và-deploy"><a class="anchor" href="#build-và-deploy">Build và deploy</a></h2>
+<p>Chạy từ repo root. Tên stack ngắn, chữ thường; bucket được đặt tên từ stack/account/Region để tránh dependency vòng permission→bucket→function.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export IMAGE_STACK=orders-image-lab
+export IMAGE_REPO_NAME=orders-image-lab
+export IMAGE_STATE=$(mktemp -d)
+aws ecr create-repository --repository-name &quot;$IMAGE_REPO_NAME&quot; --image-tag-mutability IMMUTABLE &gt; &quot;$IMAGE_STATE/repo.json&quot;
+export IMAGE_REPO=$(jq -r .repository.repositoryUri &quot;$IMAGE_STATE/repo.json&quot;)
+aws ecr get-login-password | docker login --username AWS --password-stdin &quot;${IMAGE_REPO%%/*}&quot;
+docker build --platform linux/amd64 --provenance=false -t &quot;$IMAGE_REPO:v1&quot; examples/image-processor
+docker push &quot;$IMAGE_REPO:v1&quot;
+export IMAGE_URI=&quot;$IMAGE_REPO@$(aws ecr describe-images --repository-name &quot;$IMAGE_REPO_NAME&quot; --image-ids imageTag=v1 --query 'imageDetails[0].imageDigest' --output text)&quot;
+aws cloudformation create-stack --stack-name &quot;$IMAGE_STACK&quot; \
+  --template-body file://infra/laravel-order-app/images.yaml --capabilities CAPABILITY_IAM \
+  --parameters ParameterKey=ImageUri,ParameterValue=&quot;$IMAGE_URI&quot;
+aws cloudformation wait stack-create-complete --stack-name &quot;$IMAGE_STACK&quot;
+aws cloudformation describe-stacks --stack-name &quot;$IMAGE_STACK&quot; &gt; &quot;$IMAGE_STATE/stack.json&quot;
+imgout() { jq -r --arg k &quot;$1&quot; '.Stacks[0].Outputs[]|select(.OutputKey==$k)|.OutputValue' &quot;$IMAGE_STATE/stack.json&quot;; }
+export IMAGE_BUCKET=$(imgout Bucket)</code></pre></div>
+<p>ECR repository và bucket là tài nguyên của lab riêng. Nếu repository đã tồn tại, kiểm tra owner trước khi tái sử dụng, không xóa/push đè tag của người khác. Template Lambda có 512 MB, timeout 30s, concurrency 2 cho từng function, queue retention 14 ngày. Trần buổi 90 phút, 20 ảnh dưới 5 MB; dừng nếu thấy invocation liên tục hoặc output ghi vào uploads/.</p>
+<p>Chi phí theo request/duration/S3/ECR/log; dự trù buổi $1 với khối lượng nhỏ làm <strong>ngưỡng tự dừng</strong>, không bảo đảm hóa đơn. Ghi giá Region từ <a href="https://aws.amazon.com/lambda/pricing/" target="_blank" rel="noopener">Lambda</a>, <a href="https://aws.amazon.com/s3/pricing/" target="_blank" rel="noopener">S3</a> và <a href="https://aws.amazon.com/sqs/pricing/" target="_blank" rel="noopener">SQS</a> trước chạy; không dùng Free Tier làm giả định.</p>
+<h2 id="s3-happy-path-và-failure-destination"><a class="anchor" href="#s3-happy-path-và-failure-destination">S3 happy path và failure destination</a></h2>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>python - &lt;&lt;'PY'
+from PIL import Image
+Image.new('RGB',(1024,800),'blue').save('/tmp/order-image.png')
+PY
+aws s3api put-object --bucket &quot;$IMAGE_BUCKET&quot; --key uploads/photo.png --body /tmp/order-image.png --content-type image/png &gt; &quot;$IMAGE_STATE/upload.json&quot;
+aws s3api list-objects-v2 --bucket &quot;$IMAGE_BUCKET&quot; --prefix processed/</code></pre></div>
+<p>Chờ log cho invocation; tải một object processed/ về local rồi đọc kích thước bằng Pillow: phải 512×400 JPEG. Đổi ảnh rồi upload cùng key: VersionId đổi và tạo output khác. Gửi lại event chứa VersionId cũ: không ghi đè output phiên bản mới. Duplicate invoke có thể tạo thêm version cùng output key; không tuyên bố đúng một PUT.</p>
+<p>Upload text vào <code>uploads/bad.png</code>: handler phải fail, Lambda retry có trần, sau đó queue <code>Errors</code> nhận invocation record. Xem CloudWatch Errors/alarm và DLQ body; không chỉ xem HTTP return của PUT. <code>processed/</code> không có notification nên không kích hoạt lại resize. Nếu thiếu log: kiểm tra notification, Lambda resource permission source bucket/account, execution role và image architecture.</p>
+<h2 id="sqs-partial-batch"><a class="anchor" href="#sqs-partial-batch">SQS partial batch</a></h2>
+<p>Template tạo BatchFunction dùng <code>handler.sqs_handler</code>, BatchQueue và BatchDLQ. Event source mapping đã bật ReportBatchItemFailures. Mỗi message body chứa <strong>S3 event JSON</strong>; không trộn với Laravel serialized job.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export BATCH_QUEUE=$(imgout BatchQueue)
+python - &lt;&lt;'PY' &gt; &quot;$IMAGE_STATE/batch.json&quot;
+import json,os,boto3
+s3=boto3.client('s3');bucket=os.environ['IMAGE_BUCKET']
+version=s3.head_object(Bucket=bucket,Key='uploads/photo.png')['VersionId']
+event={'Records':[{'s3':{'bucket':{'name':bucket},'object':{'key':'uploads/photo.png','versionId':version}}}]}
+print(json.dumps({'QueueUrl':os.environ['BATCH_QUEUE'],'Entries':[{'Id':'good','MessageBody':json.dumps(event)},{'Id':'bad','MessageBody':'not-json'}]}))
+PY
+aws sqs send-message-batch --cli-input-json &quot;file://$IMAGE_STATE/batch.json&quot;</code></pre></div>
+<p>Expected: message good hoàn thành, message bad được retry và sang BatchDLQ sau 3 lần nhận; không cần good đi theo bad. Lambda poller không bảo đảm cả hai nằm cùng batch mọi lần; local test kiểm chứng return contract, live test kiểm chứng số message/invocation và DLQ thực tế. Không dùng demo này cho FIFO mà không đổi xử lý ordering.</p>
+<h2 id="cleanup"><a class="anchor" href="#cleanup">Cleanup</a></h2>
+<p>Lưu inventory, disable bucket notification trước khi xóa function, rồi delete stack. Nếu đã dừng giữa chừng, lấy bucket/function/queue từ describe-stacks và làm cùng thứ tự.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws cloudformation list-stack-resources --stack-name &quot;$IMAGE_STACK&quot; &gt; &quot;$IMAGE_STATE/inventory.json&quot;
+aws s3api put-bucket-notification-configuration --bucket &quot;$IMAGE_BUCKET&quot; --notification-configuration '{}'
+aws cloudformation delete-stack --stack-name &quot;$IMAGE_STACK&quot;
+aws cloudformation wait stack-delete-complete --stack-name &quot;$IMAGE_STACK&quot;
+python3 infra/laravel-order-app/scripts/cleanup-retained.py &quot;$IMAGE_STATE/inventory.json&quot;
+# Sau khi review đúng bucket fixture:
+python3 infra/laravel-order-app/scripts/cleanup-retained.py &quot;$IMAGE_STATE/inventory.json&quot; --apply
+aws ecr delete-repository --repository-name &quot;$IMAGE_REPO_NAME&quot; --force</code></pre></div>
+<p>Kiểm tra không còn Lambda functions/mapping/queues/log groups của stack, bucket versions và ECR repo. Không xóa bucket capstone vì mini-lab này dùng bucket riêng.</p>
+<h2 id="đánh-giá"><a class="anchor" href="#đánh-giá">Đánh giá</a></h2>
+<p>Nộp kích thước ảnh gốc/kết quả, hai version cùng input key, duplicate event, ảnh hỏng→failure destination, partial batch→BatchDLQ và cleanup inventory. Phân biệt quyền ghi object, quyền S3 invoke Lambda và quyền Lambda đọc object version. Không có ảnh thực/PII trong fixture.</p>
+
+<footer>Sinh tự động từ <code>examples/image-processor/README.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

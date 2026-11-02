@@ -342,3 +342,17 @@ Trong bài thực hành đính kèm, bạn sẽ trực tiếp triển khai:
 
 </details>
 
+
+---
+
+## Bổ sung — Laravel trên RDS, cache/session và connection budget
+
+Đường dự án học RDS trước DynamoDB: [mốc 2 và 4](../labs/15-capstone-laravel/README.md). Migration tạo orders/reports/outbox; seed giả tách khỏi bootstrap instance để không chạy lặp trên mỗi replica. RDS không public, app SG được phép vào DB SG, database credentials đến từ Secrets Manager.
+
+Cache-aside ở order detail có TTL 30 giây, PATCH invalidates key; kiểm tra owner từ DB trước khi đọc cache. Nếu invalidation lỗi, dữ liệu có thể cũ tới TTL; đừng dùng cached quantity để quyết định thanh toán. Session Redis là bài tập state chung, không phải kho dữ liệu đơn hàng. Cache chết thì GET có thể fallback DB nhưng session/auth cache có thể fail-closed; xác định expected result theo từng endpoint.
+
+Connection budget: `số API replica × pm.max_children + số worker + migration + quản trị + dự phòng`. Với 2 × 8 PHP workers, 2 queue workers và 2 kết nối migration/admin, phần base là 20; nếu dành 10 dự phòng thì budget 30. Đây là upper-bound mô hình, không phải đo actual concurrent connections. Tăng API lên 8 replica có thể tăng base lên 68 trước dự phòng.
+
+RDS Proxy chia sẻ pool kết nối nhưng transaction/session state có thể gây pinning. Đo DatabaseConnections, thời gian chờ pool và throughput trước/sau; proxy không tăng năng lực CPU/IO của DB. [RDS Proxy](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/rds-proxy.html), đối chiếu 2026-11-01. Bài tính budget là bắt buộc; triển khai Proxy là tùy chọn vì thêm chi phí.
+
+Bài tập: cache lỗi cùng lúc traffic tăng, vì sao DB có thể quá tải? Đáp án: mọi cache miss/fallback dồn xuống DB; cần trần concurrency, timeout/backpressure và tránh retry nhiều tầng. Lab dự án có `/api/probe` để quan sát các cơ chế đó trên PostgreSQL.

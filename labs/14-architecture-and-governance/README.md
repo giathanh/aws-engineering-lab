@@ -915,3 +915,11 @@ Giá trị nào là `None` thì bỏ qua lệnh xóa tương ứng. Nếu ALB đ
 Bài làm được đánh giá bằng bằng chứng (số đo, output, log), không phải bằng việc đã bấm đủ bước.
 
 Quay lại [README lộ trình](../../plans/README.md) để xem tổng quan và chọn chủ đề cần ôn lại.
+
+---
+
+## Nhánh Laravel theo lộ trình gốc
+
+Lab dịch vụ ở trên được nối với [dự án Laravel + Vue](../15-capstone-laravel/README.md). Đọc phần bổ sung trong bài lý thuyết 14 và bảng mốc của dự án để chọn đúng prerequisite. Đầu ra bắt buộc gồm code/fixture, happy path, negative case và inventory sau cleanup; không dùng output minh họa làm bằng chứng đã chạy.
+
+Làm thêm [bài triage GuardDuty/Security Hub](findings.md), có fixture và đáp án, không yêu cầu bật dịch vụ để làm đường chính.

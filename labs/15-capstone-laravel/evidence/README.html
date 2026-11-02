@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sổ kiểm chứng dự án Laravel</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+a.back{display:inline-flex;align-items:center;gap:6px;margin-bottom:16px;padding:4px 12px;border:1px solid var(--line);border-radius:999px;color:var(--muted);text-decoration:none;font-size:14px}
+a.back:hover{color:var(--fg);background:var(--code-bg)}
+main > a.back{display:none}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:24px;align-self:start;max-height:calc(100vh - 48px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}main > a.back{display:inline-flex}}
+@media print{a.back,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="toc"><a class="back" href="../../../notes/00-introduction.html">← Mở đầu</a><div class="label">Mục lục</div><ol><li><a href="#trạng-thái-biên-soạn-ngày-2026-11-01">Trạng thái biên soạn ngày 2026-11-01</a></li><li><a href="#mẫu-ghi-mỗi-lần-thực-hiện">Mẫu ghi mỗi lần thực hiện</a></li><li><a href="#ma-trận-nghiệm-thu-cần-chạy-trên-aws">Ma trận nghiệm thu cần chạy trên AWS</a></li><li><a href="#không-đưa-vào-evidence">Không đưa vào evidence</a></li></ol></aside>
+<main>
+<a class="back" href="../../../notes/00-introduction.html">← Mở đầu</a>
+<h1 id="sổ-kiểm-chứng-dự-án-laravel"><a class="anchor" href="#sổ-kiểm-chứng-dự-án-laravel">Sổ kiểm chứng dự án Laravel</a></h1>
+<h2 id="trạng-thái-biên-soạn-ngày-2026-11-01"><a class="anchor" href="#trạng-thái-biên-soạn-ngày-2026-11-01">Trạng thái biên soạn ngày 2026-11-01</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Phần</th>
+<th>Kiểm chứng</th>
+<th>Giới hạn</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Laravel API/queue/outbox</td>
+<td>PHPUnit local với SQLite, filesystem giả, queue sync và database worker</td>
+<td>Chưa thử row lock/concurrency PostgreSQL/SQS thật</td>
+</tr>
+<tr>
+<td>Cognito middleware</td>
+<td>Token RSA giả hợp lệ, sai issuer/client/token_use/scope/hết hạn</td>
+<td>Chưa đăng nhập hosted UI Cognito thật</td>
+</tr>
+<tr>
+<td>Vue</td>
+<td>npm install/lockfile và production build</td>
+<td>Chưa E2E browser với AWS</td>
+</tr>
+<tr>
+<td>Lambda ảnh</td>
+<td>Unit tests resize/reject/duplicate/version/partial batch với client giả</td>
+<td>Chưa chạy Lambda/S3 triggers</td>
+</tr>
+<tr>
+<td>CloudFormation</td>
+<td>cfn-lint trên foundation/runtime/ec2/images</td>
+<td>Chưa create/update/delete stack</td>
+</tr>
+<tr>
+<td>Docker images</td>
+<td>Dockerfile/Compose đã biên soạn</td>
+<td>Máy biên soạn chưa có Docker; chưa build/run image</td>
+</tr>
+<tr>
+<td>CI/CD</td>
+<td>Workflow/release script đã biên soạn và kiểm tra cú pháp</td>
+<td>Chưa chạy GitHub Actions/OIDC/deploy/rollback</td>
+</tr>
+<tr>
+<td>HA/load/DR/chi phí</td>
+<td>Quy trình, workload có giới hạn và mẫu ghi bằng chứng</td>
+<td>Chưa đo AWS RTO/RPO, p95/p99, cost thực</td>
+</tr>
+</tbody></table>
+</div>
+<p>Kết quả local: <strong>9 test Laravel, 37 assertions đạt</strong> (PHP 8.3.36/PHPUnit 11.5.57), <strong>5 test xử lý ảnh đạt</strong> (Pillow 11.3.0), <strong>Vue build đạt</strong> (Vite 6.4.5), <strong>4 template cfn-lint đạt</strong> (1.46.0), kiểm tra cú pháp PHP/Python và liên kết nội bộ đạt. Có test database queue worker và propagation trace context sau khi request kết thúc. Không đánh dấu lộ trình đã hoàn thành chỉ từ các artifact này.</p>
+<h2 id="mẫu-ghi-mỗi-lần-thực-hiện"><a class="anchor" href="#mẫu-ghi-mỗi-lần-thực-hiện">Mẫu ghi mỗi lần thực hiện</a></h2>
+<p>Sao chép mẫu ra thư mục cá nhân đã ignore; không commit log chứa định danh/secret.</p>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Mốc/test:
+Ngày và timezone:
+Commit/artifact digest:
+Tool versions:
+Account alias / Region:
+Tài nguyên fixture và owner:
+Prerequisite/quyền:
+Lệnh hoặc bước thực hiện (che định danh):
+Expected:
+Actual:
+Trạng thái: chưa chạy | đạt | thất bại
+Evidence log/metric/trace đã che thông tin:
+Giới hạn hoặc nguyên nhân thất bại:
+Thời gian bắt đầu sự cố / phục hồi:
+Watermark dữ liệu và phương pháp tính RTO/RPO:
+Inventory sau cleanup / retained resources / chi phí còn lại:</code></pre></div>
+<h2 id="ma-trận-nghiệm-thu-cần-chạy-trên-aws"><a class="anchor" href="#ma-trận-nghiệm-thu-cần-chạy-trên-aws">Ma trận nghiệm thu cần chạy trên AWS</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Nhóm</th>
+<th>Positive</th>
+<th>Negative</th>
+<th>Bằng chứng bắt buộc</th>
+<th>Trạng thái</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>EC2</td>
+<td>FPM/Nginx sau reboot</td>
+<td>Dừng FPM, terminate instance</td>
+<td>HTTP/status, log, target timeline</td>
+<td>Chưa chạy</td>
+</tr>
+<tr>
+<td>RDS/S3</td>
+<td>Migration, upload/download</td>
+<td>Sai owner, URL hết hạn, file giả ảnh</td>
+<td>Row/key/version, HTTP error</td>
+<td>Chưa chạy</td>
+</tr>
+<tr>
+<td>HTTPS/session</td>
+<td>TLS hợp lệ, cookie qua target</td>
+<td>Một target mất</td>
+<td>hostname/visit count, error timeline</td>
+<td>Chưa chạy</td>
+</tr>
+<tr>
+<td>Queue/cache</td>
+<td>Report/cache hit/refresh</td>
+<td>Duplicate, worker crash, poison, cache down</td>
+<td>DB state, queue/DLQ, object key</td>
+<td>Chưa chạy</td>
+</tr>
+<tr>
+<td>Scheduler</td>
+<td>Tick theo lịch</td>
+<td>Target lỗi/command lỗi</td>
+<td>Scheduler DLQ khác ECS exit code</td>
+<td>Chưa chạy</td>
+</tr>
+<tr>
+<td>Quan sát/secret</td>
+<td>Trace HTTP→job, dev allow</td>
+<td>500/slow SQL, other-env deny</td>
+<td>Trace/log/alarm và principal</td>
+<td>Chưa chạy</td>
+</tr>
+<tr>
+<td>ECS/pipeline</td>
+<td>Digest + business smoke</td>
+<td>Bad port, healthy-but-broken API</td>
+<td>Task revision, rollback, schema compatibility</td>
+<td>Chưa chạy</td>
+</tr>
+<tr>
+<td>IaC</td>
+<td>Dựng môi trường mới</td>
+<td>Drift/change set replacement</td>
+<td>Template/parameter và smoke</td>
+<td>Chưa chạy</td>
+</tr>
+<tr>
+<td>Recovery</td>
+<td>Restore + app verify</td>
+<td>Watermark sau recovery point mất</td>
+<td>Tập UUID, RTO/RPO</td>
+<td>Chưa chạy</td>
+</tr>
+<tr>
+<td>Lambda</td>
+<td>Resize đúng</td>
+<td>Duplicate/corrupt/partial batch</td>
+<td>Kích thước, version, errors queue</td>
+<td>Chưa chạy</td>
+</tr>
+<tr>
+<td>Security services</td>
+<td>Phân tích finding sample</td>
+<td>Thiếu evidence/dedup</td>
+<td>Phiếu triage, không coi sample là exploit</td>
+<td>Offline fixture</td>
+</tr>
+<tr>
+<td>Cleanup</td>
+<td>Hết compute/network tính giờ</td>
+<td>Dừng giữa chừng</td>
+<td>Inventory retained/deleted</td>
+<td>Chưa chạy</td>
+</tr>
+</tbody></table>
+</div>
+<h2 id="không-đưa-vào-evidence"><a class="anchor" href="#không-đưa-vào-evidence">Không đưa vào evidence</a></h2>
+<p>AWS credentials/session token, Cognito tokens/password, presigned URL còn hiệu lực, <code>.env</code>, dump dữ liệu thật, output chưa che account/ARN/host. Dùng alias khi chia sẻ. Luôn giữ bản ghi <code>chưa chạy</code> cho bước bị bỏ qua.</p>
+
+<footer>Sinh tự động từ <code>labs/15-capstone-laravel/evidence/README.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

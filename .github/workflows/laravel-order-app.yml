@@ -1,0 +1,83 @@
+name: Laravel order lab
+on:
+  pull_request:
+    paths: ['examples/**', 'infra/**', '.github/workflows/laravel-order-app.yml']
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Deploy the existing sandbox runtime stack'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_sqlite, pdo_pgsql, mbstring, pcntl
+          tools: composer:v2
+      - run: composer install --no-interaction --prefer-dist
+        working-directory: examples/laravel-order-app
+      - run: composer test
+        working-directory: examples/laravel-order-app
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci && npm run build
+        working-directory: examples/laravel-order-app/web
+      - run: pip install cfn-lint==1.46.0 -r examples/image-processor/requirements.txt
+      - run: cfn-lint infra/laravel-order-app/*.yaml
+      - run: python -m unittest discover -s examples/image-processor
+      - run: docker build --target app -t order-app:test examples/laravel-order-app && docker build --target nginx -t order-web:test examples/laravel-order-app
+  deploy:
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-24.04
+    environment: dev
+    concurrency:
+      group: order-lab-dev
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_DEFAULT_REGION: ${{ vars.AWS_REGION }}
+      FOUNDATION_STACK: ${{ vars.FOUNDATION_STACK }}
+      RUNTIME_STACK: ${{ vars.RUNTIME_STACK }}
+      CFN_EXECUTION_ROLE: ${{ vars.CFN_EXECUTION_ROLE }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - run: pip install boto3
+      - name: Build and push immutable artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          output=$(aws cloudformation describe-stacks --stack-name "$FOUNDATION_STACK" --query 'Stacks[0].Outputs' --output json)
+          app=$(jq -r '.[]|select(.OutputKey=="AppRepo")|.OutputValue' <<< "$output")
+          web=$(jq -r '.[]|select(.OutputKey=="NginxRepo")|.OutputValue' <<< "$output")
+          telemetry=$(jq -r '.[]|select(.OutputKey=="TelemetryRepo")|.OutputValue' <<< "$output")
+          registry=${app%%/*}
+          aws ecr get-login-password | docker login --username AWS --password-stdin "$registry"
+          tag="${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          docker build --platform linux/amd64 --target app -t "$app:$tag" examples/laravel-order-app
+          docker build --platform linux/amd64 --target nginx -t "$web:$tag" examples/laravel-order-app
+          docker build --platform linux/amd64 -f examples/laravel-order-app/docker/telemetry.Dockerfile -t "$telemetry:$tag" examples/laravel-order-app
+          for item in "APP_IMAGE=$app" "NGINX_IMAGE=$web" "TELEMETRY_IMAGE=$telemetry"; do
+            key=${item%%=*}; repo=${item#*=}
+            docker push "$repo:$tag"
+            digest=$(aws ecr describe-images --repository-name "${repo#*/}" --image-ids "imageTag=$tag" --query 'imageDetails[0].imageDigest' --output text)
+            echo "$key=$repo@$digest" >> "$GITHUB_ENV"
+          done
+      - name: Migrate, deploy, verify and rollback when needed
+        env:
+          ACCESS_TOKEN: ${{ secrets.LAB_SMOKE_ACCESS_TOKEN }}
+        run: python infra/laravel-order-app/scripts/release.py

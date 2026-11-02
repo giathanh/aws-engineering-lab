@@ -533,3 +533,9 @@ Sau đó chạy lại Bước 8. Provider chỉ bị xóa nếu mang tag `Projec
 ## Tiếp theo
 
 Bạn đã deploy hạ tầng có review, có quyền tách bạch và có rollback được chứng minh, và cho CI dùng credentials tạm thời. Bài tiếp theo: **[Bài 13 — Độ tin cậy và hiệu năng: SLO, load test, backup, DR](../../notes/13-reliability-and-performance.md)**.
+
+---
+
+## Nhánh Laravel theo lộ trình gốc
+
+Lab dịch vụ ở trên được nối với [dự án Laravel + Vue](../15-capstone-laravel/README.md). Đọc phần bổ sung trong bài lý thuyết 12 và bảng mốc của dự án để chọn đúng prerequisite. Đầu ra bắt buộc gồm code/fixture, happy path, negative case và inventory sau cleanup; không dùng output minh họa làm bằng chứng đã chạy.

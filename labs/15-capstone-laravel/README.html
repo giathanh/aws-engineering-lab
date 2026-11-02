@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab 15 — Laravel + Vue, từ EC2 đến ECS và recovery drill</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+a.back{display:inline-flex;align-items:center;gap:6px;margin-bottom:16px;padding:4px 12px;border:1px solid var(--line);border-radius:999px;color:var(--muted);text-decoration:none;font-size:14px}
+a.back:hover{color:var(--fg);background:var(--code-bg)}
+main > a.back{display:none}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:24px;align-self:start;max-height:calc(100vh - 48px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}main > a.back{display:inline-flex}}
+@media print{a.back,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="toc"><a class="back" href="../../notes/00-introduction.html">← Mở đầu</a><div class="label">Mục lục</div><ol><li><a href="#chuẩn-bị-và-ownership">Chuẩn bị và ownership</a></li><li><a href="#chi-phí-và-điều-kiện-dừng">Chi phí và điều kiện dừng</a></li><li><a href="#checkpoint-local">Checkpoint local</a></li><li><a href="#mốc-1--laravel-native-trên-ec2">Mốc 1 — Laravel native trên EC2</a></li><li><a href="#mốc-2--rds-s3-và-vue-với-cognito">Mốc 2 — RDS, S3 và Vue với Cognito</a></li><li><a href="#mốc-3--hai-instance-https-và-asg">Mốc 3 — Hai instance, HTTPS và ASG</a></li><li><a href="#mốc-4--cache-worker-dlq-và-lịch">Mốc 4 — Cache, worker, DLQ và lịch</a></li><li><a href="#mốc-5--quan-sát-và-secret">Mốc 5 — Quan sát và secret</a></li><li><a href="#mốc-6--ecs-scheduler-và-pipeline">Mốc 6 — ECS, Scheduler và pipeline</a></li><li><a href="#mốc-7--tái-tạo-load-test-và-restore">Mốc 7 — Tái tạo, load test và restore</a></li><li><a href="#cleanup-và-dừng-giữa-chừng">Cleanup và dừng giữa chừng</a></li><li><a href="#troubleshooting-và-nghiệm-thu">Troubleshooting và nghiệm thu</a></li></ol></aside>
+<main>
+<a class="back" href="../../notes/00-introduction.html">← Mở đầu</a>
+<h1 id="lab-15--laravel--vue-từ-ec2-đến-ecs-và-recovery-drill"><a class="anchor" href="#lab-15--laravel--vue-từ-ec2-đến-ecs-và-recovery-drill">Lab 15 — Laravel + Vue, từ EC2 đến ECS và recovery drill</a></h1>
+<blockquote>
+<p><a href="../../notes/15-capstone-laravel.html">Lý thuyết</a> · <a href="../../examples/laravel-order-app/README.html">Ứng dụng</a> · <a href="../../infra/laravel-order-app/README.html">CloudFormation</a> · <a href="evidence/README.html">Bằng chứng</a>.
+Biên soạn 2026-11-01. Các thao tác AWS bên dưới là hướng dẫn để người học thực hiện; chưa được chạy trên account thật trong lần biên soạn này.</p>
+</blockquote>
+<h2 id="chuẩn-bị-và-ownership"><a class="anchor" href="#chuẩn-bị-và-ownership">Chuẩn bị và ownership</a></h2>
+<p>Dùng Bash cho các khối lệnh, chạy từ <strong>repo root</strong> trừ khi ghi rõ trên EC2. Cần AWS CLI v2, jq, Python 3.10+ với boto3, PHP 8.3/Composer, Node 22 và Docker nếu build container. Hoàn thành lab 01–04 và đọc prerequisite theo từng mốc ở bài 15.</p>
+<p>Mỗi lần học có ba stack riêng: foundation, EC2 và ECS. Foundation tạo tài nguyên tính tiền ngay, kể cả chưa chạy ứng dụng. Dùng đúng Region, không tái sử dụng stack production. Domain và ACM certificate đã xác thực trong cùng Region là prerequisite của đường HTTPS; account không có domain làm local/lab dịch vụ trước, ghi HTTPS <code>chưa chạy</code>.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export AWS_PROFILE=aws-lab
+export AWS_REGION=ap-southeast-1 AWS_DEFAULT_REGION=ap-southeast-1
+export FOUNDATION_STACK=orders-dev-foundation
+export EC2_STACK=orders-dev-ec2 RUNTIME_STACK=orders-dev-runtime
+export APP_ORIGIN=https://orders.example.com   # thay bằng domain bạn quản lý
+export CERTIFICATE_ARN='&lt;ARN ACM cùng Region&gt;'
+export COGNITO_PREFIX='&lt;prefix-duy-nhat-cua-ban&gt;'
+export LAB_STATE=$(mktemp -d)
+chmod 700 &quot;$LAB_STATE&quot;
+aws sts get-caller-identity</code></pre></div>
+<p>Thay toàn bộ placeholder trước khi chạy. <code>LAB_STATE</code> lưu tham số/inventory local, không commit. Quyền người tạo stack và role runtime được giải thích trong README hạ tầng. Không dùng <code>AdministratorAccess</code> làm cách chữa lỗi permission; đọc event lỗi để xác định action/resource thiếu.</p>
+<h2 id="chi-phí-và-điều-kiện-dừng"><a class="anchor" href="#chi-phí-và-điều-kiện-dừng">Chi phí và điều kiện dừng</a></h2>
+<p>Tính một buổi 3 giờ, tối đa 2 EC2 <strong>hoặc</strong> 2 API + 2 worker Fargate, thêm một task migration/tick; rollout có thể tạm gấp đôi số service task. Foundation dùng một NAT, một ALB cho mỗi stack compute đang giữ, một RDS 20 GB và một cache node. Không chạy cả EC2 và ECS qua đêm.</p>
+<p>Bảng sau là <strong>giả định để làm phép tính</strong>, không phải báo giá Singapore đã xác nhận. Thay đơn giá bằng bảng Region tại các nguồn trước khi deploy, ghi ngày vào evidence:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Thành phần</th>
+<th>Giả định đơn giá cho bài tính</th>
+<th>Số lượng</th>
+<th>Ước tính 3 giờ</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>NAT</td>
+<td>$0.06/giờ</td>
+<td>1</td>
+<td>$0.18 + xử lý dữ liệu</td>
+</tr>
+<tr>
+<td>ALB</td>
+<td>$0.04/giờ gồm LCU giả định</td>
+<td>1</td>
+<td>$0.12</td>
+</tr>
+<tr>
+<td>Public IPv4</td>
+<td>$0.005/IP-giờ</td>
+<td>tối thiểu 3</td>
+<td>$0.045</td>
+</tr>
+<tr>
+<td>EC2</td>
+<td>$0.025/instance-giờ</td>
+<td>2</td>
+<td>$0.15</td>
+</tr>
+<tr>
+<td>RDS</td>
+<td>$0.03/giờ</td>
+<td>1</td>
+<td>$0.09 + storage/backup</td>
+</tr>
+<tr>
+<td>Cache</td>
+<td>$0.025/giờ</td>
+<td>1</td>
+<td>$0.075</td>
+</tr>
+<tr>
+<td>Fargate thay EC2</td>
+<td>$0.035/task-giờ với 0.5 vCPU/1 GB giả định</td>
+<td>4</td>
+<td>$0.42 + task tạm</td>
+</tr>
+</tbody></table>
+</div>
+<p>Theo giả định này, phần giờ khoảng $0.66 với EC2 hoặc $0.93 với ECS trong 3 giờ; còn S3/ECR/log/trace/secret/Cognito/request/egress/backup và thuế. Đặt ngân sách buổi <strong>$5</strong> là điều kiện tự dừng, không phải AWS spending cap. Dừng và cleanup sau 3 giờ hoặc khi thấy tài nguyên vượt inventory dự kiến. Không suy chi phí thật từ bảng minh họa.</p>
+<p>Nguồn được mở đối chiếu 2026-11-01: <a href="https://aws.amazon.com/ec2/pricing/on-demand/" target="_blank" rel="noopener">EC2</a>, <a href="https://aws.amazon.com/vpc/pricing/" target="_blank" rel="noopener">VPC/NAT/IPv4</a>, <a href="https://aws.amazon.com/elasticloadbalancing/pricing/" target="_blank" rel="noopener">ALB</a>, <a href="https://aws.amazon.com/rds/postgresql/pricing/" target="_blank" rel="noopener">RDS PostgreSQL</a>, <a href="https://aws.amazon.com/fargate/pricing/" target="_blank" rel="noopener">Fargate</a>, <a href="https://aws.amazon.com/elasticache/pricing/" target="_blank" rel="noopener">ElastiCache</a>. Các bảng giá tương tác cần chọn Region thực tế trước khi tính.</p>
+<h2 id="checkpoint-local"><a class="anchor" href="#checkpoint-local">Checkpoint local</a></h2>
+<p>Làm theo README ứng dụng; cần tạo đơn, report hoàn tất và test owner isolation đạt trước khi tạo AWS. SQLite/local disk giúp học luồng nghiệp vụ; PostgreSQL/Redis Compose dùng cho concurrency/session. Không dùng kết quả SQLite để tuyên bố đã kiểm chứng row lock PostgreSQL.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cd examples/laravel-order-app
+composer install
+cp .env.example .env
+php artisan key:generate
+touch database/database.sqlite
+php artisan migrate --seed
+composer test
+cd web
+npm ci
+npm run build
+cd ../../..</code></pre></div>
+<p>Nếu <code>.env</code> đã có, giữ cấu hình và key của bạn, không chạy lại lệnh copy. Bản local có worker riêng; xem README để chạy API/Vue/worker.</p>
+<h2 id="mốc-1--laravel-native-trên-ec2"><a class="anchor" href="#mốc-1--laravel-native-trên-ec2">Mốc 1 — Laravel native trên EC2</a></h2>
+<p>Để tái lập giữa các buổi, lab dùng template đã có để tạo mạng/dữ liệu, nhưng bạn vẫn phải đọc resource và giải thích route/SG trước khi chạy. Bài 05 độc lập tiếp tục là đường học EC2 bằng CLI thủ công.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws cloudformation create-stack --stack-name &quot;$FOUNDATION_STACK&quot; \
+  --template-body file://infra/laravel-order-app/foundation.yaml \
+  --capabilities CAPABILITY_IAM \
+  --parameters ParameterKey=Environment,ParameterValue=dev \
+    ParameterKey=AppOrigin,ParameterValue=&quot;$APP_ORIGIN&quot; \
+    ParameterKey=CognitoPrefix,ParameterValue=&quot;$COGNITO_PREFIX&quot;
+aws cloudformation wait stack-create-complete --stack-name &quot;$FOUNDATION_STACK&quot;
+aws cloudformation describe-stacks --stack-name &quot;$FOUNDATION_STACK&quot; &gt; &quot;$LAB_STATE/foundation.json&quot;
+out() { jq -r --arg key &quot;$1&quot; '.Stacks[0].Outputs[]|select(.OutputKey==$key)|.OutputValue' &quot;$LAB_STATE/foundation.json&quot;; }</code></pre></div>
+<p><em>Kỳ vọng:</em> <code>CREATE_COMPLETE</code>; DB/cache private, app SG chỉ nhận 8080 từ ALB SG. Nếu thất bại: <code>describe-stack-events</code>, tìm event lỗi đầu tiên; quota, instance class và service-linked role thường là prerequisite cần sửa. Không tiếp tục bằng output rỗng.</p>
+<p>Đóng gói release với vendor theo lockfile và Vue build:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>python3 examples/laravel-order-app/scripts/package.py &quot;$LAB_STATE/app.tgz&quot;
+export ARTIFACT_KEY=&quot;releases/$(git rev-parse --short HEAD)-$(date -u +%Y%m%d%H%M%S).tgz&quot;
+aws s3 cp &quot;$LAB_STATE/app.tgz&quot; &quot;s3://$(out Artifacts)/$ARTIFACT_KEY&quot;
+export AMI_ID=$(aws ssm get-parameter \
+  --name /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id \
+  --query Parameter.Value --output text)
+python3 infra/laravel-order-app/scripts/parameters.py &quot;$FOUNDATION_STACK&quot; --mode ec2 &gt; &quot;$LAB_STATE/ec2-parameters.json&quot;
+aws cloudformation create-stack --stack-name &quot;$EC2_STACK&quot; \
+  --template-body file://infra/laravel-order-app/ec2.yaml \
+  --parameters &quot;file://$LAB_STATE/ec2-parameters.json&quot;
+aws cloudformation wait stack-create-complete --stack-name &quot;$EC2_STACK&quot;</code></pre></div>
+<p>AMI parameter phải tồn tại ở Region đã chọn; xác nhận <code>describe-images</code> architecture <code>x86_64</code>, owner Canonical và image available. Nếu không, lấy AMI Ubuntu 24.04 chính thức cùng Region rồi đặt <code>AMI_ID</code>; không thay bằng AMI lạ để bỏ qua bước xác minh.</p>
+<p>Lấy ASG rồi instance ID theo tag Project của stack; mở Session Manager:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export INSTANCE_ID=$(aws ec2 describe-instances --filters &quot;Name=tag:Project,Values=$EC2_STACK&quot; Name=instance-state-name,Values=running --query 'Reservations[0].Instances[0].InstanceId' --output text)
+aws ssm start-session --target &quot;$INSTANCE_ID&quot;</code></pre></div>
+<p><strong>Trên EC2</strong>:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>sudo cloud-init status --wait
+cd /var/www/app
+sudo -u www-data php artisan migrate --seed --force
+curl -i http://localhost:8080/up
+curl -i http://localhost:8080/api/ready
+sudo systemctl status php8.3-fpm nginx --no-pager</code></pre></div>
+<p><em>Kỳ vọng:</em> <code>/up</code> và <code>/api/ready</code> đều 200 sau migration. <code>.env</code> là root:www-data 0640, secret được lấy qua instance role. Tắt FPM bằng <code>sudo systemctl stop php8.3-fpm</code>: Nginx trả 502; xem <code>/var/log/nginx/error.log</code>, khôi phục <code>sudo systemctl start php8.3-fpm</code>. Reboot qua SSM/EC2 rồi kiểm tra <code>/up</code> lại. Không restart worker trước khi schema sẵn sàng.</p>
+<h2 id="mốc-2--rds-s3-và-vue-với-cognito"><a class="anchor" href="#mốc-2--rds-s3-và-vue-với-cognito">Mốc 2 — RDS, S3 và Vue với Cognito</a></h2>
+<p>Foundation đã tạo RDS, bucket private và Cognito. App dùng PostgreSQL ngay ở đường AWS; bước chuyển từ local SQLite là chạy migration/seed vào DB mới, không copy file SQLite lên RDS. Fixture DB user <code>orders</code> là master do RDS quản lý secret để giảm bootstrap; trước production phải tách migration role với runtime SQL role giới hạn DML.</p>
+<ol>
+<li>Lấy ALB DNS bằng <code>describe-stacks --stack-name &quot;$EC2_STACK&quot;</code>; trỏ domain <code>APP_ORIGIN</code> đến ALB bằng Alias Route 53 hoặc CNAME của subdomain. ACM cert phải khớp hostname. Kiểm tra <code>curl -I &quot;$APP_ORIGIN/up&quot;</code> trả 200 và HTTP redirect sang HTTPS.</li>
+<li>Trong Cognito user pool <code>$(out Pool)</code>, tạo hai user test với <strong>Suppress invitation</strong>, không gửi SMS/email. Đặt password riêng trong môi trường cá nhân; dùng hosted UI đổi temporary password khi đăng nhập. Không ghi password vào repo.</li>
+<li>Mở Vue bằng đúng <code>APP_ORIGIN</code>, đăng nhập user thứ nhất. Tạo đơn, logout, đăng nhập user thứ hai: danh sách không chứa đơn của user thứ nhất. API đọc trực tiếp UUID của người khác phải trả 404.</li>
+<li>Upload PNG/JPEG nhỏ: Vue gọi endpoint cấp URL, PUT trực tiếp S3, rồi verify. Với local disk sẽ trả 409; ở AWS phải thành công. <code>uploads/</code> vẫn private: anonymous GET trực tiếp S3 và CloudFront phải bị từ chối.</li>
+<li>Trong DevTools Network, giữ một URL đã hết 2 phút rồi thử PUT lại: 403; ký mới nếu cần. Không đưa URL này vào evidence. Cố gửi text với <code>Content-Type: image/png</code>: PUT có thể thành công nhưng verify phải trả 422.</li>
+</ol>
+<p>S3 CORS origin phải đúng cả scheme/host/port. Sai CORS gây lỗi browser, không nhất thiết có nghĩa IAM đã chặn <code>curl</code>. <code>AccessDenied</code> trong backend cần xem instance role/resource prefix; không cấp <code>s3:*</code> toàn account.</p>
+<h2 id="mốc-3--hai-instance-https-và-asg"><a class="anchor" href="#mốc-3--hai-instance-https-và-asg">Mốc 3 — Hai instance, HTTPS và ASG</a></h2>
+<p>Đổi <code>DesiredCount</code> trong file ec2 parameters từ 1 thành 2, update stack với cùng template:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>jq 'map(if .ParameterKey==&quot;DesiredCount&quot; then .ParameterValue=&quot;2&quot; else . end)' &quot;$LAB_STATE/ec2-parameters.json&quot; &gt; &quot;$LAB_STATE/ec2-two.json&quot;
+aws cloudformation update-stack --stack-name &quot;$EC2_STACK&quot; --use-previous-template --parameters &quot;file://$LAB_STATE/ec2-two.json&quot;
+aws cloudformation wait stack-update-complete --stack-name &quot;$EC2_STACK&quot;</code></pre></div>
+<p>Target group cần có hai target healthy. Cả hai instance lấy cùng APP_KEY/DB/cache/bucket. Không chạy seed trên mọi máy. Lưu access token của user test vào biến <code>ACCESS_TOKEN</code> bằng nhập kín trong shell; không dán vào tài liệu. Chỉ dùng token còn hạn, đúng issuer/client/scope của stack này.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>read -rs -p 'Access token của user test: ' ACCESS_TOKEN; echo
+export ACCESS_TOKEN BASE_URL=&quot;$APP_ORIGIN&quot;
+for n in 1 2 3 4; do curl -fsS -c &quot;$LAB_STATE/cookies&quot; -b &quot;$LAB_STATE/cookies&quot; -H &quot;Authorization: Bearer $ACCESS_TOKEN&quot; &quot;$BASE_URL/api/session&quot;; echo; done</code></pre></div>
+<p><em>Kỳ vọng:</em> visits tăng dù hostname target thay đổi. Nếu hostname chưa đổi, chạy thêm vài request; không bật stickiness chỉ để che lỗi session local. Cookie dùng HTTPS và cùng APP_KEY.</p>
+<p>Chọn <strong>một instance có tag đúng stack</strong>, terminate bằng <code>aws ec2 terminate-instances --instance-ids &quot;$INSTANCE_ID&quot;</code>; theo dõi target health và request lỗi có timestamp. ASG phải thay máy mới; dữ liệu đơn/upload còn nguyên. Ghi thời gian mất target/khôi phục, không điền số giả. Kiểm tra giới hạn một NAT/Single-AZ DB trước khi kết luận HA.</p>
+<h2 id="mốc-4--cache-worker-dlq-và-lịch"><a class="anchor" href="#mốc-4--cache-worker-dlq-và-lịch">Mốc 4 — Cache, worker, DLQ và lịch</a></h2>
+<p>Trên mỗi EC2 dùng làm worker: <code>sudo systemctl enable --now order-worker</code>. Worker có thể chạy ở máy riêng về sau; API không chạy job nặng trong request.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>BASE_URL=&quot;$APP_ORIGIN&quot; python3 examples/laravel-order-app/scripts/smoke.py</code></pre></div>
+<p><em>Kỳ vọng:</em> tạo/đọc đơn, gửi report với cùng key hai lần, cùng report ID, tải kết quả có đơn vừa tạo. Dừng worker rồi gửi report: status pending; khởi động lại thì complete. Kill process worker giữa tác vụ và gửi lại cùng key: chỉ một report trong DB, object key không đổi. Có thể phát sinh thêm S3 version.</p>
+<p>Cache: gọi GET cùng đơn hai lần, PATCH quantity rồi GET lại phải thấy giá trị mới khi invalidation thành công. Thử lỗi cache trên fixture bằng tạm cấu hình <code>REDIS_HOST=127.0.0.1</code> ở EC2 rồi restart FPM; khôi phục ngay sau thử. Order detail có fallback DB, nhưng session và JWT JWKS cache có thể fail-closed; không kết luận mọi endpoint phải vẫn 200.</p>
+<p>Poison job: trong môi trường riêng, tạm bỏ quyền PutObject <code>reports/*</code> của <strong>instance role lab</strong>, gửi một report và chờ đủ số lần nhận. SQS queue visibility 180 giây, redrive 5 lần; có thể cần nhiều phút. Xem DLQ visible tăng, report chưa complete. Khôi phục quyền trước khi redrive; dùng <code>start-message-move-task</code> từ DLQ sang source queue với tốc độ 1 msg/s và kiểm tra report hoàn tất. Không chỉnh role dùng chung. Nếu dùng Laravel finite tries, kiểm tra <code>failed_jobs</code> thay vì kỳ vọng DLQ.</p>
+<p>Scheduler được bật ở mốc 6 bằng ECS RunTask. Trước đó có thể thử một lần trên EC2: <code>sudo -u www-data php artisan reports:tick 2026-11-01T03:00:00Z</code>, chạy lại cùng slot; số report không tăng lần hai. Đây là kiểm chứng command/idempotency, chưa phải bằng chứng Scheduler AWS đã chạy.</p>
+<h2 id="mốc-5--quan-sát-và-secret"><a class="anchor" href="#mốc-5--quan-sát-và-secret">Mốc 5 — Quan sát và secret</a></h2>
+<p>EC2: xem Nginx/FPM/systemd logs bằng SSM. Bước collector tự động ở ECS mốc 6; trước đó tracing AWS ghi <code>chưa chạy</code>. Đọc cấu hình <code>docker/otel.yaml</code> và helper Telemetry để biết span nào được tạo.</p>
+<p>Secret dev/prod: trên EC2, instance role đọc AppKey được nhưng không đọc ProdCanary. Không in secret ra màn hình:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code># Trên EC2; đặt ARN từ output foundation, không phải giá trị secret
+python3 - &lt;&lt;'PY'
+import boto3, os
+sm=boto3.client('secretsmanager',region_name=os.environ['AWS_REGION'])
+for variable in ['DEV_SECRET_ARN','OTHER_SECRET_ARN']:
+    try: sm.get_secret_value(SecretId=os.environ[variable]); print(variable, 'ALLOWED')
+    except sm.exceptions.ClientError as e: print(variable,e.response['Error']['Code'])
+PY</code></pre></div>
+<p>Export AWS_REGION/DEV_SECRET_ARN/OTHER_SECRET_ARN ở shell EC2 trước khi chạy. Kỳ vọng AppKey ALLOWED, ProdCanary AccessDenied. Với ECS, execution role đọc secret để inject; task role cố đọc trực tiếp cả hai đều bị từ chối theo template. Muốn kiểm chứng allow/deny ở execution role dùng IAM simulation có đúng context hoặc một task test riêng, không nhầm quyền người deploy với quyền app.</p>
+<p>Tạo lỗi HTTP 500 và slow SQL: bật <code>LAB_FAULTS=true</code> <strong>chỉ cho fixture</strong> (EC2 <code>.env</code> rồi restart; ECS thêm env task definition qua template và update). Dùng token gọi <code>/api/fault/500</code>, <code>/api/fault/slow</code>. Tìm log theo X-Request-ID, metric latency/error, trace HTTP→DB, rồi khôi phục <code>LAB_FAULTS=false</code>. Alarm không gắn SNS mặc định, xem state trong CloudWatch; không giả định có email thông báo.</p>
+<h2 id="mốc-6--ecs-scheduler-và-pipeline"><a class="anchor" href="#mốc-6--ecs-scheduler-và-pipeline">Mốc 6 — ECS, Scheduler và pipeline</a></h2>
+<p>Build/push ba image theo <a href="../../infra/laravel-order-app/README.html">README hạ tầng</a>, đặt <code>APP_IMAGE</code>, <code>NGINX_IMAGE</code>, <code>TELEMETRY_IMAGE</code> bằng digest. Sau đó:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>python3 infra/laravel-order-app/scripts/parameters.py &quot;$FOUNDATION_STACK&quot; &gt; &quot;$LAB_STATE/runtime.json&quot;
+aws cloudformation create-stack --stack-name &quot;$RUNTIME_STACK&quot; \
+  --template-body file://infra/laravel-order-app/runtime.yaml --capabilities CAPABILITY_IAM \
+  --parameters &quot;file://$LAB_STATE/runtime.json&quot;
+aws cloudformation wait stack-create-complete --stack-name &quot;$RUNTIME_STACK&quot;</code></pre></div>
+<p>Ban đầu DesiredCount=0. Trỏ DNS sang ALB runtime trước smoke test; EC2 có thể giữ tạm để chuyển đổi nhưng không chạy Scheduler trùng. <code>release.py</code> chạy migration bằng task một lần trước khi cập nhật service lên 2 API/2 worker:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>python3 infra/laravel-order-app/scripts/release.py</code></pre></div>
+<p><em>Kỳ vọng:</em> migration exit 0, service stable, smoke test PASS, image digest đúng build. Nếu app khởi động nhưng smoke fail, script cập nhật lại các tham số runtime trước đó. Lần deploy đầu trước đó có desired=0: rollback về 0 là đúng, không phải ứng dụng cũ đang phục vụ. Migration đã chạy vẫn còn; phải tương thích ngược.</p>
+<p>Sau khi ổn định, lấy runtime parameters hiện tại rồi đổi ScheduleState=ENABLED (giữ các image/digest và DesiredCount hiện tại), update stack. Mỗi 5 phút Scheduler chạy một task <code>reports:tick</code>; xem task exit code và reports. Cố tình dùng một task revision không có quyền target trong fixture riêng để thấy Scheduler delivery error/DLQ; với command bên trong task lỗi, xem ECS stopped task/log thay vì kỳ vọng Scheduler DLQ.</p>
+<p>Kiểm tra tracing: tạo report từ Vue, mở X-Ray và tìm span HTTP/report.export/storage.put chung trace. Nếu chỉ thấy HTTP, kiểm tra carrier trong outbox và OTEL env worker; nếu không có trace, kiểm tra collector log, port 4318, IAM xray và đường outbound.</p>
+<p>CI/CD: workflow chỉ deploy khi chạy thủ công, checkbox deploy=true, branch main và GitHub environment dev. Cấu hình environment theo README hạ tầng. PR chỉ test/build. Token smoke là user test có hạn ngắn, nhập vào environment secret trước phiên deploy và xóa sau phiên; không dùng account thật hoặc AWS access key.</p>
+<p>Negative case bắt buộc: (1) image sai port/FPM không lên, ECS circuit breaker xử lý; (2) image healthy nhưng API report sai, business smoke kích hoạt rollback. Ghi cả task definition trước/sau và kết quả sau khôi phục. Graceful worker stop phải đủ hoàn thành job hoặc để message được nhận lại an toàn.</p>
+<h2 id="mốc-7--tái-tạo-load-test-và-restore"><a class="anchor" href="#mốc-7--tái-tạo-load-test-và-restore">Mốc 7 — Tái tạo, load test và restore</a></h2>
+<p><strong>Tái tạo:</strong> dùng tên stack foundation mới (ví dụ orders-staging-foundation), Cognito prefix/domain riêng, cùng template và image digest. Chạy lại bootstrap/migration/smoke. Không import âm thầm tài nguyên tạo tay từ bài 05–14. Domain/certificate là đầu vào cấp ngoài; mọi tài nguyên ứng dụng khác nằm trong template.</p>
+<p><strong>Load test:</strong> chỉ đặt BASE_URL đến endpoint lab mình sở hữu:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>python3 examples/laravel-order-app/scripts/load.py &gt; &quot;$LAB_STATE/load.jsonl&quot;</code></pre></div>
+<p>Script có baseline/ramp/steady/recovery, tối đa 4 concurrent, timeout 3 giây và dừng khi hơn 20% lỗi trong 20 mẫu gần nhất. Lưu count/p95/p99/error; script không tính percentile từ average. Xem saturation PHP-FPM, DB connections và queue backlog cùng thời điểm. Không tăng max task trước khi tìm bottleneck.</p>
+<p><strong>Dependency drill:</strong> bật LAB_FAULTS cho fixture PostgreSQL. Gọi <code>/api/probe?mode=slow&amp;resilient=0</code> rồi <code>...&amp;resilient=1</code> vài lần, so latency/attempts/503. Sau ba failure, circuit mở 15 giây; gọi mode=ok sau cooldown để thấy phục hồi. Tạo nhiều request đồng thời để thấy 429 từ bulkhead. Load script sẽ dừng sớm khi lỗi vượt ngưỡng; đây là điều kiện dừng đúng, không bỏ giới hạn để kéo dài drill.</p>
+<p><strong>Recovery drill:</strong> snapshot nguồn, tạo thêm đơn làm watermark sau snapshot, rồi restore vào DB khác. Không xóa nguồn để mô phỏng sự cố.</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>export SOURCE_DB=$(out Database)
+export SNAPSHOT_ID=&quot;orders-dr-$(date -u +%Y%m%d%H%M%S)&quot;
+aws rds create-db-snapshot --db-instance-identifier &quot;$SOURCE_DB&quot; --db-snapshot-identifier &quot;$SNAPSHOT_ID&quot;
+aws rds wait db-snapshot-available --db-snapshot-identifier &quot;$SNAPSHOT_ID&quot;
+# Tạo một đơn mới qua Vue và ghi timestamp/UUID làm watermark; sau đó bắt đầu đồng hồ sự cố.
+export RESTORE_DB=&quot;orders-restore-$(date -u +%Y%m%d%H%M%S)&quot;
+date -u +%FT%TZ &gt; &quot;$LAB_STATE/recovery-start.txt&quot;
+aws rds restore-db-instance-from-db-snapshot --db-instance-identifier &quot;$RESTORE_DB&quot; \
+  --db-snapshot-identifier &quot;$SNAPSHOT_ID&quot; --db-instance-class db.t4g.micro \
+  --db-subnet-group-name &quot;$(out DBSubnets)&quot; --vpc-security-group-ids &quot;$(out DBSG)&quot; \
+  --no-publicly-accessible --no-multi-az
+aws rds wait db-instance-available --db-instance-identifier &quot;$RESTORE_DB&quot;</code></pre></div>
+<p>Tạo runtime <strong>recovery</strong> riêng DesiredCount=0 với DBHost bản restore và DBSecret tương ứng, cùng mạng/role được mở đúng secret ARN; không đổi runtime chính. Restore có thể tạo managed secret mới; kiểm tra <code>MasterUserSecret.SecretArn</code>, cập nhật execution role/EC2 role cho secret của bản restore. Nếu không có managed secret, cấu hình quản lý password cho DB restore theo lab 07 trước khi chạy task. Dùng app test/migration task trên runtime recovery để query tập UUID và snapshot JSON trước khi chạy smoke tạo dữ liệu mới.</p>
+<p>Ghi dữ liệu trước snapshot có đủ; watermark sau snapshot có thể mất đúng theo recovery point. Chạy smoke qua domain recovery (Cognito callback phải thêm origin recovery hoặc dùng token API cùng user pool), ghi thời gian kết thúc. RTO bao gồm thời gian đổi cấu hình và kiểm tra này; RPO dùng watermark chứ không chỉ số lượng rows.</p>
+<p><strong>ADR cuối:</strong> ít nhất một lựa chọn thay thế cho EC2/ECS/Lambda, RDS/Aurora/DynamoDB, S3/EFS, cache, queue, HA/DR. Đánh giá vận hành, bảo mật, độ tin cậy, hiệu năng, chi phí, tính bền vững; dẫn evidence đo được và việc chưa thử. Không gọi cấu hình tiết kiệm Single-AZ là production HA.</p>
+<h2 id="cleanup-và-dừng-giữa-chừng"><a class="anchor" href="#cleanup-và-dừng-giữa-chừng">Cleanup và dừng giữa chừng</a></h2>
+<p>Lưu inventory trước khi xóa. Nếu mất shell, khôi phục bằng <code>describe-stacks</code> theo ba tên stack; không tìm mọi tài nguyên account rồi xóa hàng loạt.</p>
+<ol>
+<li>Disable ScheduleState qua update runtime hoặc xóa runtime stack; chờ task tick đang chạy kết thúc. Không xóa queue khi scheduler còn gửi.</li>
+<li>Xóa runtime recovery nếu có, rồi runtime chính và EC2 stack. Các thao tác dưới đây chỉ áp dụng stack do phiên lab tạo:</li>
+</ol>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>aws cloudformation list-stack-resources --stack-name &quot;$RUNTIME_STACK&quot; &gt; &quot;$LAB_STATE/runtime-inventory.json&quot;
+aws cloudformation delete-stack --stack-name &quot;$RUNTIME_STACK&quot;
+aws cloudformation wait stack-delete-complete --stack-name &quot;$RUNTIME_STACK&quot;
+aws cloudformation delete-stack --stack-name &quot;$EC2_STACK&quot;
+aws cloudformation wait stack-delete-complete --stack-name &quot;$EC2_STACK&quot;</code></pre></div>
+<ol start="3">
+<li>Xóa DB restore sau khi đã thu evidence: <code>aws rds delete-db-instance --db-instance-identifier &quot;$RESTORE_DB&quot; --skip-final-snapshot --delete-automated-backups</code>; chờ db-instance-deleted. Chỉ bỏ snapshot cuối cho bản restore dùng dữ liệu giả.</li>
+<li>Lưu foundation inventory và outputs rồi delete-stack foundation, chờ hoàn tất. Template giữ <strong>bucket, repository</strong> và tạo <strong>RDS final snapshot</strong>; chúng vẫn có thể tính phí.</li>
+<li>Với bucket thuộc đúng lab, kiểm kê versions/delete markers rồi xóa bằng script <code>cleanup-retained.py</code> trong README hạ tầng. <code>aws s3 rm --recursive</code> không xóa hết version. Dọn ECR image/repository và snapshot lab sau khi xác nhận không cần cho buổi sau.</li>
+<li>Kiểm tra EC2/ASG, ALB, NAT, EIP, RDS, cache, ECS service/task, Scheduler, queues, log groups, CloudFront và IAM roles theo inventory. <code>DELETE_FAILED</code> phải đọc event để xử lý dependency; không coi command trả về là đã dọn xong.</li>
+<li>Domain record, ACM certificate và OIDC provider có trước lab được giữ. Xóa token smoke trên GitHub, logout Cognito; secret bị scheduled deletion được ghi lại thời hạn. Billing có độ trễ, không dùng làm bằng chứng duy nhất.</li>
+</ol>
+<h2 id="troubleshooting-và-nghiệm-thu"><a class="anchor" href="#troubleshooting-và-nghiệm-thu">Troubleshooting và nghiệm thu</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Triệu chứng</th>
+<th>Thu thập</th>
+<th>Cách sửa có phạm vi nhỏ</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>EC2 không xuất hiện SSM</td>
+<td>instance profile, route NAT, cloud-init, SSM agent</td>
+<td>Sửa profile/egress/agent; không mở SSH ra Internet</td>
+</tr>
+<tr>
+<td>ALB 502</td>
+<td>nginx error, FPM socket/port, process</td>
+<td>Khớp socket native hoặc loopback container; restart service lỗi</td>
+</tr>
+<tr>
+<td>ALB 503</td>
+<td>target health/reason, bootstrap log</td>
+<td>Chờ đủ boot, sửa health path; không bỏ health check</td>
+</tr>
+<tr>
+<td>API 401</td>
+<td>token_use/issuer/client/scope/expiry, JWKS fetch</td>
+<td>Đăng nhập lại đúng pool; không chuyển AUTH_MODE local trên AWS</td>
+</tr>
+<tr>
+<td>Report pending</td>
+<td>outbox, queue, worker log, S3 permission</td>
+<td>Dispatch lại outbox; sửa quyền prefix, redrive có kiểm soát</td>
+</tr>
+<tr>
+<td>ECS cannot pull image</td>
+<td>image digest, execution role, NAT, ECR</td>
+<td>Sửa đường outbound/quyền đúng repo, không gán public IP mặc định</td>
+</tr>
+<tr>
+<td>Trace rời rạc</td>
+<td>carrier, SDK/collector log</td>
+<td>Kiểm tra propagation và exporter, không ghi token vào trace</td>
+</tr>
+<tr>
+<td>Cleanup kẹt</td>
+<td>stack events, ENI dependency</td>
+<td>Chờ service xóa ENI, dọn theo owner; giữ inventory lỗi</td>
+</tr>
+</tbody></table>
+</div>
+<p>Nộp API smoke, owner negative test, duplicate job/worker crash, session qua target, S3 lỗi, tracing, secret deny, rollout/rollback, restore watermark/RTO/RPO, load test, ADR và inventory sau cleanup. Đánh dấu từng mục <code>đã chạy / chưa chạy / thất bại</code>; output minh họa không được dùng làm evidence.</p>
+
+<footer>Sinh tự động từ <code>labs/15-capstone-laravel/README.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

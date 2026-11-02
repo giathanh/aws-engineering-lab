@@ -33,6 +33,13 @@ const docs = [
   { src: 'labs/13-reliability-and-performance/README.md', nav: '13. Lab' },
   { src: 'notes/14-architecture-and-governance.md', nav: '14. Lý thuyết' },
   { src: 'labs/14-architecture-and-governance/README.md', nav: '14. Lab' },
+  { src: 'labs/14-architecture-and-governance/findings.md', nav: '14. Finding' },
+  { src: 'notes/15-capstone-laravel.md', nav: '15. Dự án' },
+  { src: 'labs/15-capstone-laravel/README.md', nav: '15. Lab dự án' },
+  { src: 'labs/15-capstone-laravel/evidence/README.md', nav: '15. Kiểm chứng' },
+  { src: 'examples/laravel-order-app/README.md', nav: 'Ứng dụng Laravel' },
+  { src: 'examples/image-processor/README.md', nav: 'Lab ảnh Lambda' },
+  { src: 'infra/laravel-order-app/README.md', nav: 'Hạ tầng dự án' },
 ];
 const htmlPath = (p) => p.replace(/\.md$/, '.html');
 

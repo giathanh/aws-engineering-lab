@@ -1,0 +1,564 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Laravel API and worker. Start at DesiredCount=0, run migration, then scale.
+Parameters:
+  VpcId:
+    Type: String
+  PublicSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+  PrivateSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+  AlbSG:
+    Type: String
+  AppSG:
+    Type: String
+  DBHost:
+    Type: String
+  DBSecret:
+    Type: String
+  CacheHost:
+    Type: String
+  CacheKey:
+    Type: String
+  AppKey:
+    Type: String
+  Bucket:
+    Type: String
+  QueueURL:
+    Type: String
+  TaskRole:
+    Type: String
+  ExecutionRole:
+    Type: String
+  Cluster:
+    Type: String
+  Logs:
+    Type: String
+  Issuer:
+    Type: String
+  ClientId:
+    Type: String
+  CognitoDomain:
+    Type: String
+  AppOrigin:
+    Type: String
+  CertificateArn:
+    Type: String
+  AppImage:
+    Type: String
+  NginxImage:
+    Type: String
+  TelemetryImage:
+    Type: String
+  SchedulerDLQ:
+    Type: String
+  DesiredCount:
+    Type: Number
+    Default: 0
+    MinValue: 0
+    MaxValue: 2
+  ScheduleState:
+    Type: String
+    Default: DISABLED
+    AllowedValues:
+    - DISABLED
+    - ENABLED
+Resources:
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Subnets:
+        Ref: PublicSubnets
+      SecurityGroups:
+      - Ref: AlbSG
+      Scheme: internet-facing
+  Targets:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId:
+        Ref: VpcId
+      Port: 8080
+      Protocol: HTTP
+      TargetType: ip
+      HealthCheckPath: /api/ready
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      TargetGroupAttributes:
+      - Key: deregistration_delay.timeout_seconds
+        Value: '30'
+  HTTPS:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn:
+        Ref: ALB
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+      - CertificateArn:
+          Ref: CertificateArn
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn:
+          Ref: Targets
+  HTTP:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn:
+        Ref: ALB
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+      - Type: redirect
+        RedirectConfig:
+          Protocol: HTTPS
+          Port: '443'
+          StatusCode: HTTP_301
+  ApiTask:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Cpu: '512'
+      Memory: '1024'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+      - FARGATE
+      RuntimePlatform:
+        CpuArchitecture: X86_64
+        OperatingSystemFamily: LINUX
+      TaskRoleArn:
+        Ref: TaskRole
+      ExecutionRoleArn:
+        Ref: ExecutionRole
+      ContainerDefinitions:
+      - Name: app
+        Image:
+          Ref: AppImage
+        Essential: true
+        StopTimeout: 90
+        Environment:
+        - Name: APP_ENV
+          Value: production
+        - Name: APP_DEBUG
+          Value: 'false'
+        - Name: AUTH_MODE
+          Value: cognito
+        - Name: APP_URL
+          Value:
+            Ref: AppOrigin
+        - Name: DB_CONNECTION
+          Value: pgsql
+        - Name: DB_HOST
+          Value:
+            Ref: DBHost
+        - Name: DB_DATABASE
+          Value: orders
+        - Name: DB_USERNAME
+          Value: orders
+        - Name: DB_SSLMODE
+          Value: require
+        - Name: CACHE_STORE
+          Value: redis
+        - Name: SESSION_DRIVER
+          Value: redis
+        - Name: SESSION_SECURE_COOKIE
+          Value: 'true'
+        - Name: REDIS_SCHEME
+          Value: tls
+        - Name: REDIS_HOST
+          Value:
+            Ref: CacheHost
+        - Name: FILESYSTEM_DISK
+          Value: s3
+        - Name: AWS_BUCKET
+          Value:
+            Ref: Bucket
+        - Name: AWS_DEFAULT_REGION
+          Value:
+            Ref: AWS::Region
+        - Name: QUEUE_CONNECTION
+          Value: sqs
+        - Name: SQS_PREFIX
+          Value:
+            Fn::Sub: https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}
+        - Name: SQS_QUEUE
+          Value:
+            Fn::Select:
+            - 4
+            - Fn::Split:
+              - /
+              - Ref: QueueURL
+        - Name: COGNITO_ISSUER
+          Value:
+            Ref: Issuer
+        - Name: COGNITO_CLIENT_ID
+          Value:
+            Ref: ClientId
+        - Name: COGNITO_DOMAIN
+          Value:
+            Ref: CognitoDomain
+        - Name: COGNITO_SCOPE
+          Value: orders/api
+        - Name: OTEL_PHP_AUTOLOAD_ENABLED
+          Value: 'true'
+        - Name: OTEL_SERVICE_NAME
+          Value: orders
+        - Name: OTEL_TRACES_EXPORTER
+          Value: otlp
+        - Name: OTEL_EXPORTER_OTLP_ENDPOINT
+          Value: http://127.0.0.1:4318
+        - Name: OTEL_EXPORTER_OTLP_PROTOCOL
+          Value: http/protobuf
+        - Name: OTEL_METRICS_EXPORTER
+          Value: none
+        - Name: OTEL_LOGS_EXPORTER
+          Value: none
+        Secrets:
+        - Name: APP_KEY
+          ValueFrom:
+            Ref: AppKey
+        - Name: DB_PASSWORD
+          ValueFrom:
+            Fn::Sub: '${DBSecret}:password::'
+        - Name: REDIS_PASSWORD
+          ValueFrom:
+            Ref: CacheKey
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-group:
+              Ref: Logs
+            awslogs-region:
+              Ref: AWS::Region
+            awslogs-stream-prefix: api
+      - Name: telemetry
+        Image:
+          Ref: TelemetryImage
+        Essential: false
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-group:
+              Ref: Logs
+            awslogs-region:
+              Ref: AWS::Region
+            awslogs-stream-prefix: telemetry
+        Environment:
+        - Name: AWS_REGION
+          Value:
+            Ref: AWS::Region
+      - Name: nginx
+        Image:
+          Ref: NginxImage
+        Essential: true
+        PortMappings:
+        - ContainerPort: 8080
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-group:
+              Ref: Logs
+            awslogs-region:
+              Ref: AWS::Region
+            awslogs-stream-prefix: nginx
+  WorkerTask:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Cpu: '512'
+      Memory: '1024'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+      - FARGATE
+      RuntimePlatform:
+        CpuArchitecture: X86_64
+        OperatingSystemFamily: LINUX
+      TaskRoleArn:
+        Ref: TaskRole
+      ExecutionRoleArn:
+        Ref: ExecutionRole
+      ContainerDefinitions:
+      - Name: app
+        Image:
+          Ref: AppImage
+        Essential: true
+        StopTimeout: 90
+        Environment:
+        - Name: APP_ENV
+          Value: production
+        - Name: APP_DEBUG
+          Value: 'false'
+        - Name: AUTH_MODE
+          Value: cognito
+        - Name: APP_URL
+          Value:
+            Ref: AppOrigin
+        - Name: DB_CONNECTION
+          Value: pgsql
+        - Name: DB_HOST
+          Value:
+            Ref: DBHost
+        - Name: DB_DATABASE
+          Value: orders
+        - Name: DB_USERNAME
+          Value: orders
+        - Name: DB_SSLMODE
+          Value: require
+        - Name: CACHE_STORE
+          Value: redis
+        - Name: SESSION_DRIVER
+          Value: redis
+        - Name: SESSION_SECURE_COOKIE
+          Value: 'true'
+        - Name: REDIS_SCHEME
+          Value: tls
+        - Name: REDIS_HOST
+          Value:
+            Ref: CacheHost
+        - Name: FILESYSTEM_DISK
+          Value: s3
+        - Name: AWS_BUCKET
+          Value:
+            Ref: Bucket
+        - Name: AWS_DEFAULT_REGION
+          Value:
+            Ref: AWS::Region
+        - Name: QUEUE_CONNECTION
+          Value: sqs
+        - Name: SQS_PREFIX
+          Value:
+            Fn::Sub: https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}
+        - Name: SQS_QUEUE
+          Value:
+            Fn::Select:
+            - 4
+            - Fn::Split:
+              - /
+              - Ref: QueueURL
+        - Name: COGNITO_ISSUER
+          Value:
+            Ref: Issuer
+        - Name: COGNITO_CLIENT_ID
+          Value:
+            Ref: ClientId
+        - Name: COGNITO_DOMAIN
+          Value:
+            Ref: CognitoDomain
+        - Name: COGNITO_SCOPE
+          Value: orders/api
+        - Name: OTEL_PHP_AUTOLOAD_ENABLED
+          Value: 'true'
+        - Name: OTEL_SERVICE_NAME
+          Value: orders
+        - Name: OTEL_TRACES_EXPORTER
+          Value: otlp
+        - Name: OTEL_EXPORTER_OTLP_ENDPOINT
+          Value: http://127.0.0.1:4318
+        - Name: OTEL_EXPORTER_OTLP_PROTOCOL
+          Value: http/protobuf
+        - Name: OTEL_METRICS_EXPORTER
+          Value: none
+        - Name: OTEL_LOGS_EXPORTER
+          Value: none
+        Secrets:
+        - Name: APP_KEY
+          ValueFrom:
+            Ref: AppKey
+        - Name: DB_PASSWORD
+          ValueFrom:
+            Fn::Sub: '${DBSecret}:password::'
+        - Name: REDIS_PASSWORD
+          ValueFrom:
+            Ref: CacheKey
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-group:
+              Ref: Logs
+            awslogs-region:
+              Ref: AWS::Region
+            awslogs-stream-prefix: worker
+        Command:
+        - php
+        - artisan
+        - queue:work
+        - --sleep=2
+        - --timeout=60
+        - --tries=0
+      - Name: telemetry
+        Image:
+          Ref: TelemetryImage
+        Essential: false
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-group:
+              Ref: Logs
+            awslogs-region:
+              Ref: AWS::Region
+            awslogs-stream-prefix: telemetry
+        Environment:
+        - Name: AWS_REGION
+          Value:
+            Ref: AWS::Region
+  API:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster:
+        Ref: Cluster
+      TaskDefinition:
+        Ref: ApiTask
+      LaunchType: FARGATE
+      DesiredCount:
+        Ref: DesiredCount
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets:
+            Ref: PrivateSubnets
+          SecurityGroups:
+          - Ref: AppSG
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+      HealthCheckGracePeriodSeconds: 120
+      LoadBalancers:
+      - ContainerName: nginx
+        ContainerPort: 8080
+        TargetGroupArn:
+          Ref: Targets
+    DependsOn: HTTPS
+  Worker:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster:
+        Ref: Cluster
+      TaskDefinition:
+        Ref: WorkerTask
+      LaunchType: FARGATE
+      DesiredCount:
+        Ref: DesiredCount
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets:
+            Ref: PrivateSubnets
+          SecurityGroups:
+          - Ref: AppSG
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+  ScheduleRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: scheduler.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: RunTick
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action: ecs:RunTask
+            Resource:
+              Ref: WorkerTask
+            Condition:
+              ArnEquals:
+                ecs:cluster:
+                  Ref: Cluster
+          - Effect: Allow
+            Action: iam:PassRole
+            Resource:
+            - Ref: TaskRole
+            - Ref: ExecutionRole
+            Condition:
+              StringEquals:
+                iam:PassedToService: ecs-tasks.amazonaws.com
+          - Effect: Allow
+            Action: sqs:SendMessage
+            Resource:
+              Ref: SchedulerDLQ
+  Schedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      ScheduleExpression: rate(5 minutes)
+      ScheduleExpressionTimezone: Asia/Ho_Chi_Minh
+      FlexibleTimeWindow:
+        Mode: 'OFF'
+      State:
+        Ref: ScheduleState
+      Target:
+        Arn:
+          Fn::Sub: arn:${AWS::Partition}:scheduler:::aws-sdk:ecs:runTask
+        RoleArn:
+          Fn::GetAtt:
+          - ScheduleRole
+          - Arn
+        RetryPolicy:
+          MaximumEventAgeInSeconds: 600
+          MaximumRetryAttempts: 2
+        DeadLetterConfig:
+          Arn:
+            Ref: SchedulerDLQ
+        Input:
+          Fn::Sub:
+          - '{"Cluster": "${Cluster}", "TaskDefinition": "${WorkerTask}", "LaunchType": "FARGATE", "NetworkConfiguration":
+            {"AwsvpcConfiguration": {"Subnets": ["${SubnetA}", "${SubnetB}"], "SecurityGroups": ["${AppSG}"], "AssignPublicIp":
+            "DISABLED"}}, "Overrides": {"ContainerOverrides": [{"Name": "app", "Command": ["php", "artisan", "reports:tick",
+            "<aws.scheduler.scheduled-time>"]}]}}'
+          - SubnetA:
+              Fn::Select:
+              - 0
+              - Ref: PrivateSubnets
+            SubnetB:
+              Fn::Select:
+              - 1
+              - Ref: PrivateSubnets
+  ErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Namespace: AWS/ApplicationELB
+      MetricName: HTTPCode_Target_5XX_Count
+      Dimensions:
+      - Name: LoadBalancer
+        Value:
+          Fn::GetAtt:
+          - ALB
+          - LoadBalancerFullName
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+Outputs:
+  URL:
+    Value:
+      Ref: AppOrigin
+  ALBDNS:
+    Value:
+      Fn::GetAtt:
+      - ALB
+      - DNSName
+  ApiService:
+    Value:
+      Ref: API
+  WorkerService:
+    Value:
+      Ref: Worker
+  ApiTask:
+    Value:
+      Ref: ApiTask
+  WorkerTask:
+    Value:
+      Ref: WorkerTask
+  Schedule:
+    Value:
+      Ref: Schedule

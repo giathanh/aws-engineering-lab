@@ -1,0 +1,192 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Native Nginx PHP-FPM on private EC2; same application as ECS
+Parameters:
+  VpcId:
+    Type: String
+  PublicSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+  PrivateSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+  AlbSG:
+    Type: String
+  AppSG:
+    Type: String
+  InstanceProfile:
+    Type: String
+  CertificateArn:
+    Type: String
+  AmiId:
+    Type: AWS::EC2::Image::Id
+    Description: Ubuntu 24.04 amd64 AMI for this Region
+  ArtifactBucket:
+    Type: String
+  ArtifactKey:
+    Type: String
+  RuntimeConfigBase64:
+    Type: String
+    Description: Base64 JSON nonsecret runtime config; secret ARNs only
+  DesiredCount:
+    Type: Number
+    Default: 1
+    MinValue: 1
+    MaxValue: 2
+Resources:
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Subnets:
+        Ref: PublicSubnets
+      SecurityGroups:
+      - Ref: AlbSG
+      Scheme: internet-facing
+  Targets:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId:
+        Ref: VpcId
+      Port: 8080
+      Protocol: HTTP
+      TargetType: instance
+      HealthCheckPath: /up
+      TargetGroupAttributes:
+      - Key: deregistration_delay.timeout_seconds
+        Value: '30'
+  HTTPS:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn:
+        Ref: ALB
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+      - CertificateArn:
+          Ref: CertificateArn
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn:
+          Ref: Targets
+  HTTP:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn:
+        Ref: ALB
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+      - Type: redirect
+        RedirectConfig:
+          Protocol: HTTPS
+          Port: '443'
+          StatusCode: HTTP_301
+  Template:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        ImageId:
+          Ref: AmiId
+        InstanceType: t3.small
+        IamInstanceProfile:
+          Name:
+            Ref: InstanceProfile
+        SecurityGroupIds:
+        - Ref: AppSG
+        MetadataOptions:
+          HttpTokens: required
+        BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 12
+            VolumeType: gp3
+            Encrypted: true
+            DeleteOnTermination: true
+        UserData:
+          Fn::Base64:
+            Fn::Sub: '#!/bin/bash
+
+              set -euo pipefail
+
+              export DEBIAN_FRONTEND=noninteractive
+
+              apt-get update
+
+              apt-get install -y nginx php8.3-fpm php8.3-pgsql php8.3-sqlite3 php8.3-mbstring php8.3-xml php8.3-curl php8.3-zip
+              python3-boto3
+
+              mkdir -p /var/www/app
+
+              printf ''%s'' ''${RuntimeConfigBase64}'' | base64 -d > /etc/order-lab.json
+
+              python3 - <<''PYBOOT''
+
+              import boto3
+
+              boto3.client(''s3'',region_name=''${AWS::Region}'').download_file(''${ArtifactBucket}'',''${ArtifactKey}'',''/tmp/app.tgz'')
+
+              PYBOOT
+
+              tar xzf /tmp/app.tgz -C /var/www/app
+
+              cd /var/www/app
+
+              python3 scripts/ec2-env.py /etc/order-lab.json
+
+              chown -R www-data:www-data storage bootstrap/cache
+
+              chmod 640 .env
+
+              chown root:www-data .env
+
+              cp docker/ec2-nginx.conf /etc/nginx/sites-available/default
+
+              cp docker/order-worker.service /etc/systemd/system/order-worker.service
+
+              systemctl daemon-reload
+
+              systemctl enable php8.3-fpm nginx
+
+              systemctl restart php8.3-fpm nginx
+
+              '
+  ASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier:
+        Ref: PrivateSubnets
+      MinSize: '1'
+      MaxSize: '2'
+      DesiredCapacity:
+        Ref: DesiredCount
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 600
+      TargetGroupARNs:
+      - Ref: Targets
+      LaunchTemplate:
+        LaunchTemplateId:
+          Ref: Template
+        Version:
+          Fn::GetAtt:
+          - Template
+          - LatestVersionNumber
+      Tags:
+      - Key: Project
+        Value:
+          Fn::Sub: ${AWS::StackName}
+        PropagateAtLaunch: true
+    DependsOn: HTTPS
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        MaxBatchSize: 1
+        PauseTime: PT10M
+Outputs:
+  ALBDNS:
+    Value:
+      Fn::GetAtt:
+      - ALB
+      - DNSName
+  ASG:
+    Value:
+      Ref: ASG
+  TargetGroup:
+    Value:
+      Ref: Targets

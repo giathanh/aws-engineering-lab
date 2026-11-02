@@ -660,3 +660,9 @@ Sau đó chạy lại Bước 10. Nếu `DIST_ID` là `None`, bỏ qua mục 1�
 ## Tiếp theo
 
 Bạn đã phục vụ nội dung từ bucket private qua CDN và cho client upload trực tiếp mà không mở quyền. Bài tiếp theo: **[Bài 07 — Database và cache: RDS, Aurora, DynamoDB, ElastiCache](../../notes/07-databases-and-cache.md)**.
+
+---
+
+## Nhánh Laravel theo lộ trình gốc
+
+Lab dịch vụ ở trên được nối với [dự án Laravel + Vue](../15-capstone-laravel/README.md). Đọc phần bổ sung trong bài lý thuyết 06 và bảng mốc của dự án để chọn đúng prerequisite. Đầu ra bắt buộc gồm code/fixture, happy path, negative case và inventory sau cleanup; không dùng output minh họa làm bằng chứng đã chạy.

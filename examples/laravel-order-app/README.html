@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laravel API + Vue — ứng dụng xuyên suốt</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+a.back{display:inline-flex;align-items:center;gap:6px;margin-bottom:16px;padding:4px 12px;border:1px solid var(--line);border-radius:999px;color:var(--muted);text-decoration:none;font-size:14px}
+a.back:hover{color:var(--fg);background:var(--code-bg)}
+main > a.back{display:none}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:24px;align-self:start;max-height:calc(100vh - 48px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}main > a.back{display:inline-flex}}
+@media print{a.back,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="toc"><a class="back" href="../../notes/00-introduction.html">← Mở đầu</a><div class="label">Mục lục</div><ol><li><a href="#chạy-local-bằng-php">Chạy local bằng PHP</a></li><li><a href="#chạy-postgresql-và-redis-bằng-docker-compose">Chạy PostgreSQL và Redis bằng Docker Compose</a></li><li><a href="#hợp-đồng-api">Hợp đồng API</a></li><li><a href="#version-và-kiểm-chứng">Version và kiểm chứng</a></li></ol></aside>
+<main>
+<a class="back" href="../../notes/00-introduction.html">← Mở đầu</a>
+<h1 id="laravel-api--vue--ứng-dụng-xuyên-suốt"><a class="anchor" href="#laravel-api--vue--ứng-dụng-xuyên-suốt">Laravel API + Vue — ứng dụng xuyên suốt</a></h1>
+<p>Ứng dụng này đi cùng <a href="../../notes/15-capstone-laravel.html">bài 15</a> và <a href="../../labs/15-capstone-laravel/README.html">lab bảy mốc</a>. Dữ liệu chỉ là fixture học tập.</p>
+<h2 id="chạy-local-bằng-php"><a class="anchor" href="#chạy-local-bằng-php">Chạy local bằng PHP</a></h2>
+<p>Cần PHP 8.3 với PDO SQLite/PgSQL, mbstring, DOM, curl, pcntl; Composer 2; Node 22 và Python 3.10+ cho script triển khai. Chạy từ thư mục này:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>composer install
+cp .env.example .env
+php artisan key:generate
+mkdir -p storage/app/private
+touch database/database.sqlite
+php artisan migrate --seed
+composer test
+php artisan serve --host=127.0.0.1 --port=8080</code></pre></div>
+<p>Terminal thứ hai, cùng thư mục: <code>php artisan queue:work --timeout=60 --tries=3</code>. Terminal thứ ba:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>cd web
+npm ci
+npm run dev</code></pre></div>
+<p>Mở địa chỉ Vite in ra. <code>alice</code>/<code>bob</code> là identity local, không có quyền đăng nhập AWS. Upload trả <code>409</code> đến khi cấu hình S3 ở mốc 2. Thử tạo đơn → xuất báo cáo → kiểm tra trạng thái → tải JSON. Backend giữ yêu cầu báo cáo trong outbox trước khi gửi queue. Nếu queue tạm lỗi, chạy <code>php artisan reports:dispatch</code> khi queue hoạt động lại.</p>
+<h2 id="chạy-postgresql-và-redis-bằng-docker-compose"><a class="anchor" href="#chạy-postgresql-và-redis-bằng-docker-compose">Chạy PostgreSQL và Redis bằng Docker Compose</a></h2>
+<p>Tạo <code>.env</code> và APP_KEY như trên, sau đó:</p>
+<div class="code"><span class="lang">bash</span><button type="button">Copy</button><pre><code>docker compose build
+docker compose up -d db redis app nginx
+docker compose exec app php artisan migrate --seed --force
+docker compose up -d worker
+BASE_URL=http://127.0.0.1:8080 LOCAL_SMOKE=1 python3 scripts/smoke.py</code></pre></div>
+<p>Mở <code>http://127.0.0.1:8080</code>. Nginx dùng network namespace của app để gọi FPM trên loopback; port được publish ở service app. Web và worker chia sẻ volume báo cáo trong Compose; trên AWS cả hai dùng S3.</p>
+<p>Dừng: <code>docker compose down</code>. Chỉ khi muốn xóa <strong>dữ liệu fixture local</strong> mới dùng <code>docker compose down -v</code>.</p>
+<h2 id="hợp-đồng-api"><a class="anchor" href="#hợp-đồng-api">Hợp đồng API</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Method/path</th>
+<th>Kết quả</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET /up</code></td>
+<td>Liveness Laravel; không phụ thuộc DB</td>
+</tr>
+<tr>
+<td><code>GET /api/ready</code></td>
+<td>DB reachable, version; readiness ALB ECS</td>
+</tr>
+<tr>
+<td><code>GET /api/config</code></td>
+<td>Cấu hình public cho OIDC client; không có secret</td>
+</tr>
+<tr>
+<td><code>POST /api/orders</code></td>
+<td><code>{product, quantity}</code> → <code>201</code>, UUID</td>
+</tr>
+<tr>
+<td><code>GET /api/orders</code>, <code>GET /api/orders/{id}</code></td>
+<td>Chỉ đơn thuộc identity hiện tại</td>
+</tr>
+<tr>
+<td><code>PATCH /api/orders/{id}</code></td>
+<td><code>{quantity}</code>; invalidation cache</td>
+</tr>
+<tr>
+<td><code>POST /api/uploads</code></td>
+<td><code>{content_type, bytes}</code> → URL PUT 2 phút; chỉ ở chế độ S3</td>
+</tr>
+<tr>
+<td><code>POST /api/uploads/{id}/verify</code></td>
+<td>Kiểm tra owner, bytes và ảnh thực; ảnh gốc vẫn private</td>
+</tr>
+<tr>
+<td><code>POST /api/reports</code></td>
+<td><code>{key}</code> idempotency theo owner; <code>202</code>, report ID</td>
+</tr>
+<tr>
+<td><code>GET /api/reports/{id}</code> và <code>.../download</code></td>
+<td>Trạng thái và JSON snapshot, kiểm tra owner</td>
+</tr>
+<tr>
+<td><code>GET /api/session</code></td>
+<td>Bộ đếm cookie dùng để học session qua nhiều target</td>
+</tr>
+<tr>
+<td><code>GET /api/fault/500</code>, <code>.../slow</code>, <code>/api/probe</code></td>
+<td>Chỉ hoạt động khi <code>LAB_FAULTS=true</code>; cần identity hợp lệ</td>
+</tr>
+</tbody></table>
+</div>
+<p>AWS sử dụng Cognito access token. <code>AUTH_MODE=local</code> bị chặn nếu <code>APP_ENV</code> không phải local/testing. Không đổi <code>APP_ENV=local</code> để chữa lỗi đăng nhập trên AWS. API kiểm tra quyền bằng DB kể cả khi cache hit. Cache invalidation thất bại có thể giữ dữ liệu cũ tối đa TTL 30 giây; ứng dụng này không dùng cache cho quyết định thanh toán hay phân quyền.</p>
+<h2 id="version-và-kiểm-chứng"><a class="anchor" href="#version-và-kiểm-chứng">Version và kiểm chứng</a></h2>
+<p>PHP 8.3, Laravel 12, Vue 3, Vite 6; phiên bản dependency chính xác nằm trong <code>composer.lock</code> và <code>web/package-lock.json</code>. Đây là bộ phiên bản của fixture, không phải tuyên bố bản mới nhất. Bản JWT 7 được chọn vì Composer từ chối bản 6 có advisory khi resolve.</p>
+<p>Kết quả kiểm thử và giới hạn nằm ở <a href="../../labs/15-capstone-laravel/evidence/README.html">sổ kiểm chứng</a>. Không commit <code>.env</code>, token Cognito, URL presigned hoặc dữ liệu AWS thật.</p>
+
+<footer>Sinh tự động từ <code>examples/laravel-order-app/README.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

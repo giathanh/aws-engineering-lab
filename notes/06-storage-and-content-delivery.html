@@ -55,7 +55,7 @@ footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border
 </head>
 <body>
 <div class="layout">
-<aside class="toc"><a class="back" href="00-introduction.html">← Mở đầu</a><div class="label">Mục lục</div><ol><li><a href="#mục-tiêu">Mục tiêu</a></li><li><a href="#phần-1--amazon-s3-đối-tượng-khóa-bucket-policy-và-bảo-mật-mặc-định-50-phút">Phần 1 — Amazon S3: Đối tượng, Khóa, Bucket Policy và Bảo mật mặc định (50 phút)</a></li><li><a href="#phần-2--presigned-urls-content-type-cors-và-kiểm-tra-toàn-vẹn-checksum-45-phút">Phần 2 — Presigned URLs, Content-Type, CORS và Kiểm tra Toàn vẹn Checksum (45 phút)</a></li><li><a href="#phần-3--vòng-đời-lưu-trữ-lifecycle-tầng-lưu-trữ-storage-classes-và-multipart-upload-45-phút">Phần 3 — Vòng đời lưu trữ (Lifecycle), Tầng lưu trữ (Storage Classes) và Multipart Upload (45 phút)</a></li><li><a href="#phần-4--amazon-cloudfront-cdn-oac-cache-key-và-invalidation-50-phút">Phần 4 — Amazon CloudFront: CDN, OAC, Cache Key và Invalidation (50 phút)</a></li><li><a href="#phần-5--amazon-route-53-và-aws-certificate-manager-acm-45-phút">Phần 5 — Amazon Route 53 và AWS Certificate Manager (ACM) (45 phút)</a></li><li><a href="#phần-6--giới-thiệu-bài-thực-hành-lab-06">Phần 6 — Giới thiệu bài thực hành (Lab 06)</a></li><li><a href="#phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi phổ biến (25 phút)</a></li><li><a href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></li><li><a href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></li><li><a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></li><li><a href="#đáp-án-gợi-ý">Đáp án gợi ý</a></li></ol></aside>
+<aside class="toc"><a class="back" href="00-introduction.html">← Mở đầu</a><div class="label">Mục lục</div><ol><li><a href="#mục-tiêu">Mục tiêu</a></li><li><a href="#phần-1--amazon-s3-đối-tượng-khóa-bucket-policy-và-bảo-mật-mặc-định-50-phút">Phần 1 — Amazon S3: Đối tượng, Khóa, Bucket Policy và Bảo mật mặc định (50 phút)</a></li><li><a href="#phần-2--presigned-urls-content-type-cors-và-kiểm-tra-toàn-vẹn-checksum-45-phút">Phần 2 — Presigned URLs, Content-Type, CORS và Kiểm tra Toàn vẹn Checksum (45 phút)</a></li><li><a href="#phần-3--vòng-đời-lưu-trữ-lifecycle-tầng-lưu-trữ-storage-classes-và-multipart-upload-45-phút">Phần 3 — Vòng đời lưu trữ (Lifecycle), Tầng lưu trữ (Storage Classes) và Multipart Upload (45 phút)</a></li><li><a href="#phần-4--amazon-cloudfront-cdn-oac-cache-key-và-invalidation-50-phút">Phần 4 — Amazon CloudFront: CDN, OAC, Cache Key và Invalidation (50 phút)</a></li><li><a href="#phần-5--amazon-route-53-và-aws-certificate-manager-acm-45-phút">Phần 5 — Amazon Route 53 và AWS Certificate Manager (ACM) (45 phút)</a></li><li><a href="#phần-6--giới-thiệu-bài-thực-hành-lab-06">Phần 6 — Giới thiệu bài thực hành (Lab 06)</a></li><li><a href="#phần-7--troubleshooting-và-các-lỗi-phổ-biến-25-phút">Phần 7 — Troubleshooting và các lỗi phổ biến (25 phút)</a></li><li><a href="#câu-hỏi-tự-kiểm-tra">Câu hỏi tự kiểm tra</a></li><li><a href="#tài-liệu-tham-khảo-chính-thức">Tài liệu tham khảo chính thức</a></li><li><a href="#trạng-thái-kiểm-chứng">Trạng thái kiểm chứng</a></li><li><a href="#đáp-án-gợi-ý">Đáp án gợi ý</a></li><li><a href="#bổ-sung--efs-upload-laravel-và-client-vue">Bổ sung — EFS, upload Laravel và client Vue</a></li></ol></aside>
 <main>
 <a class="back" href="00-introduction.html">← Mở đầu</a>
 <h1 id="bài-06--lưu-trữ-và-phân-phối-nội-dung-s3-cloudfront-route-53-và-acm"><a class="anchor" href="#bài-06--lưu-trữ-và-phân-phối-nội-dung-s3-cloudfront-route-53-và-acm">Bài 06 — Lưu trữ và phân phối nội dung: S3, CloudFront, Route 53 và ACM</a></h1>
@@ -493,6 +493,57 @@ Nếu bạn muốn trỏ trực tiếp <code>example.com</code> về CloudFront 
 </ol>
 </details>
 
+
+<hr>
+<h2 id="bổ-sung--efs-upload-laravel-và-client-vue"><a class="anchor" href="#bổ-sung--efs-upload-laravel-và-client-vue">Bổ sung — EFS, upload Laravel và client Vue</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Yêu cầu</th>
+<th>S3</th>
+<th>EBS</th>
+<th>EFS</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Cách truy cập</td>
+<td>Object API/HTTPS</td>
+<td>Block device gắn vào compute</td>
+<td>NFS filesystem dùng chung</td>
+</tr>
+<tr>
+<td>Upload từ web/mobile</td>
+<td>Presigned URL phù hợp</td>
+<td>Phải đi qua app</td>
+<td>Phải đi qua app</td>
+</tr>
+<tr>
+<td>POSIX/shared directory</td>
+<td>Không phải filesystem POSIX</td>
+<td>Không mặc định chia sẻ giữa nhiều máy</td>
+<td>Phù hợp ứng dụng cần shared filesystem</td>
+</tr>
+<tr>
+<td>Phạm vi cần cân nhắc</td>
+<td>Bucket/Region, IAM/object key</td>
+<td>Volume/AZ, snapshot</td>
+<td>Regional hoặc One Zone, mount targets/SG</td>
+</tr>
+<tr>
+<td>Lỗi cần thử</td>
+<td>Signature/ownership/version</td>
+<td>Detach/instance loss</td>
+<td>Mount/network/permission/throughput</td>
+</tr>
+</tbody></table>
+</div>
+<p>EFS Regional và One Zone có phạm vi chịu lỗi khác nhau; mount nhiều máy không thay cho backup. Truy cập NFS cần network path/SG và quyền filesystem phù hợp. <a href="https://docs.aws.amazon.com/efs/latest/ug/whatisefs.html" target="_blank" rel="noopener">AWS EFS</a>, đối chiếu 2026-11-01.</p>
+<p>Ví dụ Laravel trong dự án dùng S3 cho ảnh/báo cáo vì không cần POSIX. Nếu thư viện legacy bắt buộc ghi/đọc một shared directory giữa nhiều máy, cân nhắc EFS và đo latency/throughput. EBS phù hợp filesystem của một instance; không coi EBS snapshot là shared live storage.</p>
+<p><a href="../examples/laravel-order-app/app/Http/Controllers/Uploads.php">Controller upload</a> cấp URL sau xác thực owner, backend tự chọn key. <a href="../examples/laravel-order-app/web/src/App.vue">Vue client</a> gửi PUT trực tiếp rồi gọi verify. CORS không thay authorization; client khai báo bytes không ngăn PUT một object lớn hơn. <code>verify</code> kiểm tra actual object và ảnh; original luôn private. Chỉ output đã xử lý/phê duyệt mới đưa vào <code>public/*</code> cho CloudFront.</p>
+<p>Bài tập: (1) ảnh sản phẩm cho mobile, (2) ổ boot EC2, (3) thư mục POSIX cho công cụ legacy chạy hai máy: chọn storage và nêu failure mode.</p>
+<details><summary>Đáp án</summary>
+(1) S3 + CDN phù hợp; kiểm tra quyền và cache. (2) EBS; instance/volume/AZ và snapshot. (3) EFS nếu thực sự cần semantics filesystem; xem mount target, SG, UID/GID và throughput. Không ép upload Laravel lên EFS khi S3 đáp ứng đủ.
+</details>
 
 <footer>Sinh tự động từ <code>notes/06-storage-and-content-delivery.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
 </main>

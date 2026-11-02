@@ -556,3 +556,9 @@ Sau đó chạy lại Bước 8 (bỏ dòng `deactivate`). Lệnh báo `NonExist
 ## Tiếp theo
 
 Bạn đã chứng minh được hệ thống không tạo đơn trùng dù message bị gửi lại, cô lập và cứu được poison message, và tách lỗi tạm thời khỏi lỗi nghiệp vụ trong workflow. Bài tiếp theo: **[Bài 12 — Infrastructure as Code và CI/CD: CloudFormation/CDK, Terraform, GitHub Actions OIDC](../../notes/12-iac-and-cicd.md)**.
+
+---
+
+## Nhánh Laravel theo lộ trình gốc
+
+Lab dịch vụ ở trên được nối với [dự án Laravel + Vue](../15-capstone-laravel/README.md). Đọc phần bổ sung trong bài lý thuyết 11 và bảng mốc của dự án để chọn đúng prerequisite. Đầu ra bắt buộc gồm code/fixture, happy path, negative case và inventory sau cleanup; không dùng output minh họa làm bằng chứng đã chạy.

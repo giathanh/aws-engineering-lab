@@ -1,0 +1,12 @@
+node_modules
+.git
+
+# Local application dependencies and runtime files are not documentation artifacts.
+**/vendor/**
+**/.env
+**/.env.*
+!**/.env.example
+**/*.sqlite*
+**/.phpunit.cache/**
+**/storage/**
+**/__pycache__/**

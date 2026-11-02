@@ -342,3 +342,17 @@ Trong bài thực hành đính kèm, bạn sẽ trực tiếp triển khai:
 
 </details>
 
+
+---
+
+## Bổ sung — Pipeline ứng dụng và IaC toàn môi trường
+
+[Hạ tầng dự án](../infra/laravel-order-app/README.md) chọn CloudFormation YAML: foundation giữ mạng/dữ liệu/identity, compute stack giữ EC2 hoặc ECS. CDK/Terraform là phương án so sánh; không có hai state managers cùng sở hữu resource.
+
+[Workflow](../.github/workflows/laravel-order-app.yml) chạy test/build cho PR; deploy là workflow_dispatch từ main vào environment dev. OIDC trust giới hạn repo+environment, branch restriction được cấu hình ở GitHub environment. Deployment job dùng token AWS tạm thời, CI test job không có id-token write.
+
+Release script đăng ký task migration ứng viên, chờ exit 0, update CloudFormation với digest, chờ services stable rồi smoke API/report/idempotency. Smoke fail thì đưa tham số stack về bản trước; schema đã migrate vẫn còn. Rollback hạ tầng và rollback dữ liệu là hai công việc khác nhau.
+
+Tái tạo staging dùng foundation mới và cùng image digest, không copy secret dev. Certificate/domain/OIDC provider là prerequisite cấp ngoài được liệt kê, không giấu trong thao tác thủ công. Sau update tay để thử lỗi, kiểm tra drift rồi đồng bộ template.
+
+Bài tập: service stable nhưng API export report không chạy, pipeline có đạt không? Đáp án: không; cần business smoke, vì health endpoint không kiểm chứng queue/worker/storage end-to-end.

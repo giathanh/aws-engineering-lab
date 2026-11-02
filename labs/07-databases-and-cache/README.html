@@ -55,7 +55,7 @@ footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border
 </head>
 <body>
 <div class="layout">
-<aside class="toc"><a class="back" href="../../notes/00-introduction.html">← Mở đầu</a><div class="label">Mục lục</div><ol><li><a href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></li><li><a href="#quy-ước-placeholder">Quy ước placeholder</a></li><li><a href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></li><li><a href="#sơ-đồ-kiến-trúc-lab-07">Sơ đồ kiến trúc Lab 07</a></li><li><a href="#phần-a--dynamodb">Phần A — DynamoDB</a></li><li><a href="#phần-b--rds-postgresql-private">Phần B — RDS PostgreSQL private</a></li><li><a href="#phần-c-tùy-chọn--cache-aside-với-elasticache">Phần C (tùy chọn) — Cache-aside với ElastiCache</a></li><li><a href="#bước-11--dọn-dẹp-theo-dependency">Bước 11 — Dọn dẹp theo dependency</a></li><li><a href="#checklist-hoàn-thành">Checklist hoàn thành</a></li><li><a href="#troubleshooting-nhanh">Troubleshooting nhanh</a></li><li><a href="#tiếp-theo">Tiếp theo</a></li></ol></aside>
+<aside class="toc"><a class="back" href="../../notes/00-introduction.html">← Mở đầu</a><div class="label">Mục lục</div><ol><li><a href="#lab-này-làm-gì-và-không-làm-gì">Lab này làm gì và không làm gì</a></li><li><a href="#quy-ước-placeholder">Quy ước placeholder</a></li><li><a href="#điều-kiện-đầu-vào">Điều kiện đầu vào</a></li><li><a href="#sơ-đồ-kiến-trúc-lab-07">Sơ đồ kiến trúc Lab 07</a></li><li><a href="#phần-a--dynamodb">Phần A — DynamoDB</a></li><li><a href="#phần-b--rds-postgresql-private">Phần B — RDS PostgreSQL private</a></li><li><a href="#phần-c-tùy-chọn--cache-aside-với-elasticache">Phần C (tùy chọn) — Cache-aside với ElastiCache</a></li><li><a href="#bước-11--dọn-dẹp-theo-dependency">Bước 11 — Dọn dẹp theo dependency</a></li><li><a href="#checklist-hoàn-thành">Checklist hoàn thành</a></li><li><a href="#troubleshooting-nhanh">Troubleshooting nhanh</a></li><li><a href="#tiếp-theo">Tiếp theo</a></li><li><a href="#nhánh-laravel-theo-lộ-trình-gốc">Nhánh Laravel theo lộ trình gốc</a></li></ol></aside>
 <main>
 <a class="back" href="../../notes/00-introduction.html">← Mở đầu</a>
 <h1 id="lab-07--database-và-cache-dynamodb-theo-access-pattern-rds-postgresql-private-và-restore-thật"><a class="anchor" href="#lab-07--database-và-cache-dynamodb-theo-access-pattern-rds-postgresql-private-và-restore-thật">Lab 07 — Database và cache: DynamoDB theo access pattern, RDS PostgreSQL private và restore thật</a></h1>
@@ -716,6 +716,9 @@ echo &quot;VPC=${VPC_ID} CLIENT=${CLIENT_ID} SG=${SG_CLIENT},${SG_DB},${SG_CACHE
 <hr>
 <h2 id="tiếp-theo"><a class="anchor" href="#tiếp-theo">Tiếp theo</a></h2>
 <p>Bạn đã chọn kho dữ liệu theo access pattern, giữ database private và chứng minh backup bằng một lần restore thật. Bài tiếp theo: <strong><a href="../../notes/08-containers.html">Bài 08 — Container: ECR, ECS, Fargate</a></strong>.</p>
+<hr>
+<h2 id="nhánh-laravel-theo-lộ-trình-gốc"><a class="anchor" href="#nhánh-laravel-theo-lộ-trình-gốc">Nhánh Laravel theo lộ trình gốc</a></h2>
+<p>Lab dịch vụ ở trên được nối với <a href="../15-capstone-laravel/README.html">dự án Laravel + Vue</a>. Đọc phần bổ sung trong bài lý thuyết 07 và bảng mốc của dự án để chọn đúng prerequisite. Đầu ra bắt buộc gồm code/fixture, happy path, negative case và inventory sau cleanup; không dùng output minh họa làm bằng chứng đã chạy.</p>
 
 <footer>Sinh tự động từ <code>labs/07-databases-and-cache/README.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
 </main>

@@ -347,3 +347,17 @@ Trong bài thực hành đi kèm, bạn ghép các mảnh kiến trúc từ Lab 
 
 </details>
 
+
+---
+
+## Bổ sung — Laravel, Nginx và PHP-FPM qua nhiều instance
+
+Đường thực hành Laravel nằm ở [mốc 1–3 của lab dự án](../labs/15-capstone-laravel/README.md). Nginx chuyển request API sang PHP-FPM; FPM quản lý PHP workers và Laravel thực thi route. 502 thường nằm ở socket/port/process FPM; 500 là lỗi app cần kiểm tra log; 503 từ ALB thường cần xem target health trước.
+
+`ec2.yaml` tạo instance Ubuntu private và systemd services. Artifact có Composer lockfile/Vue build; instance role đọc artifact và secret, user data không chứa giá trị secret. `APP_KEY` dùng chung, DB nằm ở RDS, uploads ở S3. `/up` là liveness, `/api/ready` là readiness có DB; hiểu sự khác nhau trước khi chọn health check.
+
+Bài tập: dừng FPM trên một máy, xem Nginx log và target health; khôi phục, reboot rồi kiểm tra process tự lên. Sau đó chạy hai instance và terminate một máy. Đơn hàng/upload phải còn; session demo tăng qua hai hostname khi dùng Redis. Hai máy không tự giải quyết cron trùng: dùng Scheduler hoặc distributed lock cho đúng nghiệp vụ.
+
+<details><summary>Đáp án áp dụng</summary>
+Nếu session/file nằm local, request sang target khác có thể không thấy state cũ. Nếu cả hai máy cùng chạy cron, cùng lịch có thể sinh hai side effect. Cần state chung và business idempotency; sticky session chỉ che một phần vấn đề và không bảo vệ khi instance mất.
+</details>

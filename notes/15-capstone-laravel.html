@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bài 15 — Dự án Laravel API + Vue xuyên suốt</title>
+<style>
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
+@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+a.back{display:inline-flex;align-items:center;gap:6px;margin-bottom:16px;padding:4px 12px;border:1px solid var(--line);border-radius:999px;color:var(--muted);text-decoration:none;font-size:14px}
+a.back:hover{color:var(--fg);background:var(--code-bg)}
+main > a.back{display:none}
+.layout{max-width:1200px;margin:0 auto;padding:24px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+aside.toc{position:sticky;top:24px;align-self:start;max-height:calc(100vh - 48px);overflow:auto;font-size:14px}
+aside.toc .label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+aside.toc ol{list-style:none;margin:0;padding:0}
+aside.toc li a{display:block;padding:4px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+aside.toc li a:hover{color:var(--fg)}
+aside.toc li a.current{color:var(--accent);border-left-color:var(--accent)}
+main{max-width:860px}
+h1{font-size:2rem;line-height:1.25;margin:.2em 0 .6em}
+h2{font-size:1.5rem;margin:2.2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1.18rem;margin:1.8em 0 .5em}
+h1 a.anchor,h2 a.anchor,h3 a.anchor{color:inherit;text-decoration:none}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+blockquote{margin:1.2em 0;padding:.8em 1.1em;background:var(--accent-bg);border-left:4px solid var(--accent);border-radius:0 8px 8px 0}
+blockquote p{margin:.3em 0}
+code{font:0.88em/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+.code{position:relative;margin:1.1em 0}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+pre code{background:none;padding:0;font-size:.86em}
+.code .lang{position:absolute;top:6px;left:12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;pointer-events:none}
+.code pre{padding-top:26px}
+.code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
+.code button:hover{opacity:1;color:var(--fg)}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+li input[type=checkbox]{margin-right:.5em}
+ul:has(> li > input[type=checkbox]){list-style:none;padding-left:.4em}
+details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+details summary{cursor:pointer;font-weight:600}
+footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
+@media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}main > a.back{display:inline-flex}}
+@media print{a.back,aside.toc,.code button{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="toc"><a class="back" href="00-introduction.html">← Mở đầu</a><div class="label">Mục lục</div><ol><li><a href="#mục-tiêu-và-đường-học">Mục tiêu và đường học</a></li><li><a href="#kiến-trúc-cuối">Kiến trúc cuối</a></li><li><a href="#http-process-và-state">HTTP, process và state</a></li><li><a href="#transaction-queue-và-tính-idempotent">Transaction, queue và tính idempotent</a></li><li><a href="#upload-và-quyền-dữ-liệu">Upload và quyền dữ liệu</a></li><li><a href="#xác-thực-và-phân-quyền">Xác thực và phân quyền</a></li><li><a href="#tracing-metric-và-xử-lý-sự-cố">Tracing, metric và xử lý sự cố</a></li><li><a href="#ha-hiệu-năng-và-phục-hồi">HA, hiệu năng và phục hồi</a></li><li><a href="#bài-tập-quyết-định-và-đáp-án">Bài tập quyết định và đáp án</a></li><li><a href="#giới-hạn-kiểm-chứng">Giới hạn kiểm chứng</a></li></ol></aside>
+<main>
+<a class="back" href="00-introduction.html">← Mở đầu</a>
+<h1 id="bài-15--dự-án-laravel-api--vue-xuyên-suốt"><a class="anchor" href="#bài-15--dự-án-laravel-api--vue-xuyên-suốt">Bài 15 — Dự án Laravel API + Vue xuyên suốt</a></h1>
+<blockquote>
+<p>Đọc song song với bài 05–14. <a href="../labs/15-capstone-laravel/README.html">Lab bảy mốc</a> · <a href="../examples/laravel-order-app/README.html">Mã ứng dụng</a> · <a href="../infra/laravel-order-app/README.html">Hạ tầng</a>.
+Biên soạn/đối chiếu nguồn: 2026-11-01. Kiểm chứng local được ghi riêng; chưa triển khai AWS.</p>
+</blockquote>
+<h2 id="mục-tiêu-và-đường-học"><a class="anchor" href="#mục-tiêu-và-đường-học">Mục tiêu và đường học</a></h2>
+<p>Một đơn hàng đi qua cùng API, database, bucket và hàng đợi ở mọi mốc. Khi chuyển EC2 sang ECS, chỉ cách vận hành process thay đổi; hợp đồng API và dữ liệu không đổi. Hoàn thành bài nghĩa là bạn giải thích được lựa chọn, triển khai được, tìm được lỗi và khôi phục được bằng bằng chứng.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Mốc</th>
+<th>Đọc trước</th>
+<th>Đầu ra</th>
+<th>Thời lượng thêm dự kiến</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1. EC2</td>
+<td>01–05</td>
+<td>Laravel/Nginx/PHP-FPM, reboot, log</td>
+<td>3–5 giờ</td>
+</tr>
+<tr>
+<td>2. RDS/S3</td>
+<td>06–07</td>
+<td>Vue tạo đơn, upload; dữ liệu ngoài máy</td>
+<td>4–6 giờ</td>
+</tr>
+<tr>
+<td>3. HTTPS/ALB/ASG</td>
+<td>05–07</td>
+<td>Hai instance, mất một instance vẫn phục vụ</td>
+<td>3–4 giờ</td>
+</tr>
+<tr>
+<td>4. Cache/queue</td>
+<td>07, 11</td>
+<td>Session chung, báo cáo idempotent, lịch chạy</td>
+<td>4–6 giờ</td>
+</tr>
+<tr>
+<td>5. Quan sát/secret</td>
+<td>10</td>
+<td>Trace, alarm, test dev/prod</td>
+<td>4–6 giờ</td>
+</tr>
+<tr>
+<td>6. ECS/pipeline</td>
+<td>08, 12</td>
+<td>API/worker riêng, CI/CD và rollback</td>
+<td>5–8 giờ</td>
+</tr>
+<tr>
+<td>7. IaC/DR</td>
+<td>12–14</td>
+<td>Môi trường mới, restore, load test, ADR</td>
+<td>5–8 giờ</td>
+</tr>
+</tbody></table>
+</div>
+<p>Tổng phần dự án khoảng 28–43 giờ, chưa tính chờ quyền, domain và thời gian xử lý sự cố. Mini-lab Cognito, xử lý ảnh và triage finding thêm khoảng 4–8 giờ nếu chưa làm trong các bài tương ứng. Không cần giữ tài nguyên tính phí giữa các buổi: checkpoint là code, tham số và bằng chứng đã che thông tin.</p>
+<h2 id="kiến-trúc-cuối"><a class="anchor" href="#kiến-trúc-cuối">Kiến trúc cuối</a></h2>
+<div class="code"><span class="lang">text</span><button type="button">Copy</button><pre><code>Vue ── Cognito authorization code + PKCE
+ │ access token
+ ▼
+HTTPS ALB ── private app: Nginx → PHP-FPM/Laravel
+                 │           │             │
+                 │           │             └── S3 uploads/ (quarantine)
+                 │           └── Redis cache/session
+                 └── RDS orders + reports + outbox
+                                      │ dispatch Laravel payload
+                                      ▼
+                                  SQS → worker → S3 reports/
+                                   │ lỗi quá số lần nhận
+                                   └── DLQ
+Scheduler → ECS RunTask → artisan reports:tick → outbox → SQS
+OpenTelemetry API/worker → collector → X-Ray; structured log → CloudWatch
+S3 ảnh (mini-lab riêng) → Lambda → processed/ + queue lưu lỗi</code></pre></div>
+<p><code>foundation.yaml</code> chứa mạng/dữ liệu/identity/repository, <code>ec2.yaml</code> chứa máy chủ native, <code>runtime.yaml</code> chứa container. Tách vòng đời giúp thay compute mà không mất database. Môi trường mới có stack foundation mới; không dùng secret/DB của môi trường khác.</p>
+<h2 id="http-process-và-state"><a class="anchor" href="#http-process-và-state">HTTP, process và state</a></h2>
+<p>Nginx phục vụ Vue và chuyển <code>/api</code> sang FastCGI. PHP-FPM quản lý PHP workers; mỗi worker có thể mở kết nối DB. Liveness <code>/up</code> không cần DB; readiness <code>/api/ready</code> kiểm tra DB. Nếu mọi target cùng mất DB, readiness cùng fail: health check không tự phục hồi database.</p>
+<p>Mỗi task/instance có thể bị thay. Upload và báo cáo nằm ở S3, đơn hàng nằm ở RDS. API xác thực bằng JWT, nên không cần session để xác định người dùng; <code>/api/session</code> là bài tập cookie độc lập để thấy vì sao session local làm bộ đếm thay đổi giữa target. Redis session chứa state dùng chung nhưng không biến cookie thành access token.</p>
+<p><code>APP_KEY</code> phải giống giữa instance để giải mã cookie. Rotate key mà không có kế hoạch tương thích có thể làm mất session. Không tạo key mới ở mỗi lần boot. Secret được lấy lúc EC2 bootstrap hoặc ECS inject lúc khởi động; rotate secret phải restart/redeploy process để nhận giá trị mới.</p>
+<h2 id="transaction-queue-và-tính-idempotent"><a class="anchor" href="#transaction-queue-và-tính-idempotent">Transaction, queue và tính idempotent</a></h2>
+<p>Yêu cầu xuất báo cáo tạo <code>reports</code> và <code>outbox</code> trong cùng transaction. Sau commit, dispatcher gửi job; nếu gửi queue lỗi, outbox còn để thử lại. Nếu gửi thành công rồi chết trước khi xóa outbox, sẽ có job trùng.</p>
+<p>Worker khóa row report, lấy snapshot đã lưu và ghi vào key <code>reports/{uuid}.json</code>. Crash sau S3 PUT nhưng trước commit DB được phục hồi bằng cách ghi lại cùng bytes vào cùng key. Với bucket versioning, vẫn có thể phát sinh thêm object version và chi phí; tiêu chí là một kết quả nghiệp vụ, không phải đúng một lần gọi S3. Không áp dụng lập luận này cho gửi email hay thu tiền nếu dịch vụ ngoài không hỗ trợ idempotency key.</p>
+<p>Trong đường SQS, worker dùng <code>--tries=0</code>; redrive policy của SQS đưa poison job sang DLQ sau số lần nhận cấu hình. Nếu đặt Laravel tries hữu hạn, Laravel có thể đánh dấu failed và xóa message trước khi SQS đưa vào DLQ. Local database queue dùng <code>--tries=3</code>. Timeout job 60 giây phải ngắn hơn visibility 180 giây và thời gian chờ graceful stop 90 giây. Đây là thông số fixture, cần đo lại khi workload thay đổi. <a href="https://laravel.com/docs/12.x/queues" target="_blank" rel="noopener">Laravel queues</a>.</p>
+<p>Scheduler chạy Artisan qua ECS thay vì viết tay serialized Laravel job. Khóa lịch dựa trên <code>scheduled-time</code>, giữ nguyên qua retry; UUID của lần thực thi không thích hợp để chống trùng cùng một lịch. Scheduler DLQ ghi lỗi gọi target; RunTask được chấp nhận không đảm bảo command bên trong thành công. Cần xem exit code/log task và tuổi outbox để phát hiện lỗi ứng dụng. <a href="https://docs.aws.amazon.com/scheduler/latest/UserGuide/managing-targets-universal.html" target="_blank" rel="noopener">Scheduler universal targets</a>.</p>
+<h2 id="upload-và-quyền-dữ-liệu"><a class="anchor" href="#upload-và-quyền-dữ-liệu">Upload và quyền dữ liệu</a></h2>
+<p>Backend xác thực owner, tự chọn key ngẫu nhiên và ký PUT ngắn hạn. CORS giúp browser tuân thủ origin nhưng không ngăn một HTTP client có URL hợp lệ. Giới hạn bytes trong request cấp URL chỉ là khai báo; presigned PUT không tự thực thi giới hạn kích thước do ứng dụng đặt.</p>
+<p><code>verify</code> kiểm tra bytes, loại ảnh và kích thước pixel thực. URL vẫn dùng lại được cho tới khi hết hạn; vì vậy không công khai object gốc sau một lần verify. Pipeline ảnh dùng version ID và output riêng theo version. CloudFront trong foundation chỉ đọc <code>public/*</code>; <code>uploads/</code>, <code>processed/</code>, <code>reports/</code> mặc định không public. Muốn xuất bản ảnh, cần bước phê duyệt/copy phiên bản đã xử lý sang <code>public/</code>; fixture không tự công khai dữ liệu.</p>
+<h2 id="xác-thực-và-phân-quyền"><a class="anchor" href="#xác-thực-và-phân-quyền">Xác thực và phân quyền</a></h2>
+<p>Cognito user pool quản lý người dùng và phát token; identity pool cấp AWS credentials cho client theo cấu hình, không cần cho luồng presigned upload này. Vue dùng authorization code + PKCE, không giữ client secret. Access token phải được kiểm chữ ký, issuer, expiry, <code>token_use</code>, client ID và scope; sau đó API vẫn phải kiểm tra owner của từng đơn/báo cáo. ID token phục vụ thông tin đăng nhập, không được dùng thay access token của API. <a href="https://docs.aws.amazon.com/cognito/latest/developerguide/amazon-cognito-user-pools-using-tokens-verifying-a-jwt.html" target="_blank" rel="noopener">Kiểm chứng JWT Cognito</a>.</p>
+<p>Middleware cache JWKS 5 phút. Một key mới chưa có trong cache có thể khiến request bị từ chối tới khi cache hết hạn; fixture chọn fail-closed. Verify offline không bảo đảm phát hiện ngay token đã revoke; cần TTL phù hợp và thiết kế bổ sung nếu nghiệp vụ đòi thu hồi tức thì. Token local trong tests chỉ chứng minh logic kiểm tra, không chứng minh đã tích hợp Cognito thật.</p>
+<h2 id="tracing-metric-và-xử-lý-sự-cố"><a class="anchor" href="#tracing-metric-và-xử-lý-sự-cố">Tracing, metric và xử lý sự cố</a></h2>
+<p>Middleware tạo span HTTP; <code>Telemetry::run</code> tạo span DB/export/storage. Trace context được đưa vào outbox và serialized job để nối worker với request tạo báo cáo. Manual instrumentation chỉ bao phủ các điểm đã bọc; không được kết luận mọi query đã có span. SDK xuất OTLP HTTP tới collector cùng task; collector xuất sang X-Ray bằng task role. <a href="https://opentelemetry.io/docs/languages/php/instrumentation/" target="_blank" rel="noopener">OpenTelemetry PHP instrumentation</a>.</p>
+<p>Log JSON gồm request ID, status, latency và version; không ghi Authorization, token, URL ký sẵn hoặc payload đơn hàng. Khi gặp 500, đi từ alarm đến log theo request ID rồi trace liên quan. Khi latency tăng, kiểm tra SQL span, số PHP worker, DB connection và cache miss trước khi tăng instance.</p>
+<h2 id="ha-hiệu-năng-và-phục-hồi"><a class="anchor" href="#ha-hiệu-năng-và-phục-hồi">HA, hiệu năng và phục hồi</a></h2>
+<p>Hai app ở hai AZ giải quyết mất một compute instance. Cấu hình tiết kiệm vẫn dùng một NAT, một RDS Single-AZ và một cache node: mất AZ có thể gây downtime. Snapshot không phải failover; Multi-AZ không thay backup khi ứng dụng xóa dữ liệu hợp lệ. ADR phải ghi cả ba điểm này.</p>
+<p><code>/api/probe</code> là dependency drill trên PostgreSQL: timeout SQL, retry tối đa hai lần với jitter, khóa giới hạn concurrency và circuit mở 15 giây sau ba request thất bại. Khi hết thời gian mở, khóa chỉ cho một probe vào, đóng sau thành công hoặc mở lại sau thất bại. Đây là fixture nhỏ để quan sát, chưa phải thư viện circuit breaker cho production. HTTP 429/503 với Retry-After là tín hiệu backpressure; client không retry vô hạn.</p>
+<p>RTO đo từ lúc công bố sự cố đến lúc ứng dụng dùng DB khôi phục vượt smoke test. RPO đo từ dữ liệu đã xác nhận trước sự cố đến điểm mới nhất có trong bản khôi phục. Ghi riêng thời gian provision DB, đổi cấu hình và kiểm tra nghiệp vụ. Không suy RTO chỉ từ thời gian API restore trả về.</p>
+<h2 id="bài-tập-quyết-định-và-đáp-án"><a class="anchor" href="#bài-tập-quyết-định-và-đáp-án">Bài tập quyết định và đáp án</a></h2>
+<ol>
+<li>Nếu worker chết sau PUT S3 nhưng trước commit DB, tiêu chí nào chứng minh không xuất báo cáo trùng?</li>
+<li>Tăng API từ 2 lên 8 task, mỗi task 8 PHP worker: cần dự trù bao nhiêu kết nối, ngoài worker/migration?</li>
+<li>ASG thay một máy thành công có đủ chứng minh chịu mất AZ không?</li>
+<li>Pipeline smoke test fail sau migration: rollback image có sửa lại schema không?</li>
+</ol>
+<details><summary>Đáp án gợi ý</summary>
+
+<ol>
+<li>Cùng report ID, cùng key và cùng nội dung, một trạng thái hoàn tất trong DB. S3 có thể có nhiều version của cùng key.</li>
+<li>Trần từ PHP-FPM có thể lên 64 kết nối, cộng queue workers, migration, quản trị và khoảng dự phòng; cần đo mức thực và giới hạn DB. Proxy không loại bỏ mọi pinning/transaction.</li>
+<li>Không; NAT/DB/cache và đường mạng vẫn có failure mode riêng. Thử đúng sự cố và kiểm tra toàn luồng.</li>
+<li>Không. Dùng expand/contract và compatibility window; nếu migration phá dữ liệu phải áp dụng recovery plan, không chạy migrate:rollback mù quáng.</li>
+</ol>
+</details>
+
+<h2 id="giới-hạn-kiểm-chứng"><a class="anchor" href="#giới-hạn-kiểm-chứng">Giới hạn kiểm chứng</a></h2>
+<p>Artifact hướng dẫn triển khai đã được biên soạn. Test local, build Vue và lint CloudFormation không chứng minh quota, IAM propagation, AMI availability, DNS/TLS, ECS rollout hoặc RTO/RPO trên account thật. Theo dõi từng dòng ở <a href="../labs/15-capstone-laravel/evidence/README.html">sổ kiểm chứng</a>.</p>
+
+<footer>Sinh tự động từ <code>notes/15-capstone-laravel.md</code>. Hãy sửa file Markdown rồi build lại, đừng sửa trực tiếp file HTML này.</footer>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
+  await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+  b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
+}));
+const links=[...document.querySelectorAll('aside.toc a')];
+const heads=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1)))).filter(Boolean);
+const mark=()=>{let cur=heads[0];for(const h of heads){if(h.getBoundingClientRect().top<100)cur=h}
+  links.forEach(a=>a.classList.toggle('current',cur&&decodeURIComponent(a.hash.slice(1))===cur.id))};
+addEventListener('scroll',mark,{passive:true});mark();
+</script>
+</body>
+</html>

@@ -14,7 +14,7 @@
 ## 2. Mục tiêu học tập đo được
 
 1. Giải thích và áp dụng: desired state, plan/change set, dependency và drift.
-2. Giải thích và áp dụng: chọn một đường chính: CDK→CloudFormation; Terraform là nhánh so sánh.
+2. Giải thích và áp dụng: chọn CloudFormation YAML làm đường chính; CDK/Terraform là nhánh so sánh.
 3. Giải thích và áp dụng: stack/module, parameters, outputs, environment và secret references.
 4. Giải thích và áp dụng: cI validate/test, deploy artifact bất biến, OIDC role và trust claims.
 5. Giải thích và áp dụng: rollback application/infrastructure, state, concurrency và destroy.
@@ -34,7 +34,7 @@ Các nội dung chính nằm trong dàn ý bên dưới. Chỉ giới thiệu d�
 | Phần | Nội dung | Bằng chứng hiểu bài |
 |---|---|---|
 | 1 | Desired state, plan/change set, dependency và drift | Có ví dụ, sơ đồ hoặc bảng quyết định; có một câu hỏi áp dụng gắn với phần này |
-| 2 | Chọn một đường chính: CDK→CloudFormation; Terraform là nhánh so sánh | Có ví dụ, sơ đồ hoặc bảng quyết định; có một câu hỏi áp dụng gắn với phần này |
+| 2 | CloudFormation YAML làm đường chính; CDK/Terraform là nhánh so sánh | Có ví dụ, sơ đồ hoặc bảng quyết định; có một câu hỏi áp dụng gắn với phần này |
 | 3 | Stack/module, parameters, outputs, environment và secret references | Có ví dụ, sơ đồ hoặc bảng quyết định; có một câu hỏi áp dụng gắn với phần này |
 | 4 | CI validate/test, deploy artifact bất biến, OIDC role và trust claims | Có ví dụ, sơ đồ hoặc bảng quyết định; có một câu hỏi áp dụng gắn với phần này |
 | 5 | Rollback application/infrastructure, state, concurrency và destroy | Có ví dụ, sơ đồ hoặc bảng quyết định; có một câu hỏi áp dụng gắn với phần này |
@@ -118,3 +118,9 @@ Các trang dưới đây là điểm bắt đầu tra cứu, không thay cho ki�
 ## 11. Chỉ dẫn bàn giao cho mô hình tiếp theo
 
 > Dựa trên plan này, tạo bài học và lab tiếng Việt cho chủ đề “Infrastructure as Code và CI/CD — CloudFormation/CDK, Terraform, GitHub Actions OIDC” tại hai đường dẫn mục 1. Kiểm tra nội dung repository và hướng dẫn AGENTS.md trước khi sửa; giữ nguyên thay đổi của người khác. Tra cứu tài liệu hiện hành, cụ thể hóa quyền và lệnh, cung cấp expected output, đáp án, troubleshooting và cleanup. Chỉ biên soạn artifact; không tự chạy thao tác thay đổi AWS account, deploy hoặc gửi thông báo. Không mở rộng nhánh tùy chọn thành prerequisite bắt buộc. Ghi rõ nội dung đã đối chiếu tài liệu và phần thực sự đã kiểm thử.
+
+## 12. Phần bổ sung theo lộ trình Laravel
+
+Đọc [plan hoàn thiện lộ trình](15-roadmap-gap-completion.md) trước khi biên soạn tiếp. Phạm vi bổ sung cho chủ đề này: Mốc 6–7: pipeline ứng dụng đầy đủ qua OIDC và CloudFormation tái tạo toàn môi trường Laravel; giữ ví dụ SNS/SQS làm bài nền tảng.
+
+Giữ lab dịch vụ hiện tại và liên kết tới nhánh dự án; áp dụng hợp đồng ứng dụng, kiểm chứng và cleanup trong plan bổ sung. Không đánh dấu hoàn thành yêu cầu thực hành chỉ bằng ví dụ Python/Node.js hoặc output minh họa.

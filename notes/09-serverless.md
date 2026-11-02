@@ -322,3 +322,15 @@ Trong bài thực hành đính kèm, bạn sẽ trực tiếp triển khai:
 
 </details>
 
+
+---
+
+## Bổ sung — Xử lý ảnh thật và lỗi từng phần SQS
+
+[Mini-lab xử lý ảnh](../examples/image-processor/README.md) cung cấp Lambda code, Dockerfile, CloudFormation và tests. Ảnh versioned trong uploads/ được resize tối đa 512×512, giữ tỉ lệ; output processed/ theo hash key+version. Duplicate event ghi cùng kết quả; event cũ không ghi đè kết quả version mới. Không xử lý lại processed/ để tránh vòng lặp.
+
+S3 async invocation: exception làm cả invocation lỗi; cấu hình retry/failure destination theo Lambda. SQS event source mapping: handler trả `batchItemFailures` và phải bật `ReportBatchItemFailures`; message thành công không cần nhận lại cùng batch. Code mẫu dùng standard queue; FIFO cần dừng sau lỗi đầu và trả cả message chưa xử lý để giữ ordering. [AWS partial batch responses](https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-errorhandling.html), đối chiếu 2026-11-01.
+
+EventBridge dùng event envelope riêng (`source`, `detail-type`, `detail`); không đưa envelope đó trực tiếp vào handler đòi S3 `Records`. Khi chọn EventBridge làm nguồn, phải có adapter và negative test schema. Scheduler trong dự án gọi Artisan qua ECS, không cùng cơ chế S3 async retry.
+
+Bài tập: message A xử lý xong, B lỗi, C xử lý xong trên standard queue; trả ID nào? Đáp án: chỉ B. Nếu handler ném exception ra ngoài, cả batch có thể bị retry; idempotency vẫn cần ngay cả khi dùng partial response.

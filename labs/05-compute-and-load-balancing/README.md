@@ -773,3 +773,9 @@ echo "TG=${TG_ARN}"
 ## Tiếp theo
 
 Bạn đã triển khai một dịch vụ có cân bằng tải, tự phục hồi và quản trị không cần SSH. Bài tiếp theo (Bài 06) chuyển sang lưu trữ đối tượng và phân phối nội dung: **Amazon S3, CloudFront, Route 53 và AWS Certificate Manager (ACM)**.
+
+---
+
+## Nhánh Laravel theo lộ trình gốc
+
+Lab dịch vụ ở trên được nối với [dự án Laravel + Vue](../15-capstone-laravel/README.md). Đọc phần bổ sung trong bài lý thuyết 05 và bảng mốc của dự án để chọn đúng prerequisite. Đầu ra bắt buộc gồm code/fixture, happy path, negative case và inventory sau cleanup; không dùng output minh họa làm bằng chứng đã chạy.

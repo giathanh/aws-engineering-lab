@@ -117,3 +117,9 @@ Các trang dưới đây là điểm bắt đầu tra cứu, không thay cho ki�
 ## 11. Chỉ dẫn bàn giao cho mô hình tiếp theo
 
 > Dựa trên plan này, tạo bài học và lab tiếng Việt cho chủ đề “Messaging và workflow — SQS, SNS, EventBridge, Step Functions” tại hai đường dẫn mục 1. Kiểm tra nội dung repository và hướng dẫn AGENTS.md trước khi sửa; giữ nguyên thay đổi của người khác. Tra cứu tài liệu hiện hành, cụ thể hóa quyền và lệnh, cung cấp expected output, đáp án, troubleshooting và cleanup. Chỉ biên soạn artifact; không tự chạy thao tác thay đổi AWS account, deploy hoặc gửi thông báo. Không mở rộng nhánh tùy chọn thành prerequisite bắt buộc. Ghi rõ nội dung đã đối chiếu tài liệu và phần thực sự đã kiểm thử.
+
+## 12. Phần bổ sung theo lộ trình Laravel
+
+Đọc [plan hoàn thiện lộ trình](15-roadmap-gap-completion.md) trước khi biên soạn tiếp. Phạm vi bổ sung cho chủ đề này: Mốc 4: Laravel Queue/SQS, retry/DLQ/redrive, idempotency bền vững, EventBridge Scheduler và kiểm chứng lịch không tạo side effect trùng.
+
+Giữ lab dịch vụ hiện tại và liên kết tới nhánh dự án; áp dụng hợp đồng ứng dụng, kiểm chứng và cleanup trong plan bổ sung. Không đánh dấu hoàn thành yêu cầu thực hành chỉ bằng ví dụ Python/Node.js hoặc output minh họa.

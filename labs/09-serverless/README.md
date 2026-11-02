@@ -467,3 +467,11 @@ Sau đó chạy lại Bước 9. Lệnh nào báo `NotFoundException`, `Resource
 ## Tiếp theo
 
 Bạn đã chạy một API serverless có giới hạn chi phí và đọc được nguyên nhân lỗi từ log. Bài tiếp theo: **[Bài 10 — Quan sát và bảo mật ứng dụng: CloudWatch, CloudTrail, Secrets Manager, Parameter Store, KMS](../../notes/10-observability-and-application-security.md)**.
+
+---
+
+## Nhánh Laravel theo lộ trình gốc
+
+Lab dịch vụ ở trên được nối với [dự án Laravel + Vue](../15-capstone-laravel/README.md). Đọc phần bổ sung trong bài lý thuyết 09 và bảng mốc của dự án để chọn đúng prerequisite. Đầu ra bắt buộc gồm code/fixture, happy path, negative case và inventory sau cleanup; không dùng output minh họa làm bằng chứng đã chạy.
+
+Làm thêm [mini-lab ảnh và SQS partial batch](../../examples/image-processor/README.md): có code resize thật, template, expected result và cleanup.

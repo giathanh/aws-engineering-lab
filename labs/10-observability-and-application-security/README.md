@@ -562,3 +562,9 @@ Sau đó chạy lại Bước 10. Nếu alias đã bị xóa mà key chưa sched
 ## Tiếp theo
 
 Bạn đã quan sát được hành vi của app bằng log, metric và alarm, và chứng minh secret được bảo vệ bởi cả IAM lẫn KMS. Bài tiếp theo: **[Bài 11 — Messaging và workflow: SQS, SNS, EventBridge, Step Functions](../../notes/11-messaging-and-workflows.md)**.
+
+---
+
+## Nhánh Laravel theo lộ trình gốc
+
+Lab dịch vụ ở trên được nối với [dự án Laravel + Vue](../15-capstone-laravel/README.md). Đọc phần bổ sung trong bài lý thuyết 10 và bảng mốc của dự án để chọn đúng prerequisite. Đầu ra bắt buộc gồm code/fixture, happy path, negative case và inventory sau cleanup; không dùng output minh họa làm bằng chứng đã chạy.

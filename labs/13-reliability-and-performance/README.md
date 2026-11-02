@@ -505,3 +505,9 @@ Sau đó chạy lại Bước 9 (bỏ dòng `deactivate`). Nếu `BACKUP_ARN` l�
 ## Tiếp theo
 
 Bạn đã có SLO, số đo có phương pháp, hiểu đánh đổi của retry và một drill restore với RTO/RPO đo được. Bài cuối: **[Bài 14 — Kiến trúc và quản trị nâng cao: Organizations, SCP, Control Tower, WAF](../../notes/14-architecture-and-governance.md)**.
+
+---
+
+## Nhánh Laravel theo lộ trình gốc
+
+Lab dịch vụ ở trên được nối với [dự án Laravel + Vue](../15-capstone-laravel/README.md). Đọc phần bổ sung trong bài lý thuyết 13 và bảng mốc của dự án để chọn đúng prerequisite. Đầu ra bắt buộc gồm code/fixture, happy path, negative case và inventory sau cleanup; không dùng output minh họa làm bằng chứng đã chạy.
