@@ -51,9 +51,11 @@ const slug = (s) =>
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+const DARK = '--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c';
 const CSS = `
-:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d}
-@media (prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e3;--muted:#9aa0a6;--line:#2e3238;--card:#1d2025;--code-bg:#22262c;--accent:#6cb0ff;--accent-bg:#1b2a3d;--warn-bg:#2b2416;--warn-line:#8a6a2c}}
+:root{--bg:#fbfaf8;--fg:#1f2328;--muted:#5f6670;--line:#e3e1dc;--card:#fff;--code-bg:#f3f2ef;--accent:#0b6bcb;--accent-bg:#e8f1fb;--warn-bg:#fff7e6;--warn-line:#f0c36d;color-scheme:light}
+:root[data-theme=dark]{${DARK};color-scheme:dark}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){${DARK};color-scheme:dark}}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;scroll-padding-top:24px}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
@@ -84,6 +86,8 @@ pre code{background:none;padding:0;font-size:.86em}
 .code pre{padding-top:26px}
 .code button{position:absolute;top:6px;right:8px;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:2px 8px;cursor:pointer;opacity:.7}
 .code button:hover{opacity:1;color:var(--fg)}
+button.theme{position:fixed;top:14px;right:14px;z-index:10;width:38px;height:38px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--fg);font-size:18px;line-height:1;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+button.theme:hover{background:var(--code-bg)}
 .table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--line);border-radius:10px}
 table{border-collapse:collapse;width:100%;font-size:.94em}
 th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
@@ -97,10 +101,18 @@ details{margin:1.2em 0;padding:.6em 1.1em;border:1px solid var(--warn-line);back
 details summary{cursor:pointer;font-weight:600}
 footer{color:var(--muted);font-size:13px;margin:4em 0 2em;padding-top:1em;border-top:1px solid var(--line)}
 @media (max-width:900px){.layout{grid-template-columns:1fr;gap:0}aside.toc{display:none}main > a.back{display:inline-flex}}
-@media print{a.back,aside.toc,.code button{display:none}.layout{display:block}}
+@media print{a.back,aside.toc,.code button,button.theme{display:none}.layout{display:block}}
 `;
 
+// Chạy trong <head> để áp theme đã lưu trước khi vẽ trang, tránh nháy sáng
+const THEME_INIT = `try{const t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t}catch(e){}`;
+
 const JS = `
+const tb=document.querySelector('button.theme');
+const isDark=()=>(document.documentElement.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'))==='dark';
+const paint=()=>{const d=isDark();tb.textContent=d?'☀️':'🌙';tb.title=tb.ariaLabel=d?'Chuyển sang nền sáng':'Chuyển sang nền tối'};
+tb.addEventListener('click',()=>{const t=isDark()?'light':'dark';document.documentElement.dataset.theme=t;try{localStorage.setItem('theme',t)}catch(e){}paint()});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',paint);paint();
 document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{
   await navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
   b.textContent='Đã copy';setTimeout(()=>b.textContent='Copy',1500);
@@ -163,9 +175,11 @@ for (const doc of docs) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title>
+<script>${THEME_INIT}</script>
 <style>${CSS}</style>
 </head>
 <body>
+<button type="button" class="theme" aria-label="Đổi nền sáng/tối"></button>
 <div class="layout">
 <aside class="toc">${back}<div class="label">Mục lục</div><ol>${toc.map((t) => `<li><a href="#${esc(t.id)}">${t.label}</a></li>`).join('')}</ol></aside>
 <main>
